@@ -1,10 +1,10 @@
-package com.roomiegram.tareas;
+package com.roomiegram.tarea;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class TareasApplicationTests {
+class TareaApplicationTests {
 
 	@Test
 	void contextLoads() {

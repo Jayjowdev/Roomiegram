@@ -1,13 +1,13 @@
-package com.roomiegram.tareas;
+package com.roomiegram.tarea;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class TareasApplication {
+public class TareaApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TareasApplication.class, args);
+		SpringApplication.run(TareaApplication.class, args);
 	}
 
 }

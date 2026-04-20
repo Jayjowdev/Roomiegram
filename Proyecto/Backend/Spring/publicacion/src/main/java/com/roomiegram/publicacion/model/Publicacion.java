@@ -1,0 +1,49 @@
+package com.roomiegram.publicacion.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "publicacion")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+
+public class Publicacion {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String usuarioCreador;
+
+    @Column(nullable = false, length = 300)
+    private String titulo;
+
+    @Column(nullable = false, length = 500)
+    private String ubicacion;
+
+    @Column(nullable = false, length = 5000)
+    private String descripcion;
+
+    @Column(nullable = false)
+    private Double precio;
+
+    @Column(nullable = false)
+    private int numeroHabitaciones;
+
+    @Column(nullable = false)
+    private int numeroPersonas;
+
+    @Column(nullable = false)
+    private int numeroBanos;
+
+
+}

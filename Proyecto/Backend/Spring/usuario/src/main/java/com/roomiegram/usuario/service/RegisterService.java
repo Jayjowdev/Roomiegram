@@ -23,7 +23,8 @@ public class RegisterService {
 
     // Metodo para registrar un nuevo usuario
     public Register registrarUsuario(Register register) {
-        
+        normalizarCampos(register);
+
         //Validaciones
         if (register.getNombre() == null || register.getNombre().isEmpty()) {
             throw new IllegalArgumentException("El nombre no puede estar vacío");
@@ -33,6 +34,9 @@ public class RegisterService {
         }
         if (register.getCorreo() == null || register.getCorreo().isEmpty()) {
             throw new IllegalArgumentException("El correo no puede estar vacío");
+        }
+        if (register.getTelefono() == null || register.getTelefono().isEmpty()) {
+            throw new IllegalArgumentException("El telefono no puede estar vacío");
         }
         if (register.getContrasena() == null || register.getContrasena().isEmpty()) {
             throw new IllegalArgumentException("La contraseña no puede estar vacía");
@@ -66,12 +70,20 @@ public class RegisterService {
 
     // Metodo para crear un administrador 
     public Register crearAdmin(Register register) {
+        normalizarCampos(register);
+
         //Validaciones
         if (register.getNombre() == null || register.getNombre().isEmpty()) {
             throw new IllegalArgumentException("El nombre no puede estar vacío");
         }
+        if (register.getUsuario() == null || register.getUsuario().isEmpty()) {
+            throw new IllegalArgumentException("El usuario no puede estar vacío");
+        }
         if (register.getCorreo() == null || register.getCorreo().isEmpty()) {
             throw new IllegalArgumentException("El correo no puede estar vacío");
+        }
+        if (register.getTelefono() == null || register.getTelefono().isEmpty()) {
+            throw new IllegalArgumentException("El telefono no puede estar vacío");
         }
         if (register.getContrasena() == null || register.getContrasena().isEmpty()) {
             throw new IllegalArgumentException("La contraseña no puede estar vacía");
@@ -101,5 +113,27 @@ public class RegisterService {
         loginRepository.save(login);
 
         return registroGuardado;
+    }
+
+    private void normalizarCampos(Register register) {
+        if (register == null) {
+            throw new IllegalArgumentException("La solicitud de registro es obligatoria");
+        }
+
+        register.setNombre(limpiarTexto(register.getNombre()));
+        register.setApellido(limpiarTexto(register.getApellido()));
+        register.setCorreo(limpiarTexto(register.getCorreo()));
+        register.setUsuario(limpiarTexto(register.getUsuario()));
+        register.setTelefono(limpiarTexto(register.getTelefono()));
+        register.setContrasena(limpiarTexto(register.getContrasena()));
+    }
+
+    private String limpiarTexto(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

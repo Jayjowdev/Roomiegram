@@ -32,7 +32,7 @@ public class RegisterController {
             register.setCorreo(request.correo());
             register.setUsuario(request.usuario());
             register.setContrasena(request.contrasena());
-            register.setTelefono(null); // Opcional
+            register.setTelefono(request.telefono());
     
             
             Register resultado = registerService.registrarUsuario(register);
@@ -51,6 +51,7 @@ public class RegisterController {
             register.setCorreo(request.correo());
             register.setUsuario(request.usuario());
             register.setContrasena(request.contrasena());
+            register.setTelefono(request.telefono());
 
             Register resultado = registerService.crearAdmin(register);
             return ResponseEntity.status(HttpStatus.CREATED).body(resultado);

@@ -16,23 +16,23 @@ import lombok.NoArgsConstructor;
 public class Register {
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
     @Column(nullable = false, length = 100)
-    String nombre;
+    private String nombre;
     
-    @Column(nullable = false, length = 100)
-    String apellido;
+    @Column(length = 100)
+    private String apellido;
 
     @Column(nullable = false, length = 100)
-    String correo;
+    private String correo;
 
     @Column(nullable = false, length = 100)
-    String usuario;
+    private String usuario;
 
     @Column(nullable = false, length = 100)
-    String contrasena;
+    private String contrasena;
 
     @Column(nullable = false, length = 100)
-    String telefono;
+    private String telefono;
 }

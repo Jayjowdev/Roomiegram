@@ -31,6 +31,37 @@ export interface HogarCuenta {
   deudores: CuentaDeudor[]
 }
 
+export interface Comprobante {
+  id?: number
+  hogarCuentaId: number
+  usuarioId: number
+  nombreArchivo: string
+  tipoContenido: string
+  tamanoArchivo: number
+  montoPagado: number
+  observacion?: string | null
+  fechaSubida?: string
+  archivo: string
+}
+
+export type TipoNotificacion = 'INVITACION_HOGAR' | 'CUENTA_HOGAR' | 'TAREA_HOGAR'
+
+export type EstadoNotificacion = 'PENDIENTE' | 'LEIDA' | 'ACEPTADA' | 'RECHAZADA'
+
+export interface Notificacion {
+  id?: number
+  usuarioEmisorId: number
+  usuarioReceptorId: number
+  hogarId: number
+  referenciaId?: number | null
+  tipo: TipoNotificacion
+  estado?: EstadoNotificacion
+  titulo: string
+  mensaje: string
+  fechaCreacion?: string
+  fechaActualizacion?: string | null
+}
+
 export interface Hogar {
   id?: number
   nombre: string

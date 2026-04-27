@@ -235,8 +235,11 @@ export default function DashboardPage() {
 
       <section className="control-strip glass-card">
         <div>
-          <p className="eyebrow">Hogar activo</p>
+          <label className="eyebrow" htmlFor="hogar-activo-select">
+            Hogar activo
+          </label>
           <select
+            id="hogar-activo-select"
             className="form-select"
             value={selectedHogarId}
             onChange={(event) => setSelectedHogarId(event.target.value ? Number(event.target.value) : '')}
@@ -357,6 +360,7 @@ export default function DashboardPage() {
               required
             />
             <input
+              aria-label="Fecha de la tarea"
               type="date"
               value={tareaForm.fecha}
               onChange={(event) => setTareaForm((current) => ({ ...current, fecha: event.target.value }))}

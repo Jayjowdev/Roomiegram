@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import heroImage from '../assets/hero.png'
 import { useAuth } from '../context/AuthContext'
 import { resolveApiError } from '../services/api'
 import { fetchPublicaciones } from '../services/publicacionService'
@@ -73,7 +72,19 @@ export default function HomePage() {
           </div>
         </div>
         <div className="hero-visual">
-          <img src={heroImage} alt="Vista principal de Roomiegram" />
+          <div className="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+            <div>
+              <p className="eyebrow mb-2">Microservicios activos</p>
+              <h3 className="mb-3">Puentes directos entre frontend y backend</h3>
+            </div>
+            <div className="listing-tags">
+              <span>usuario</span>
+              <span>hogar</span>
+              <span>publicacion</span>
+              <span>tarea</span>
+              <span>hogarcuenta</span>
+            </div>
+          </div>
         </div>
       </section>
 

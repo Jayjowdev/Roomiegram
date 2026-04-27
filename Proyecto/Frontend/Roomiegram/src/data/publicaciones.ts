@@ -1,25 +1,165 @@
-import { type Publicacion } from "../types/Publicacion";
+import img1 from "../assets/person1.jpeg";
+import img2 from "../assets/person2.jpeg";
+import img3 from "../assets/person3.jpeg";
+import avatar4 from "../assets/avatar4.svg";
+import avatar5 from "../assets/avatar5.svg";
+import avatar6 from "../assets/avatar6.svg";
+import home1 from "../assets/home1.svg";
+import home2 from "../assets/home2.svg";
+import home3 from "../assets/home3.svg";
+import type { Publicacion } from "../types/Publicacion";
+
+const galeriaCasa = [home1, home2, home3];
 
 export const publicaciones: Publicacion[] = [
-    {
-        id: 1,
-        titulo: "Busco roomie en Santiago Centro",
-        precio: 250000,
-        ubicacion: "Santiago Centro",
-        descripcion: "Depto compartido cerca del metro"
-    },
-    {
-        id: 2,
-        titulo: "Habitación disponible en Providencia",
-        precio: 220000,
-        ubicacion: "Providencia",
-        descripcion: "Habitación amoblada con baño privado"
-    },
-    {
-        id: 3,
-        titulo: "Habitación en Ñuñoa",
-        precio: 300000,
-        ubicacion: "Ñuñoa",
-        descripcion: "Busco roomie para compartir depto en zona tranquila"
-    }
-]
+  {
+    id: 1,
+    tipo: "busco_roomie",
+    nombre: "Sofía",
+    edad: 24,
+    ubicacion: "Santiago Centro",
+    descripcion: "Trabajo y estudio, soy ordenada y tranquila. Busco roomie responsable.",
+    intereses: ["Ordenada", "No fumadora", "Trabajo"],
+    habitos: ["ordenado", "tranquilo", "madrugador", "sin_mascotas", "no_fuma"],
+    presupuestoMaximo: 280000,
+    imagen: img1,
+  },
+  {
+    id: 2,
+    tipo: "busco_roomie",
+    nombre: "Camila",
+    edad: 22,
+    ubicacion: "Ñuñoa",
+    descripcion: "Estudiante, buena onda, me gustan los gatos y el ambiente tranquilo.",
+    intereses: ["Pet-friendly", "Estudiante", "Tranquila"],
+    habitos: ["intermedio", "tranquilo", "nocturno", "mascotas", "no_fuma"],
+    presupuestoMaximo: 230000,
+    imagen: img2,
+  },
+  {
+    id: 3,
+    tipo: "busco_roomie",
+    nombre: "Daniela",
+    edad: 27,
+    ubicacion: "Providencia",
+    descripcion: "Profesional, limpia y respetuosa. Busco alguien con rutina similar.",
+    intereses: ["Profesional", "Ordenada", "Sin carrete"],
+    habitos: ["ordenado", "tranquilo", "madrugador", "sin_mascotas", "no_fuma"],
+    presupuestoMaximo: 320000,
+    imagen: img3,
+  },
+  {
+    id: 7,
+    tipo: "busco_roomie",
+    nombre: "Valentina",
+    edad: 25,
+    ubicacion: "Las Condes",
+    descripcion: "Trabajo remoto, me gusta cocinar y mantener espacios comunes limpios.",
+    intereses: ["Home office", "Cocina", "Orden"],
+    habitos: ["ordenado", "tranquilo", "flexible", "mascotas", "no_fuma"],
+    presupuestoMaximo: 360000,
+    imagen: avatar4,
+  },
+  {
+    id: 8,
+    tipo: "busco_roomie",
+    nombre: "Ignacio",
+    edad: 29,
+    ubicacion: "Macul",
+    descripcion: "Profesional, sociable, busco convivencia respetuosa con buena comunicación.",
+    intereses: ["Social", "Deporte", "Música"],
+    habitos: ["intermedio", "social", "nocturno", "indiferente_mascotas", "no_fuma"],
+    presupuestoMaximo: 260000,
+    imagen: avatar5,
+  },
+  {
+    id: 9,
+    tipo: "busco_roomie",
+    nombre: "Renata",
+    edad: 23,
+    ubicacion: "La Florida",
+    descripcion: "Estudio y trabajo part time. Me acomoda un ambiente tranquilo y cooperativo.",
+    intereses: ["Estudiante", "Tranquila", "Cooperativa"],
+    habitos: ["relajado", "tranquilo", "flexible", "sin_mascotas", "no_fuma"],
+    presupuestoMaximo: 210000,
+    imagen: avatar6,
+  },
+  {
+    id: 4,
+    tipo: "ofrezco_casa",
+    nombre: "Andrés",
+    edad: 32,
+    titulo: "Ofrezco habitación en depto Santiago Centro",
+    precioMensual: 250000,
+    ubicacion: "Santiago Centro",
+    descripcion: "Departamento con 2 habitaciones, cocina equipada, cerca del metro. Ambiente tranquilo y responsable.",
+    amenidades: ["Wifi", "Cocina equipada", "Lavadora", "Cercano a metro"],
+    imagen: home1,
+    galeria: galeriaCasa,
+  },
+  {
+    id: 5,
+    tipo: "ofrezco_casa",
+    nombre: "Carla",
+    edad: 28,
+    titulo: "Casa con habitación disponible en Providencia",
+    precioMensual: 220000,
+    ubicacion: "Providencia",
+    descripcion: "Habitación amoblada con baño privado en casa compartida. Zona segura y bien comunicada.",
+    amenidades: ["Baño privado", "Amoblado", "Jardín", "Área común"],
+    imagen: home2,
+    galeria: [home2, home1, home3],
+  },
+  {
+    id: 6,
+    tipo: "ofrezco_casa",
+    nombre: "Marco",
+    edad: 35,
+    titulo: "Habitación en Ñuñoa - zona tranquila",
+    precioMensual: 300000,
+    ubicacion: "Ñuñoa",
+    descripcion: "Habitación espaciosa en zona residencial tranquila. Casa familiar, buscamos compañero responsable.",
+    amenidades: ["Espacio", "Parques cercanos", "Tranquilo", "Acceso a cocina completa"],
+    imagen: home3,
+    galeria: [home3, home1, home2],
+  },
+  {
+    id: 10,
+    tipo: "ofrezco_casa",
+    nombre: "Javiera",
+    edad: 30,
+    titulo: "Pieza luminosa en Las Condes",
+    precioMensual: 360000,
+    ubicacion: "Las Condes",
+    descripcion: "Pieza con escritorio, buena luz natural y espacios comunes amplios para home office.",
+    amenidades: ["Escritorio", "Balcón", "Conserjería", "Metro cercano"],
+    imagen: home1,
+    galeria: [home1, home3, home2],
+  },
+  {
+    id: 11,
+    tipo: "ofrezco_casa",
+    nombre: "Matías",
+    edad: 31,
+    titulo: "Habitación económica en Macul",
+    precioMensual: 210000,
+    ubicacion: "Macul",
+    descripcion: "Depto compartido con buen acceso a transporte, ideal para estudiante o profesional joven.",
+    amenidades: ["Transporte", "Cocina", "Gastos compartidos", "Ambiente social"],
+    imagen: home2,
+    galeria: [home2, home3, home1],
+  },
+  {
+    id: 12,
+    tipo: "ofrezco_casa",
+    nombre: "Paula",
+    edad: 34,
+    titulo: "Casa compartida cerca de metro La Florida",
+    precioMensual: 240000,
+    ubicacion: "La Florida",
+    descripcion: "Casa tranquila con patio, lavadora y cocina equipada. Buscamos alguien respetuoso.",
+    amenidades: ["Patio", "Lavadora", "Cocina equipada", "Ambiente familiar"],
+    imagen: home3,
+    galeria: [home3, home2, home1],
+  },
+];

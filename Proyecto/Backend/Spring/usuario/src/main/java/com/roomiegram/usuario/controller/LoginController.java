@@ -1,6 +1,7 @@
 package com.roomiegram.usuario.controller;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.usuario.model.Login;
+import com.roomiegram.usuario.model.Register;
+import com.roomiegram.usuario.repository.RegisterRepository;
 import com.roomiegram.usuario.service.LoginService;
 
 @RestController
@@ -24,6 +27,9 @@ public class LoginController {
     @Autowired
     private LoginService loginService;
 
+    @Autowired
+    private RegisterRepository registerRepository;
+
     @PostMapping("/login")
     public ResponseEntity<?> autenticarUsuario(@RequestBody Map<String, String> credenciales) {
         try {
@@ -32,13 +38,19 @@ public class LoginController {
 
             Login login = loginService.autenticarUsuario(usuario, contrasena);
 
+            Optional<Register> reg = registerRepository.findByUsuario(usuario);
+            String nombre = reg.map(Register::getNombre).orElse(usuario);
+            String correo = reg.map(Register::getCorreo).orElse("");
+
             // Retornar informacion del usuario autenticado (sin la contraseña)
-        return ResponseEntity.ok(Map.of(
-            "id", login.getId(),
-            "usuario", login.getUsuario(),
-            "role", login.getRole(),
-            "mensaje", "Login exitoso"
-        ));
+            return ResponseEntity.ok(Map.of(
+                "id", login.getId(),
+                "usuario", login.getUsuario(),
+                "nombre", nombre,
+                "correo", correo,
+                "role", login.getRole().name(),
+                "mensaje", "Login exitoso"
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "mensaje", e.getMessage()

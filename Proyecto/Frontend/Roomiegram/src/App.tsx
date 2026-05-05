@@ -1,28 +1,22 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import './App.css'
-import DashboardPage from './pages/DashboardPage'
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import ProtectedRoute from './pages/ProtectedRoute'
-import RegisterPage from './pages/RegisterPage'
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import Landing from "./pages/Landing"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import Dashboard from "./pages/Dashboard"
+import Home from "./pages/Home"
+import Perfil from "./pages/Perfil"
 
-function App() {
+export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/perfil/:id" element={<Perfil />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
-
-export default App

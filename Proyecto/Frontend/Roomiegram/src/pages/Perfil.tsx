@@ -1,47 +1,41 @@
-import { useNavigate, useParams } from "react-router-dom"
+import { useMemo } from "react"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import logo from "../assets/Logo-removebg-preview.png"
-import img1 from "../assets/person1.jpeg"
-import img2 from "../assets/person2.jpeg"
-import img3 from "../assets/person3.jpeg"
+import type { Publicacion } from "../types/Publicacion"
 
 export default function Perfil() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const location = useLocation()
+  const publicacion = (location.state as { publicacion?: Publicacion } | null)?.publicacion
 
-  const perfiles = [
-    {
-      id: "1",
-      nombre: "Sofía",
-      edad: 24,
-      bio: "Trabajo y estudio, soy ordenada y tranquila. Busco roomie responsable.",
-      ubicacion: "Santiago Centro",
-      intereses: ["Ordenada", "No fumadora", "Trabajo"],
-      hobbies: ["Gym", "Series", "Cocinar"],
-      imagen: img1,
-    },
-    {
-      id: "2",
-      nombre: "Camila",
-      edad: 22,
-      bio: "Estudiante, buena onda, me gustan los gatos y el ambiente tranquilo.",
-      ubicacion: "Ñuñoa",
-      intereses: ["Pet-friendly", "Estudiante", "Tranquila"],
-      hobbies: ["Lectura", "Música", "Gatos"],
-      imagen: img2,
-    },
-    {
-      id: "3",
-      nombre: "Daniela",
-      edad: 27,
-      bio: "Profesional, limpia y respetuosa. Busco alguien con rutina similar.",
-      ubicacion: "Providencia",
-      intereses: ["Profesional", "Ordenada", "Sin carrete"],
-      hobbies: ["Running", "Cine", "Viajes"],
-      imagen: img3,
-    },
+  const perfil = useMemo(
+    () =>
+      publicacion ?? {
+        id: Number(id ?? 0),
+        usuarioCreador: "Publicación",
+        titulo: `Publicación ${id ?? "sin identificar"}`,
+        ubicacion: "Sin ubicación cargada",
+        descripcion: "Abre este perfil desde Home para ver el detalle completo de la publicación.",
+        precio: 0,
+        numeroHabitaciones: 0,
+        numeroPersonas: 0,
+        numeroBanos: 0,
+      },
+    [id, publicacion],
+  )
+
+  const intereses = [
+    `${perfil.numeroHabitaciones} habitaciones`,
+    `${perfil.numeroPersonas} personas`,
+    `${perfil.numeroBanos} baños`,
   ]
 
-  const perfil = perfiles.find(p => p.id === id) || perfiles[0]
+  const hobbies = [
+    `Publicado por ${perfil.usuarioCreador}`,
+    `Presupuesto $${perfil.precio}`,
+    `ID ${perfil.id}`,
+  ]
 
   return (
     <div className="perfil-page">
@@ -64,36 +58,38 @@ export default function Perfil() {
       </header>
 
       <div className="perfil-container">
-        <div className="perfil-image">
-          <img src={perfil.imagen} alt={perfil.nombre} />
+        <div className="perfil-image perfil-image-placeholder">
+          <div className="home-card-cover perfil-cover">
+            <span>{perfil.usuarioCreador}</span>
+          </div>
         </div>
 
         <div className="perfil-info">
-          <h2>{perfil.nombre}, {perfil.edad}</h2>
+          <h2>{perfil.titulo}</h2>
           <p className="perfil-ubicacion">📍 {perfil.ubicacion}</p>
 
-          <p className="perfil-bio">{perfil.bio}</p>
+          <p className="perfil-bio">{perfil.descripcion}</p>
 
           <div className="perfil-section">
             <h5>Intereses</h5>
             <div className="perfil-tags">
-              {perfil.intereses.map((i, index) => (
+              {intereses.map((i, index) => (
                 <span key={index} className="perfil-tag">{i}</span>
               ))}
             </div>
           </div>
 
           <div className="perfil-section">
-            <h5>Hobbies</h5>
+            <h5>Resumen</h5>
             <div className="perfil-tags">
-              {perfil.hobbies.map((h, index) => (
+              {hobbies.map((h, index) => (
                 <span key={index} className="perfil-tag secondary">{h}</span>
               ))}
             </div>
           </div>
 
-          <button className="btn btn-success w-100 mt-4">
-            Contactar
+          <button className="btn btn-success w-100 mt-4" onClick={() => navigate("/notificaciones")}>
+            Ir a notificaciones
           </button>
         </div>
       </div>

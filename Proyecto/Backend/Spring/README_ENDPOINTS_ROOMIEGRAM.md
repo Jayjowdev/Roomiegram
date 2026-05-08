@@ -5,7 +5,7 @@ Documento de apoyo para probar y defender el avance funcional del proyecto. Todo
 - Swagger UI: `http://localhost:{PUERTO}/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:{PUERTO}/api-docs`
 
-## Puertos
+## Puertos 
 
 | Microservicio | Puerto | Swagger |
 | --- | ---: | --- |

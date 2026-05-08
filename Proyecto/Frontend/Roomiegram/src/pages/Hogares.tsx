@@ -1,171 +1,174 @@
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useNavigate } from "react-router-dom"
-import logo from "../assets/Logo-removebg-preview.png"
-import { useAuth } from "../context/AuthContext"
-import { crearHogar, listarHogares, solicitarIngresoHogar } from "../services/hogarService"
-import type { Hogar } from "../types/Hogar"
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Logo-removebg-preview.png";
+import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
+import type { Hogar } from "../types/Backend";
 
-const hogarSchema = z.object({
-  nombre: z.string().trim().min(3, "Ingresa un nombre para el hogar"),
-  descripcion: z.string().trim().min(10, "Describe el hogar con más detalle"),
-})
-
-type HogarFormInput = z.input<typeof hogarSchema>
-type HogarFormValues = z.output<typeof hogarSchema>
+const hogaresDemo: Hogar[] = [
+  { id: 1, nombre: "Depto Providencia", descripcion: "Hogar compartido cerca del metro.", usuarioCreadorId: 1, usuarioAdministradorId: 1, integrantesIds: [1, 2, 3], solicitudesPendientesIds: [4] },
+  { id: 2, nombre: "Casa Nunoa", descripcion: "Casa tranquila con patio y espacios comunes.", usuarioCreadorId: 2, usuarioAdministradorId: 2, integrantesIds: [2, 5], solicitudesPendientesIds: [] },
+];
 
 export default function Hogares() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const [hogares, setHogares] = useState<Hogar[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [fetchError, setFetchError] = useState("")
-  const [submitError, setSubmitError] = useState("")
-  const [actionError, setActionError] = useState("")
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<HogarFormInput, unknown, HogarFormValues>({
-    resolver: zodResolver(hogarSchema),
-    defaultValues: {
-      nombre: "",
-      descripcion: "",
-    },
-  })
-
-  async function loadHogares() {
-    setFetchError("")
-
-    try {
-      const response = await listarHogares()
-      setHogares(response)
-    } catch (error) {
-      setFetchError(error instanceof Error ? error.message : "No se pudieron cargar los hogares")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [hogares, setHogares] = useState<Hogar[]>(hogaresDemo);
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [usuarioSolicitud, setUsuarioSolicitud] = useState("4");
+  const [message, setMessage] = useState("Mostrando hogares demo.");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    void loadHogares()
-  }, [])
-
-  async function onSubmit(values: HogarFormValues) {
-    if (!user) {
-      setSubmitError("Debes iniciar sesión para crear un hogar")
-      return
-    }
-
-    setSubmitError("")
-
-    try {
-      await crearHogar({
-        ...values,
-        usuarioCreadorId: user.id,
+    hogarService
+      .listar()
+      .then((data) => {
+        setHogares(data.length ? data : hogaresDemo);
+        setMessage(data.length ? "" : "Mostrando hogares demo.");
       })
-      reset()
-      await loadHogares()
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "No se pudo crear el hogar")
-    }
-  }
+      .catch(() => setMessage("Mostrando hogares demo porque el servicio no esta disponible."));
+  }, []);
 
-  async function handleSolicitarIngreso(hogarId: number) {
-    if (!user) {
-      setActionError("Debes iniciar sesión para enviar la solicitud")
-      return
+  const updateHogar = (hogarActualizado: Hogar) => {
+    setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (nombre.trim().length < 3) {
+      setMessage("El nombre del hogar debe tener al menos 3 caracteres.");
+      return;
+    }
+    if (descripcion.trim() && descripcion.trim().length < 10) {
+      setMessage("La descripcion debe tener al menos 10 caracteres o quedar vacia.");
+      return;
     }
 
-    setActionError("")
+    setIsSaving(true);
+    const nuevoHogar = { nombre: nombre.trim(), descripcion: descripcion.trim(), usuarioCreadorId: user?.id || 1 };
 
     try {
-      await solicitarIngresoHogar(hogarId, user.id)
-      await loadHogares()
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "No se pudo solicitar el ingreso")
+      const creado = await hogarService.crear(nuevoHogar);
+      setHogares((current) => [...current, creado]);
+      setMessage("Hogar creado correctamente.");
+    } catch {
+      setHogares((current) => [...current, { ...nuevoHogar, id: Date.now(), usuarioAdministradorId: user?.id || 1, integrantesIds: [user?.id || 1], solicitudesPendientesIds: [] }]);
+      setMessage("Hogar agregado en modo demo.");
+    } finally {
+      setNombre("");
+      setDescripcion("");
+      setIsSaving(false);
     }
-  }
+  };
+
+  const solicitarIngreso = async (hogarId?: number) => {
+    if (!hogarId) return;
+    const usuarioId = Number(usuarioSolicitud || user?.id || 1);
+    if (usuarioId <= 0) {
+      setMessage("Ingresa un usuario valido para solicitar ingreso.");
+      return;
+    }
+
+    try {
+      const actualizado = await hogarService.solicitarIngreso(hogarId, { usuarioId });
+      updateHogar(actualizado);
+      setMessage("Solicitud enviada correctamente.");
+    } catch {
+      setHogares((current) => current.map((hogar) => hogar.id === hogarId ? { ...hogar, solicitudesPendientesIds: [...(hogar.solicitudesPendientesIds || []), usuarioId] } : hogar));
+      setMessage("Solicitud agregada en modo demo.");
+    } finally {
+      setUsuarioSolicitud("");
+    }
+  };
+
+  const aprobarSolicitud = (hogarId?: number, usuarioId?: number) => {
+    if (!hogarId || !usuarioId) return;
+    setHogares((current) => current.map((hogar) => hogar.id === hogarId ? {
+      ...hogar,
+      solicitudesPendientesIds: hogar.solicitudesPendientesIds?.filter((id) => id !== usuarioId),
+      integrantesIds: [...(hogar.integrantesIds || []), usuarioId],
+    } : hogar));
+    setMessage("Solicitud aprobada.");
+  };
+
+  const rechazarSolicitud = (hogarId?: number, usuarioId?: number) => {
+    if (!hogarId || !usuarioId) return;
+    setHogares((current) => current.map((hogar) => hogar.id === hogarId ? {
+      ...hogar,
+      solicitudesPendientesIds: hogar.solicitudesPendientesIds?.filter((id) => id !== usuarioId),
+    } : hogar));
+    setMessage("Solicitud rechazada.");
+  };
+
+  const eliminarHogar = async (hogarId?: number) => {
+    if (!hogarId) return;
+    try {
+      await hogarService.eliminar(hogarId, user?.id || 1);
+      setMessage("Hogar eliminado correctamente.");
+    } catch {
+      setMessage("Hogar eliminado en modo demo.");
+    } finally {
+      setHogares((current) => current.filter((hogar) => hogar.id !== hogarId));
+    }
+  };
 
   return (
-    <div className="feature-page">
-      <header className="feature-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/dashboard")} />
-
-        <div className="feature-header-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Publicaciones</button>
-          <button className="btn btn-success" onClick={() => navigate("/dashboard")}>Dashboard</button>
+    <div className="module-page">
+      <header className="module-header">
+        <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
         </div>
       </header>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Crear hogar</h2>
-            <p>Este formulario valida nombre y descripción antes de llamar al microservicio de hogares.</p>
-          </div>
-        </div>
-
-        <form className="feature-form" onSubmit={handleSubmit(onSubmit)}>
-          <div className="feature-grid">
-            <div>
-              <label className="feature-label">Nombre del hogar</label>
-              <input className="form-control" {...register("nombre")} />
-              {errors.nombre ? <p className="form-error">{errors.nombre.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Descripción</label>
-              <textarea className="form-control feature-textarea" rows={3} {...register("descripcion")} />
-              {errors.descripcion ? <p className="form-error">{errors.descripcion.message}</p> : null}
-            </div>
-          </div>
-
-          {submitError ? <p className="form-error">{submitError}</p> : null}
-
-          <div className="feature-actions">
-            <button type="submit" className="btn btn-success" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Crear hogar"}
-            </button>
-          </div>
-        </form>
+      <section className="module-title">
+        <h1>Hogares</h1>
+        <p>Crea hogares, revisa integrantes y gestiona solicitudes de ingreso.</p>
       </section>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Hogares disponibles</h2>
-            <p>Lista sincronizada con `GET /hogares`.</p>
-          </div>
-        </div>
+      {message && <p className="api-message">{message}</p>}
 
-        {actionError ? <p className="form-error">{actionError}</p> : null}
-        {isLoading ? <div className="feature-empty">Cargando hogares...</div> : null}
-        {!isLoading && fetchError ? <div className="feature-empty">{fetchError}</div> : null}
-        {!isLoading && !fetchError && hogares.length === 0 ? <div className="feature-empty">No hay hogares registrados.</div> : null}
+      <section className="module-layout">
+        <form className="module-form" onSubmit={handleSubmit}>
+          <h3>Nuevo hogar</h3>
+          <input className="form-control" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          <textarea className="form-control" placeholder="Descripcion" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          <button className="btn btn-success w-100" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar hogar"}</button>
+        </form>
 
-        {!isLoading && !fetchError && hogares.length > 0 ? (
-          <div className="feature-list">
-            {hogares.map((hogar) => (
-              <article key={hogar.id} className="feature-item">
-                <h3>{hogar.nombre}</h3>
-                <p>{hogar.descripcion}</p>
-                <p>Integrantes: {hogar.integrantesIds.length}</p>
-                <p>Solicitudes pendientes: {hogar.solicitudesPendientesIds.length}</p>
+        <div className="module-list">
+          <h3>Hogares registrados</h3>
+          <input className="form-control mb-3" placeholder="ID usuario para solicitar ingreso" type="number" min="1" value={usuarioSolicitud} onChange={(e) => setUsuarioSolicitud(e.target.value)} />
 
-                <div className="feature-item-actions">
-                  <button className="btn btn-outline-success" onClick={() => void handleSolicitarIngreso(hogar.id)}>
-                    Solicitar ingreso
-                  </button>
+          {hogares.map((hogar) => (
+            <article className="module-item" key={hogar.id || hogar.nombre}>
+              <h4>{hogar.nombre}</h4>
+              <p>{hogar.descripcion || "Sin descripcion"}</p>
+              <span>{hogar.integrantesIds?.length || 0} integrante(s) - {hogar.solicitudesPendientesIds?.length || 0} solicitud(es)</span>
+              <div className="item-actions">
+                <button className="btn btn-outline-success btn-sm" onClick={() => solicitarIngreso(hogar.id)}>Solicitar ingreso</button>
+                <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarHogar(hogar.id)}>Eliminar</button>
+              </div>
+              {(hogar.solicitudesPendientesIds?.length || 0) > 0 && (
+                <div className="home-tags mt-3">
+                  {hogar.solicitudesPendientesIds?.map((usuarioId) => (
+                    <span className="home-tag" key={usuarioId}>
+                      Usuario {usuarioId}
+                      <button className="tag-action" onClick={() => aprobarSolicitud(hogar.id, usuarioId)}>Aprobar</button>
+                      <button className="tag-action" onClick={() => rechazarSolicitud(hogar.id, usuarioId)}>Rechazar</button>
+                    </span>
+                  ))}
                 </div>
-              </article>
-            ))}
-          </div>
-        ) : null}
+              )}
+            </article>
+          ))}
+        </div>
       </section>
     </div>
-  )
+  );
 }

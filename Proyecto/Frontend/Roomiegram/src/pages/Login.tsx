@@ -1,120 +1,63 @@
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useNavigate } from "react-router-dom"
-import logo from "../assets/Logo-removebg-preview.png"
-import roomies from "../assets/login.png"
-import { useAuth } from "../context/AuthContext"
-import { login as loginRequest } from "../services/authService"
-
-const loginSchema = z.object({
-  usuario: z.string().trim().min(1, "Ingresa tu correo o usuario"),
-  contrasena: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-})
-
-type LoginFormValues = z.infer<typeof loginSchema>
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Logo-removebg-preview.png";
+import roomies from "../assets/login.png";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const navigate = useNavigate()
-  const { login } = useAuth()
-  const [submitError, setSubmitError] = useState("")
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      usuario: "",
-      contrasena: "",
-    },
-  })
+  const navigate = useNavigate();
+  const { login, isLoading, error, clearError } = useAuth();
 
-  async function onSubmit(values: LoginFormValues) {
-    setSubmitError("")
+  const [usuario, setUsuario] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [localError, setLocalError] = useState("");
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLocalError("");
+    clearError();
+
+    if (usuario.trim().length < 3) {
+      setLocalError("Ingresa un usuario válido.");
+      return;
+    }
+
+    if (contrasena.trim().length < 6) {
+      setLocalError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
 
     try {
-      const user = await loginRequest(values)
-      login(user)
-      navigate("/home")
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "No se pudo iniciar sesión")
+      await login({ usuario: usuario.trim(), contrasena });
+      navigate("/home");
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Error en login");
     }
-  }
+  };
 
   return (
     <div className="login-page">
-
-      {/* HEADER */}
       <header className="login-header">
         <div className="login-header-left">
-          <img
-            src={logo}
-            alt="RoomieGram"
-            className="login-logo"
-            onClick={() => navigate("/")}
-          />
-         
+          <img src={logo} alt="RoomieGram" className="login-logo" onClick={() => navigate("/")} />
         </div>
-
-        <button
-          className="btn btn-outline-success"
-          onClick={() => navigate("/register")}
-        >
-          Crear cuenta
-        </button>
+        <button className="btn btn-outline-success" onClick={() => navigate("/register")}>Crear cuenta</button>
       </header>
 
-      {/* CONTENT */}
       <div className="login-box">
-
-        {/* IMAGEN */}
-        <div className="login-image">
-          <img src={roomies} alt="Roomies" />
-        </div>
-
-        {/* FORM */}
-        <form className="login-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="login-image"><img src={roomies} alt="Roomies" /></div>
+        <div className="login-form">
           <h2>Iniciar sesión</h2>
-
-          <input
-            className="form-control mb-2"
-            placeholder="Correo o usuario"
-            {...register("usuario")}
-          />
-          {errors.usuario ? <p className="form-error">{errors.usuario.message}</p> : null}
-
-          <input
-            className="form-control mb-2"
-            type="password"
-            placeholder="Contraseña"
-            {...register("contrasena")}
-          />
-          {errors.contrasena ? <p className="form-error">{errors.contrasena.message}</p> : null}
-
-          {submitError ? <p className="form-error">{submitError}</p> : null}
-
-          <button
-            type="submit"
-            className="btn btn-success w-100 mb-3"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Ingresando..." : "Ingresar"}
-          </button>
-
-          {/* <button
-            className="btn btn-outline-secondary w-100"
-            onClick={() => navigate("/register")}
-          >
-            Crear una cuenta
-          </button> */}
-
-          <p className="login-legal">
-            Al continuar aceptas nuestros términos y condiciones.
-          </p>
-        </form>
+          {(error || localError) && <div className="form-error">{error || localError}</div>}
+          <form onSubmit={handleSubmit}>
+            <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
+            <input className="form-control mb-3" type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+            <button className="btn btn-success w-100 mb-3" type="submit" disabled={isLoading}>{isLoading ? "Cargando..." : "Ingresar"}</button>
+          </form>
+          <p className="login-legal">Al continuar aceptas nuestros términos y condiciones.</p>
+        </div>
       </div>
     </div>
-  )
+  );
 }

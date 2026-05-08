@@ -1,63 +1,117 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
-import type { UsuarioAuth } from "../types/Usuario"
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { authService } from "../services/authService";
+import type { LoginRequest, RegisterRequest, UserSession } from "../types/Auth";
 
-const AUTH_STORAGE_KEY = "roomiegram.auth"
-
-type AuthContextValue = {
-  user: UsuarioAuth | null
-  isAuthenticated: boolean
-  login: (nextUser: UsuarioAuth) => void
-  logout: () => void
+interface AuthContextType {
+  user: UserSession | null;
+  sessionId: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  login: (credentials: LoginRequest) => Promise<void>;
+  register: (userData: RegisterRequest) => Promise<void>;
+  loginDemo: () => void;
+  logout: () => void;
+  clearError: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function readStoredUser() {
-  const storedUser = localStorage.getItem(AUTH_STORAGE_KEY)
-
-  if (!storedUser) {
-    return null
-  }
-
-  try {
-    return JSON.parse(storedUser) as UsuarioAuth
-  } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY)
-    return null
-  }
-}
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UsuarioAuth | null>(() => readStoredUser())
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user))
-      return
+    const savedSession = authService.getSession();
+    if (savedSession) {
+      setSessionId(savedSession.sessionId);
+      setUser(savedSession.user);
     }
+  }, []);
 
-    localStorage.removeItem(AUTH_STORAGE_KEY)
-  }, [user])
+  const login = async (credentials: LoginRequest) => {
+    setIsLoading(true);
+    setError(null);
 
-  const value = useMemo(
-    () => ({
-      user,
-      isAuthenticated: Boolean(user),
-      login: (nextUser: UsuarioAuth) => setUser(nextUser),
-      logout: () => setUser(null),
-    }),
-    [user],
-  )
+    try {
+      const response = await authService.login(credentials);
+      authService.saveSession(response.sessionId, response.user);
+      setSessionId(response.sessionId);
+      setUser(response.user);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error en login";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
+  const register = async (userData: RegisterRequest) => {
+    setIsLoading(true);
+    setError(null);
 
-export function useAuth() {
-  const context = useContext(AuthContext)
+    try {
+      const response = await authService.register(userData);
+      authService.saveSession(response.sessionId, response.user);
+      setSessionId(response.sessionId);
+      setUser(response.user);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error en registro";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  if (!context) {
-    throw new Error("useAuth debe usarse dentro de AuthProvider")
+  const logout = () => {
+    authService.removeSession();
+    setSessionId(null);
+    setUser(null);
+    setError(null);
+  };
+
+  const loginDemo = () => {
+    const response = authService.createDemoSession();
+    authService.saveSession(response.sessionId, response.user);
+    setSessionId(response.sessionId);
+    setUser(response.user);
+    setError(null);
+  };
+
+  const clearError = () => {
+    setError(null);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        sessionId,
+        isAuthenticated: !!sessionId,
+        isLoading,
+        error,
+        login,
+        register,
+        loginDemo,
+        logout,
+        clearError,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth debe usarse dentro de AuthProvider");
   }
-
-  return context
-}
+  return context;
+};

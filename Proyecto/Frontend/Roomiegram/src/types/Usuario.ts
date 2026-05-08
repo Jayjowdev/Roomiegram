@@ -1,4 +1,4 @@
-export type UsuarioRole = "ADMIN" | "USER"
+export type UsuarioRole = "ADMIN" | "CLIENTE"
 
 export type UsuarioAuth = {
   id: number

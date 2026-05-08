@@ -1,13 +1,29 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute() {
-  const { isAuthenticated } = useAuth()
-  const location = useLocation()
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+/**
+ * Componente para proteger rutas que requieren autenticación
+ * Si no está logueado → Redirige a /login
+ * Si está logueado → Muestra el componente
+ */
+export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <p>Cargando...</p>
+      </div>
+    );
   }
 
-  return <Outlet />
-}
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};

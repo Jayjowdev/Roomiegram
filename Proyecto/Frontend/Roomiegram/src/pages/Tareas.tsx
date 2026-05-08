@@ -1,153 +1,117 @@
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useNavigate } from "react-router-dom"
-import logo from "../assets/Logo-removebg-preview.png"
-import { guardarTarea, listarTareas } from "../services/tareaService"
-import type { Tarea } from "../types/Tarea"
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Logo-removebg-preview.png";
+import { tareaService } from "../services/tareaService";
+import type { Tarea } from "../types/Backend";
 
-const tareaSchema = z.object({
-  titulo: z.string().trim().min(3, "Ingresa un título"),
-  encargado: z.string().trim().min(3, "Ingresa un responsable"),
-  descripcion: z.string().trim().min(10, "Agrega una descripción más clara"),
-  fecha: z.string().min(1, "Selecciona una fecha"),
-})
+const initialForm: Tarea = {
+  titulo: "",
+  encargado: "",
+  descripcion: "",
+  fecha: "",
+};
 
-type TareaFormInput = z.input<typeof tareaSchema>
-type TareaFormValues = z.output<typeof tareaSchema>
+const tareasDemo: Tarea[] = [
+  { id: 1, titulo: "Limpieza cocina", encargado: "Sofia", descripcion: "Limpiar meson, cocina y sacar reciclaje.", fecha: "2026-04-29" },
+  { id: 2, titulo: "Comprar utiles", encargado: "Camila", descripcion: "Reponer confort, detergente y bolsas.", fecha: "2026-04-30" },
+  { id: 3, titulo: "Orden living", encargado: "Daniela", descripcion: "Ordenar espacio comun antes del fin de semana.", fecha: "2026-05-02" },
+];
 
 export default function Tareas() {
-  const navigate = useNavigate()
-  const [tareas, setTareas] = useState<Tarea[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [fetchError, setFetchError] = useState("")
-  const [submitError, setSubmitError] = useState("")
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<TareaFormInput, unknown, TareaFormValues>({
-    resolver: zodResolver(tareaSchema),
-    defaultValues: {
-      titulo: "",
-      encargado: "",
-      descripcion: "",
-      fecha: "",
-    },
-  })
-
-  async function loadTareas() {
-    setFetchError("")
-
-    try {
-      const response = await listarTareas()
-      setTareas(response)
-    } catch (error) {
-      setFetchError(error instanceof Error ? error.message : "No se pudieron cargar las tareas")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const navigate = useNavigate();
+  const [tareas, setTareas] = useState<Tarea[]>(tareasDemo);
+  const [form, setForm] = useState<Tarea>(initialForm);
+  const [message, setMessage] = useState("Mostrando tareas demo.");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    void loadTareas()
-  }, [])
+    tareaService
+      .listar()
+      .then((data) => {
+        setTareas(data.length ? data : tareasDemo);
+        setMessage(data.length ? "" : "Mostrando tareas demo.");
+      })
+      .catch(() => setMessage("Mostrando tareas demo porque el servicio no esta disponible."));
+  }, []);
 
-  async function onSubmit(values: TareaFormValues) {
-    setSubmitError("")
+  const validateForm = () => {
+    if ((form.titulo || "").trim().length < 4) return "El titulo debe tener al menos 4 caracteres.";
+    if ((form.encargado || "").trim().length < 2) return "Ingresa un encargado valido.";
+    if ((form.descripcion || "").trim().length < 10) return "La descripcion debe tener al menos 10 caracteres.";
+    if (!form.fecha) return "Selecciona una fecha para la tarea.";
+    return "";
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
-      await guardarTarea(values)
-      reset()
-      await loadTareas()
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "No se pudo guardar la tarea")
+      const payload = {
+        ...form,
+        titulo: form.titulo?.trim(),
+        encargado: form.encargado?.trim(),
+        descripcion: form.descripcion?.trim(),
+      };
+      const creada = await tareaService.crear(payload);
+      setTareas((current) => [...current, creada]);
+      setMessage("Tarea creada correctamente.");
+    } catch {
+      setTareas((current) => [...current, { ...form, id: Date.now() }]);
+      setMessage("Tarea agregada en modo demo.");
+    } finally {
+      setForm(initialForm);
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
-    <div className="feature-page">
-      <header className="feature-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/dashboard")} />
-
-        <div className="feature-header-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Dashboard</button>
-          <button className="btn btn-success" onClick={() => navigate("/gastos")}>Gastos</button>
+    <div className="module-page">
+      <header className="module-header">
+        <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
         </div>
       </header>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Nueva tarea</h2>
-            <p>Formulario conectado al microservicio de tareas con validación zod.</p>
-          </div>
-        </div>
-
-        <form className="feature-form" onSubmit={handleSubmit(onSubmit)}>
-          <div className="feature-grid">
-            <div>
-              <label className="feature-label">Título</label>
-              <input className="form-control" {...register("titulo")} />
-              {errors.titulo ? <p className="form-error">{errors.titulo.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Encargado</label>
-              <input className="form-control" {...register("encargado")} />
-              {errors.encargado ? <p className="form-error">{errors.encargado.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Fecha</label>
-              <input className="form-control" type="date" {...register("fecha")} />
-              {errors.fecha ? <p className="form-error">{errors.fecha.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Descripción</label>
-              <textarea className="form-control feature-textarea" rows={3} {...register("descripcion")} />
-              {errors.descripcion ? <p className="form-error">{errors.descripcion.message}</p> : null}
-            </div>
-          </div>
-
-          {submitError ? <p className="form-error">{submitError}</p> : null}
-
-          <div className="feature-actions">
-            <button type="submit" className="btn btn-success" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Crear tarea"}
-            </button>
-          </div>
-        </form>
+      <section className="module-title">
+        <h1>Gestion de tareas</h1>
+        <p>Organiza responsabilidades domesticas con encargado y fecha.</p>
       </section>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Tareas registradas</h2>
-            <p>Datos obtenidos desde `GET /tareas/listar`.</p>
-          </div>
+      {message && <p className="api-message">{message}</p>}
+
+      <section className="module-layout">
+        <form className="module-form" onSubmit={handleSubmit}>
+          <h3>Nueva tarea</h3>
+          <input className="form-control" placeholder="Titulo" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
+          <input className="form-control" placeholder="Encargado" value={form.encargado} onChange={(e) => setForm({ ...form, encargado: e.target.value })} required />
+          <textarea className="form-control" placeholder="Descripcion" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
+          <input className="form-control" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required />
+          <button className="btn btn-success w-100" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar tarea"}</button>
+        </form>
+
+        <div className="module-list">
+          <h3>Tareas registradas</h3>
+          {tareas.map((tarea) => (
+            <article className="module-item" key={tarea.id || `${tarea.titulo}-${tarea.fecha}`}>
+              <h4>{tarea.titulo}</h4>
+              <p>{tarea.descripcion}</p>
+              <span>{tarea.encargado} - {tarea.fecha}</span>
+            </article>
+          ))}
         </div>
-
-        {isLoading ? <div className="feature-empty">Cargando tareas...</div> : null}
-        {!isLoading && fetchError ? <div className="feature-empty">{fetchError}</div> : null}
-        {!isLoading && !fetchError && tareas.length === 0 ? <div className="feature-empty">No hay tareas registradas.</div> : null}
-
-        {!isLoading && !fetchError && tareas.length > 0 ? (
-          <div className="feature-list">
-            {tareas.map((tarea) => (
-              <article key={tarea.id} className="feature-item">
-                <h3>{tarea.titulo}</h3>
-                <p><strong>Encargado:</strong> {tarea.encargado}</p>
-                <p><strong>Fecha:</strong> {tarea.fecha}</p>
-                <p>{tarea.descripcion}</p>
-              </article>
-            ))}
-          </div>
-        ) : null}
       </section>
     </div>
-  )
+  );
 }

@@ -26,3 +26,23 @@ export async function solicitarIngresoHogar(hogarId: number, usuarioId: number) 
     throw new Error(getApiErrorMessage(error))
   }
 }
+
+export async function eliminarHogar(id: number, administradorId: number) {
+  try {
+    await hogarApi.delete(`/hogares/${id}`, {
+      params: { administradorId },
+    })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export const hogarService = {
+  listar: listarHogares,
+  crear: crearHogar,
+  solicitarIngreso: (hogarId: number, payload: { usuarioId: number }) =>
+    hogarApi
+      .post(`/hogares/${hogarId}/solicitudes`, payload)
+      .then(({ data }) => data),
+  eliminar: eliminarHogar,
+}

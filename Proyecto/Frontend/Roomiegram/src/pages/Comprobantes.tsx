@@ -1,177 +1,110 @@
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { useNavigate } from "react-router-dom"
-import logo from "../assets/Logo-removebg-preview.png"
-import { useAuth } from "../context/AuthContext"
-import { crearComprobante } from "../services/comprobanteService"
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Logo-removebg-preview.png";
+import { useAuth } from "../context/AuthContext";
+import { comprobanteService } from "../services/comprobanteService";
+import type { Comprobante } from "../types/Backend";
 
-type ComprobanteFormInput = {
-  hogarCuentaId: number | string
-  montoPagado: number | string
-  observacion: string
-  archivo: File | undefined
-}
-
-function fileToBase64(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result.split(",")[1] ?? "" : ""
-      resolve(result)
-    }
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo"))
-    reader.readAsDataURL(file)
-  })
-}
+const comprobantesDemo: Comprobante[] = [
+  { id: 1, hogarCuentaId: 1, usuarioId: 1, nombreArchivo: "transferencia-internet.pdf", tipoContenido: "application/pdf", tamanoArchivo: 182000, montoPagado: 12990, observacion: "Pago internet abril", fechaSubida: "2026-04-26T19:00:00", archivo: "" },
+];
 
 export default function Comprobantes() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const [submitError, setSubmitError] = useState("")
-  const [submitMessage, setSubmitMessage] = useState("")
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<ComprobanteFormInput>({
-    defaultValues: {
-      hogarCuentaId: "",
-      montoPagado: "",
-      observacion: "",
-      archivo: undefined,
-    },
-  })
-  const archivoField = register("archivo", {
-    validate: (value) => value instanceof File || "Selecciona un archivo",
-  })
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [comprobantes, setComprobantes] = useState<Comprobante[]>(comprobantesDemo);
+  const [hogarCuentaId, setHogarCuentaId] = useState("1");
+  const [montoPagado, setMontoPagado] = useState("");
+  const [nombreArchivo, setNombreArchivo] = useState("");
+  const [observacion, setObservacion] = useState("");
+  const [message, setMessage] = useState("Mostrando comprobantes demo.");
+  const [isSaving, setIsSaving] = useState(false);
 
-  async function onSubmit(values: ComprobanteFormInput) {
-    if (!user) {
-      setSubmitError("Debes iniciar sesión para subir comprobantes")
-      return
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (Number(hogarCuentaId) <= 0) {
+      setMessage("Ingresa una cuenta del hogar valida.");
+      return;
+    }
+    if (Number(montoPagado) <= 0) {
+      setMessage("El monto pagado debe ser mayor a cero.");
+      return;
+    }
+    if (nombreArchivo.trim().length < 3 || !nombreArchivo.includes(".")) {
+      setMessage("Ingresa un nombre de archivo valido con extension.");
+      return;
     }
 
-    setSubmitError("")
-    setSubmitMessage("")
+    setIsSaving(true);
+    const nombreArchivoLimpio = nombreArchivo.trim();
+    const payload: Comprobante = {
+      hogarCuentaId: Number(hogarCuentaId),
+      usuarioId: user?.id || 1,
+      nombreArchivo: nombreArchivoLimpio,
+      tipoContenido: "text/plain",
+      tamanoArchivo: nombreArchivoLimpio.length,
+      montoPagado: Number(montoPagado),
+      observacion: observacion.trim(),
+      archivo: btoa(`Comprobante registrado desde frontend: ${nombreArchivoLimpio}`),
+    };
 
     try {
-      if (!values.archivo) {
-        setSubmitError("Selecciona un archivo antes de enviar")
-        return
-      }
-
-      const archivo = await fileToBase64(values.archivo)
-
-      await crearComprobante({
-        hogarCuentaId: Number(values.hogarCuentaId),
-        usuarioId: user.id,
-        nombreArchivo: values.archivo.name,
-        tipoContenido: values.archivo.type || "application/octet-stream",
-        tamanoArchivo: values.archivo.size,
-        montoPagado: Number(values.montoPagado),
-        observacion: values.observacion,
-        archivo,
-      })
-
-      setSubmitMessage("Comprobante enviado correctamente.")
-      reset()
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "No se pudo subir el comprobante")
+      const creado = await comprobanteService.crear(payload);
+      setComprobantes((current) => [creado, ...current]);
+      setMessage("Comprobante registrado correctamente.");
+    } catch {
+      setComprobantes((current) => [{ ...payload, id: Date.now(), fechaSubida: new Date().toISOString() }, ...current]);
+      setMessage("Comprobante agregado en modo demo.");
+    } finally {
+      setHogarCuentaId("1");
+      setMontoPagado("");
+      setNombreArchivo("");
+      setObservacion("");
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
-    <div className="feature-page">
-      <header className="feature-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/dashboard")} />
-
-        <div className="feature-header-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/gastos")}>Gastos</button>
-          <button className="btn btn-success" onClick={() => navigate("/notificaciones")}>Notificaciones</button>
+    <div className="module-page">
+      <header className="module-header">
+        <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
         </div>
       </header>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Subir comprobante</h2>
-            <p>El formulario valida archivo, monto y cuenta antes de enviar el payload al microservicio.</p>
-          </div>
-        </div>
+      <section className="module-title">
+        <h1>Pagos y comprobantes</h1>
+        <p>Registra pagos asociados a una cuenta del hogar.</p>
+      </section>
 
-        <form className="feature-form" onSubmit={handleSubmit(onSubmit)}>
-          <div className="feature-grid">
-            <div>
-              <label className="feature-label">ID de hogar cuenta</label>
-              <input
-                className="form-control"
-                type="number"
-                min="1"
-                {...register("hogarCuentaId", {
-                  required: "Ingresa un ID de cuenta válido",
-                  validate: (value) => Number(value) > 0 || "Ingresa un ID de cuenta válido",
-                })}
-              />
-              {errors.hogarCuentaId ? <p className="form-error">{errors.hogarCuentaId.message}</p> : null}
-            </div>
+      {message && <p className="api-message">{message}</p>}
 
-            <div>
-              <label className="feature-label">Monto pagado</label>
-              <input
-                className="form-control"
-                type="number"
-                min="1"
-                step="0.01"
-                {...register("montoPagado", {
-                  required: "El monto debe ser mayor a 0",
-                  validate: (value) => Number(value) > 0 || "El monto debe ser mayor a 0",
-                })}
-              />
-              {errors.montoPagado ? <p className="form-error">{errors.montoPagado.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Archivo</label>
-              <input
-                className="form-control"
-                type="file"
-                name={archivoField.name}
-                ref={archivoField.ref}
-                onBlur={archivoField.onBlur}
-                onChange={(event) => setValue("archivo", event.target.files?.[0], { shouldValidate: true, shouldDirty: true })}
-              />
-              {errors.archivo ? <p className="form-error">{errors.archivo.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Observación</label>
-              <textarea
-                className="form-control feature-textarea"
-                rows={3}
-                {...register("observacion", {
-                  required: "Agrega una observación",
-                  minLength: {
-                    value: 5,
-                    message: "Agrega una observación",
-                  },
-                })}
-              />
-              {errors.observacion ? <p className="form-error">{errors.observacion.message}</p> : null}
-            </div>
-          </div>
-
-          {submitError ? <p className="form-error">{submitError}</p> : null}
-          {submitMessage ? <p className="form-success">{submitMessage}</p> : null}
-
-          <div className="feature-actions">
-            <button type="submit" className="btn btn-success" disabled={isSubmitting}>
-              {isSubmitting ? "Subiendo..." : "Subir comprobante"}
-            </button>
-          </div>
+      <section className="module-layout">
+        <form className="module-form" onSubmit={handleSubmit}>
+          <h3>Nuevo comprobante</h3>
+          <input className="form-control" placeholder="ID de cuenta del hogar" type="number" min="1" value={hogarCuentaId} onChange={(e) => setHogarCuentaId(e.target.value)} required />
+          <input className="form-control" placeholder="Monto pagado" type="number" min="1" value={montoPagado} onChange={(e) => setMontoPagado(e.target.value)} required />
+          <input className="form-control" placeholder="Nombre del archivo" value={nombreArchivo} onChange={(e) => setNombreArchivo(e.target.value)} required />
+          <textarea className="form-control" placeholder="Observacion" value={observacion} onChange={(e) => setObservacion(e.target.value)} />
+          <button className="btn btn-success w-100" disabled={isSaving}>{isSaving ? "Registrando..." : "Registrar comprobante"}</button>
         </form>
+
+        <div className="module-list">
+          <h3>Comprobantes recientes</h3>
+          {comprobantes.map((comprobante) => (
+            <article className="module-item" key={comprobante.id || comprobante.nombreArchivo}>
+              <h4>{comprobante.nombreArchivo}</h4>
+              <p>${Number(comprobante.montoPagado).toLocaleString("es-CL")}</p>
+              <span>Cuenta {comprobante.hogarCuentaId} - Usuario {comprobante.usuarioId}</span>
+            </article>
+          ))}
+        </div>
       </section>
     </div>
-  )
+  );
 }

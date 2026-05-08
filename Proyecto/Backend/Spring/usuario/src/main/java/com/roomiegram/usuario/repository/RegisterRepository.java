@@ -14,4 +14,6 @@ public interface RegisterRepository extends JpaRepository<Register, Long> {
 
     Optional<Register> findByUsuario(String usuario);
 
+    Optional<Register> findByCorreo(String correo);
+
 }

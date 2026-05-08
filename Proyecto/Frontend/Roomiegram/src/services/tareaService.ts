@@ -18,3 +18,8 @@ export async function guardarTarea(payload: CreateTareaPayload) {
     throw new Error(getApiErrorMessage(error))
   }
 }
+
+export const tareaService = {
+  listar: listarTareas,
+  crear: guardarTarea,
+}

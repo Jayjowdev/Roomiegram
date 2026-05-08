@@ -38,13 +38,14 @@ public class LoginController {
 
             Login login = loginService.autenticarUsuario(usuario, contrasena);
 
-            Optional<Register> reg = registerRepository.findByUsuario(usuario);
-            String nombre = reg.map(Register::getNombre).orElse(usuario);
+            Optional<Register> reg = registerRepository.findByUsuario(login.getUsuario());
+            Long id = reg.map(Register::getId).orElse(login.getId());
+            String nombre = reg.map(Register::getNombre).orElse(login.getUsuario());
             String correo = reg.map(Register::getCorreo).orElse("");
 
             // Retornar informacion del usuario autenticado (sin la contraseña)
             return ResponseEntity.ok(Map.of(
-                "id", login.getId(),
+                "id", id,
                 "usuario", login.getUsuario(),
                 "nombre", nombre,
                 "correo", correo,

@@ -1,155 +1,121 @@
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useNavigate } from "react-router-dom"
-import logo from "../assets/Logo-removebg-preview.png"
-import { crearHogarCuenta, eliminarHogarCuenta, listarHogarCuentas } from "../services/hogarCuentaService"
-import type { HogarCuenta } from "../types/HogarCuenta"
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Logo-removebg-preview.png";
+import { gastoService } from "../services/gastoService";
+import type { CuentaDeudor, HogarCuenta } from "../types/Backend";
 
-const gastoSchema = z.object({
-  descripcion: z.string().trim().min(3, "Ingresa una descripción"),
-  monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
-})
+const gastosDemo: HogarCuenta[] = [
+  { id: 1, descripcion: "Internet abril", monto: 38970, montoPorPersona: 12990, deudores: [{ usuarioId: 1, montoAdeudado: 12990 }, { usuarioId: 2, montoAdeudado: 12990 }, { usuarioId: 3, montoAdeudado: 12990 }] },
+  { id: 2, descripcion: "Compra supermercado", monto: 64500, montoPorPersona: 21500, deudores: [{ usuarioId: 1, montoAdeudado: 21500 }, { usuarioId: 2, montoAdeudado: 21500 }, { usuarioId: 3, montoAdeudado: 21500 }] },
+];
 
-type GastoFormInput = z.input<typeof gastoSchema>
-type GastoFormValues = z.output<typeof gastoSchema>
+function parseDeudores(value: string, monto: number): CuentaDeudor[] {
+  const ids = value.split(",").map((id) => Number(id.trim())).filter((id) => Number.isFinite(id) && id > 0);
+  const montoAdeudado = ids.length ? Math.round(monto / ids.length) : undefined;
+  return ids.map((usuarioId) => ({ usuarioId, montoAdeudado }));
+}
 
 export default function Gastos() {
-  const navigate = useNavigate()
-  const [gastos, setGastos] = useState<HogarCuenta[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [fetchError, setFetchError] = useState("")
-  const [submitError, setSubmitError] = useState("")
-  const [actionError, setActionError] = useState("")
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<GastoFormInput, unknown, GastoFormValues>({
-    resolver: zodResolver(gastoSchema),
-    defaultValues: {
-      descripcion: "",
-      monto: 0,
-    },
-  })
-
-  async function loadGastos() {
-    setFetchError("")
-
-    try {
-      const response = await listarHogarCuentas()
-      setGastos(response)
-    } catch (error) {
-      setFetchError(error instanceof Error ? error.message : "No se pudieron cargar los gastos")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const navigate = useNavigate();
+  const [gastos, setGastos] = useState<HogarCuenta[]>(gastosDemo);
+  const [descripcion, setDescripcion] = useState("");
+  const [monto, setMonto] = useState("");
+  const [deudores, setDeudores] = useState("1,2,3");
+  const [message, setMessage] = useState("Mostrando gastos demo.");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    void loadGastos()
-  }, [])
+    gastoService
+      .listar()
+      .then((data) => {
+        setGastos(data.length ? data : gastosDemo);
+        setMessage(data.length ? "" : "Mostrando gastos demo.");
+      })
+      .catch(() => setMessage("Mostrando gastos demo porque el servicio no está disponible."));
+  }, []);
 
-  async function onSubmit(values: GastoFormValues) {
-    setSubmitError("")
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setMessage("");
+
+    const montoNumerico = Number(monto);
+    const deudoresParseados = parseDeudores(deudores, montoNumerico);
+
+    if (descripcion.trim().length < 4) {
+      setMessage("La descripción del gasto debe tener al menos 4 caracteres.");
+      return;
+    }
+    if (!Number.isFinite(montoNumerico) || montoNumerico <= 0) {
+      setMessage("El monto debe ser mayor a cero.");
+      return;
+    }
+    if (deudores.trim() && deudoresParseados.length === 0) {
+      setMessage("Ingresa IDs de deudores válidos separados por coma.");
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
-      await crearHogarCuenta(values)
-      reset()
-      await loadGastos()
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "No se pudo guardar el gasto")
+      const creado = await gastoService.crear({ descripcion: descripcion.trim(), monto: montoNumerico, deudores: deudoresParseados });
+      setGastos((current) => [...current, creado]);
+      setMessage("Gasto creado correctamente.");
+    } catch {
+      setGastos((current) => [...current, { id: Date.now(), descripcion: descripcion.trim(), monto: montoNumerico, deudores: deudoresParseados, montoPorPersona: deudoresParseados[0]?.montoAdeudado }]);
+      setMessage("Gasto agregado en modo demo.");
+    } finally {
+      setDescripcion("");
+      setMonto("");
+      setDeudores("1,2,3");
+      setIsSaving(false);
     }
-  }
-
-  async function handleEliminar(id: number) {
-    setActionError("")
-
-    try {
-      await eliminarHogarCuenta(id)
-      await loadGastos()
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "No se pudo eliminar el gasto")
-    }
-  }
+  };
 
   return (
-    <div className="feature-page">
-      <header className="feature-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/dashboard")} />
-
-        <div className="feature-header-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/tareas")}>Tareas</button>
-          <button className="btn btn-success" onClick={() => navigate("/comprobantes")}>Comprobantes</button>
+    <div className="module-page">
+      <header className="module-header">
+        <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
         </div>
       </header>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Registrar gasto</h2>
-            <p>Formulario conectado al microservicio `hogar-cuentas` con validación previa.</p>
-          </div>
-        </div>
-
-        <form className="feature-form" onSubmit={handleSubmit(onSubmit)}>
-          <div className="feature-grid">
-            <div>
-              <label className="feature-label">Descripción</label>
-              <input className="form-control" {...register("descripcion")} />
-              {errors.descripcion ? <p className="form-error">{errors.descripcion.message}</p> : null}
-            </div>
-
-            <div>
-              <label className="feature-label">Monto</label>
-              <input className="form-control" type="number" min="1" step="0.01" {...register("monto")} />
-              {errors.monto ? <p className="form-error">{errors.monto.message}</p> : null}
-            </div>
-          </div>
-
-          {submitError ? <p className="form-error">{submitError}</p> : null}
-
-          <div className="feature-actions">
-            <button type="submit" className="btn btn-success" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Registrar gasto"}
-            </button>
-          </div>
-        </form>
+      <section className="module-title">
+        <h1>Gestión de gastos</h1>
+        <p>Registra cuentas compartidas para controlar montos y división de pagos.</p>
       </section>
 
-      <section className="feature-panel">
-        <div className="feature-panel-header">
-          <div>
-            <h2>Gastos registrados</h2>
-            <p>Lista obtenida desde `GET /hogar-cuentas`.</p>
-          </div>
-        </div>
+      {message && <p className="api-message">{message}</p>}
 
-        {actionError ? <p className="form-error">{actionError}</p> : null}
-        {isLoading ? <div className="feature-empty">Cargando gastos...</div> : null}
-        {!isLoading && fetchError ? <div className="feature-empty">{fetchError}</div> : null}
-        {!isLoading && !fetchError && gastos.length === 0 ? <div className="feature-empty">No hay gastos registrados.</div> : null}
+      <section className="module-layout">
+        <form className="module-form" onSubmit={handleSubmit}>
+          <h3>Nuevo gasto</h3>
+          <input className="form-control" placeholder="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+          <input className="form-control" placeholder="Monto" type="number" min="1" value={monto} onChange={(e) => setMonto(e.target.value)} required />
+          <input className="form-control" placeholder="IDs de deudores separados por coma" value={deudores} onChange={(e) => setDeudores(e.target.value)} />
+          <button className="btn btn-success w-100" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar gasto"}</button>
+        </form>
 
-        {!isLoading && !fetchError && gastos.length > 0 ? (
-          <div className="feature-list">
-            {gastos.map((gasto) => (
-              <article key={gasto.id} className="feature-item">
-                <h3>{gasto.descripcion}</h3>
-                <p><strong>Monto:</strong> ${gasto.monto}</p>
-                <p><strong>Deudores:</strong> {gasto.deudores.length}</p>
-
-                <div className="feature-item-actions">
-                  <button className="btn btn-outline-danger" onClick={() => void handleEliminar(gasto.id)}>
-                    Eliminar
-                  </button>
+        <div className="module-list">
+          <h3>Gastos registrados</h3>
+          {gastos.map((gasto) => (
+            <article className="module-item" key={gasto.id || gasto.descripcion}>
+              <h4>{gasto.descripcion}</h4>
+              <p>${Number(gasto.monto).toLocaleString("es-CL")}</p>
+              <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · $${Number(gasto.montoPorPersona).toLocaleString("es-CL")} por persona` : ""}</span>
+              {(gasto.deudores?.length || 0) > 0 && (
+                <div className="home-tags mt-3">
+                  {gasto.deudores?.map((deudor) => (
+                    <span className="home-tag" key={deudor.id || deudor.usuarioId}>Usuario {deudor.usuarioId}{deudor.montoAdeudado ? `: $${Number(deudor.montoAdeudado).toLocaleString("es-CL")}` : ""}</span>
+                  ))}
                 </div>
-              </article>
-            ))}
-          </div>
-        ) : null}
+              )}
+            </article>
+          ))}
+        </div>
       </section>
     </div>
-  )
+  );
 }

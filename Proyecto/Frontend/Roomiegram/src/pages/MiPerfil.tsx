@@ -1,3 +1,5 @@
+import { useState } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import img1 from "../assets/person1.jpeg";
@@ -8,14 +10,41 @@ import avatarUser from "../assets/avatarUser.svg";
 import { useAuth } from "../context/AuthContext";
 
 const grupoRoomie = [
-  { nombre: "Sofía", rol: "Arriendo", estado: "Al día", imagen: img1 },
+  { nombre: "Sofia", rol: "Arriendo", estado: "Al dia", imagen: img1 },
   { nombre: "Camila", rol: "Servicios", estado: "Pendiente luz", imagen: img2 },
   { nombre: "Daniela", rol: "Compras", estado: "Turno cocina", imagen: img3 },
 ];
 
 export default function MiPerfil() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateProfilePhoto } = useAuth();
+  const [message, setMessage] = useState("");
+  const profileImage = user?.fotoPerfil || avatarUser;
+
+  const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("Sube una imagen valida para tu perfil.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage("La foto de perfil debe pesar menos de 2 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        updateProfilePhoto(reader.result).then(() => {
+          setMessage("Foto de perfil actualizada.");
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="perfil-page">
@@ -29,13 +58,21 @@ export default function MiPerfil() {
         </button>
       </header>
 
+      {message && <p className="api-message">{message}</p>}
+
       <section className="mi-perfil-hero">
         <div className="mi-perfil-card">
-          <img src={avatarUser} alt="Martina" />
+          <div className="profile-photo-editor">
+            <img src={profileImage} alt={user?.nombre || "Mi perfil"} />
+            <label className="btn btn-outline-success">
+              Cambiar foto
+              <input type="file" accept="image/*" onChange={handleProfilePhoto} />
+            </label>
+          </div>
           <div>
             <span className="demo-kicker">Mi perfil</span>
             <h1>{user?.nombre || "Martina"}</h1>
-            <p>Busco convivencia tranquila, ordenada y con buena comunicación.</p>
+            <p>Busco convivencia tranquila, ordenada y con buena comunicacion.</p>
             <div className="home-tags">
               <span className="home-tag">No fumador</span>
               <span className="home-tag">Madrugador</span>
@@ -53,7 +90,7 @@ export default function MiPerfil() {
             Buscar matches
           </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/home?crear=1")}>
-            Crear publicación
+            Crear publicacion
           </button>
         </aside>
       </section>

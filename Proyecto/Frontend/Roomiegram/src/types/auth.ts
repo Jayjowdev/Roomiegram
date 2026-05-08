@@ -17,6 +17,7 @@ export type UserSession = {
   nombre: string
   correo: string
   role: "ADMIN" | "CLIENTE"
+  fotoPerfil?: string
 }
 
 export type AuthResponse = {

@@ -42,6 +42,7 @@ public class LoginController {
             Long id = reg.map(Register::getId).orElse(login.getId());
             String nombre = reg.map(Register::getNombre).orElse(login.getUsuario());
             String correo = reg.map(Register::getCorreo).orElse("");
+            String fotoPerfil = reg.map(Register::getFotoPerfil).orElse("");
 
             // Retornar informacion del usuario autenticado (sin la contraseña)
             return ResponseEntity.ok(Map.of(
@@ -49,6 +50,7 @@ public class LoginController {
                 "usuario", login.getUsuario(),
                 "nombre", nombre,
                 "correo", correo,
+                "fotoPerfil", fotoPerfil == null ? "" : fotoPerfil,
                 "role", login.getRole().name(),
                 "mensaje", "Login exitoso"
             ));

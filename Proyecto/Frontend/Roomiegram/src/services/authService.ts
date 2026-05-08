@@ -29,6 +29,7 @@ function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
     nombre: data.nombre,
     correo: data.correo,
     role: "role" in data ? data.role : "CLIENTE",
+    fotoPerfil: "fotoPerfil" in data ? data.fotoPerfil : undefined,
   }
 }
 
@@ -48,6 +49,11 @@ export const authService = {
   async register(userData: RegisterRequest) {
     const user = await register(userData)
     return createSession(normalizeUser(user))
+  },
+
+  async updateProfilePhoto(userId: number, fotoPerfil: string) {
+    const { data } = await usuarioApi.put<UsuarioAuth>(`/auth/profile/${userId}/foto`, { fotoPerfil })
+    return normalizeUser(data)
   },
 
   saveSession(sessionId: string, user: UserSession) {

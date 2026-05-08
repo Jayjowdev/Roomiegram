@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,4 +36,8 @@ public class Register {
 
     @Column(nullable = false, length = 100)
     private String telefono;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String fotoPerfil;
 }

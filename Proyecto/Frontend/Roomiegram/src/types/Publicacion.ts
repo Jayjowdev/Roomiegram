@@ -20,6 +20,7 @@ export type Publicacion = {
   amenidades?: string[]
   imagen?: string
   galeria?: string[]
+  origen?: "demo" | "backend" | "demo-local"
 }
 
 export type CreatePublicacionPayload = {
@@ -31,4 +32,6 @@ export type CreatePublicacionPayload = {
   numeroHabitaciones: number
   numeroPersonas: number
   numeroBanos: number
+  imagen?: string
+  galeria?: string[]
 }

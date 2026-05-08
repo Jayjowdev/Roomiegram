@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { AuthProvider } from "./context/AuthContext"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"
@@ -20,27 +19,24 @@ import Hogares from "./pages/Hogares"
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* RUTAS PROTEGIDAS */}
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/compatibilidad" element={<ProtectedRoute><Compatibilidad /></ProtectedRoute>} />
-          <Route path="/convivencia" element={<ProtectedRoute><Convivencia /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
-          <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
-          <Route path="/publicaciones/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
-          <Route path="/tareas" element={<ProtectedRoute><Tareas /></ProtectedRoute>} />
-          <Route path="/gastos" element={<ProtectedRoute><Gastos /></ProtectedRoute>} />
-          <Route path="/comprobantes" element={<ProtectedRoute><Comprobantes /></ProtectedRoute>} />
-          <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
-          <Route path="/hogares" element={<ProtectedRoute><Hogares /></ProtectedRoute>} />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/compatibilidad" element={<ProtectedRoute><Compatibilidad /></ProtectedRoute>} />
+        <Route path="/convivencia" element={<ProtectedRoute><Convivencia /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
+        <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+        <Route path="/detalle-publicacion/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
+        <Route path="/publicaciones/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
+        <Route path="/tareas" element={<ProtectedRoute><Tareas /></ProtectedRoute>} />
+        <Route path="/gastos" element={<ProtectedRoute><Gastos /></ProtectedRoute>} />
+        <Route path="/comprobantes" element={<ProtectedRoute><Comprobantes /></ProtectedRoute>} />
+        <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
+        <Route path="/hogares" element={<ProtectedRoute><Hogares /></ProtectedRoute>} />
+      </Routes>
     </BrowserRouter>
   )
 }

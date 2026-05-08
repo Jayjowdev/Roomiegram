@@ -36,7 +36,9 @@ public class ComprobanteService {
 		comprobanteExistente.setTamanoArchivo(comprobanteActualizado.getTamanoArchivo());
 		comprobanteExistente.setMontoPagado(comprobanteActualizado.getMontoPagado());
 		comprobanteExistente.setObservacion(comprobanteActualizado.getObservacion());
-		comprobanteExistente.setFechaSubida(comprobanteActualizado.getFechaSubida());
+		if (comprobanteActualizado.getFechaSubida() != null) {
+			comprobanteExistente.setFechaSubida(comprobanteActualizado.getFechaSubida());
+		}
 		comprobanteExistente.setArchivo(comprobanteActualizado.getArchivo());
 
 		return comprobanteRepository.save(comprobanteExistente);

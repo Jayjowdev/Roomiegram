@@ -8,6 +8,8 @@ export type BackendPublicacion = {
   numeroHabitaciones?: number;
   numeroPersonas?: number;
   numeroBanos?: number;
+  imagen?: string;
+  galeria?: string[];
 };
 
 export type PublicacionRequest = {
@@ -19,6 +21,8 @@ export type PublicacionRequest = {
   numeroHabitaciones: number;
   numeroPersonas: number;
   numeroBanos: number;
+  imagen?: string;
+  galeria?: string[];
 };
 
 export type Tarea = {

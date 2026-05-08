@@ -13,6 +13,8 @@ interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
   loginDemo: () => void;
+  updateUser: (changes: Partial<UserSession>) => void;
+  updateProfilePhoto: (fotoPerfil: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -76,6 +78,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
   };
 
+  const updateUser = (changes: Partial<UserSession>) => {
+    setUser((current) => {
+      if (!current || !sessionId) return current;
+      const updated = { ...current, ...changes };
+      authService.saveSession(sessionId, updated);
+      return updated;
+    });
+  };
+
+  const updateProfilePhoto = async (fotoPerfil: string) => {
+    if (!user || !sessionId) return;
+
+    try {
+      const updated = await authService.updateProfilePhoto(user.id, fotoPerfil);
+      authService.saveSession(sessionId, updated);
+      setUser(updated);
+    } catch {
+      updateUser({ fotoPerfil });
+    }
+  };
+
   const loginDemo = () => {
     const response = authService.createDemoSession();
     authService.saveSession(response.sessionId, response.user);
@@ -99,6 +122,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         register,
         loginDemo,
+        updateUser,
+        updateProfilePhoto,
         logout,
         clearError,
       }}

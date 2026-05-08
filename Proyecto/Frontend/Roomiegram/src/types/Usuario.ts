@@ -6,6 +6,7 @@ export type UsuarioAuth = {
   nombre: string
   correo: string
   role: UsuarioRole
+  fotoPerfil?: string
 }
 
 export type RegisterPayload = {
@@ -22,6 +23,7 @@ export type RegisterResponse = {
   correo: string
   usuario: string
   telefono: string
+  fotoPerfil?: string
 }
 
 export type LoginPayload = {

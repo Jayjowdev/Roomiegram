@@ -1,0 +1,155 @@
+services:
+
+  # ── MySQL ──────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.4
+    container_name: roomiegram-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  # ── Microservicios ─────────────────────────────────────────────────────────
+  comprobante:
+    build: ./comprobante
+    container_name: roomiegram-comprobante
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  hogar:
+    build: ./hogar
+    container_name: roomiegram-hogar
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  hogarcuenta:
+    build: ./hogarcuenta
+    container_name: roomiegram-hogarcuenta
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  notificacion:
+    build: ./notificacion
+    container_name: roomiegram-notificacion
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  publicacion:
+    build: ./publicacion
+    container_name: roomiegram-publicacion
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  tarea:
+    build: ./tarea
+    container_name: roomiegram-tarea
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  usuario:
+    build: ./usuario
+    container_name: roomiegram-usuario
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: roomiegram
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  frontend:
+    build: ../../Frontend/Roomiegram
+    container_name: roomiegram-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Monta el código fuente para hot reload (cualquier cambio en src se refleja de inmediato)
+      - ../../Frontend/Roomiegram:/app
+      # Volumen anónimo: protege el node_modules del contenedor para que el host no lo sobreescriba
+      - /app/node_modules
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+# ── Volúmenes y redes ──────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+
+networks:
+  roomiegram-net:
+    driver: bridge

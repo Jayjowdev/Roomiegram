@@ -1,7 +1,12 @@
 package com.roomiegram.usuario.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
@@ -40,4 +45,17 @@ public class Register {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String fotoPerfil;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String descripcion;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Column(length = 100)
+    private List<String> intereses = new ArrayList<>();
+
+    private boolean estaEnCasa = false;
+
+    @Column(length = 150)
+    private String hogarActual;
 }

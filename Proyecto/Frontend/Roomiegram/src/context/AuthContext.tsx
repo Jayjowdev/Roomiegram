@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { authService } from "../services/authService";
-import type { LoginRequest, RegisterRequest, UserSession } from "../types/Auth";
+import type { LoginRequest, RegisterRequest, UserSession } from "../types/auth";
 
 interface AuthContextType {
   user: UserSession | null;
@@ -15,6 +15,7 @@ interface AuthContextType {
   loginDemo: () => void;
   updateUser: (changes: Partial<UserSession>) => void;
   updateProfilePhoto: (fotoPerfil: string) => Promise<void>;
+  updateProfile: (changes: Partial<UserSession>) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -99,6 +100,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateProfile = async (changes: Partial<UserSession>) => {
+    if (!user || !sessionId) return;
+
+    try {
+      const updated = await authService.updateProfile(user.id, changes);
+      authService.saveSession(sessionId, updated);
+      setUser(updated);
+    } catch {
+      updateUser(changes);
+    }
+  };
+
   const loginDemo = () => {
     const response = authService.createDemoSession();
     authService.saveSession(response.sessionId, response.user);
@@ -124,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginDemo,
         updateUser,
         updateProfilePhoto,
+        updateProfile,
         logout,
         clearError,
       }}

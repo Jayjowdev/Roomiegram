@@ -1,6 +1,5 @@
 services:
-
-  # ── MySQL ──────────────────────────────────────────────────────────────────
+  # MySQL
   mysql:
     image: mysql:8.4
     container_name: roomiegram-mysql
@@ -19,9 +18,9 @@ services:
     networks:
       - roomiegram-net
 
-  # ── Microservicios ─────────────────────────────────────────────────────────
+  # Microservicios
   comprobante:
-    build: ./comprobante
+    build: ./Proyecto/Backend/Spring/comprobante
     container_name: roomiegram-comprobante
     ports:
       - "8082:8082"
@@ -37,7 +36,7 @@ services:
     restart: on-failure
 
   hogar:
-    build: ./hogar
+    build: ./Proyecto/Backend/Spring/hogar
     container_name: roomiegram-hogar
     ports:
       - "8083:8083"
@@ -53,7 +52,7 @@ services:
     restart: on-failure
 
   hogarcuenta:
-    build: ./hogarcuenta
+    build: ./Proyecto/Backend/Spring/hogarcuenta
     container_name: roomiegram-hogarcuenta
     ports:
       - "8084:8084"
@@ -69,7 +68,7 @@ services:
     restart: on-failure
 
   notificacion:
-    build: ./notificacion
+    build: ./Proyecto/Backend/Spring/notificacion
     container_name: roomiegram-notificacion
     ports:
       - "8085:8085"
@@ -85,7 +84,7 @@ services:
     restart: on-failure
 
   publicacion:
-    build: ./publicacion
+    build: ./Proyecto/Backend/Spring/publicacion
     container_name: roomiegram-publicacion
     ports:
       - "8086:8086"
@@ -101,7 +100,7 @@ services:
     restart: on-failure
 
   tarea:
-    build: ./tarea
+    build: ./Proyecto/Backend/Spring/tarea
     container_name: roomiegram-tarea
     ports:
       - "8087:8087"
@@ -117,7 +116,7 @@ services:
     restart: on-failure
 
   usuario:
-    build: ./usuario
+    build: ./Proyecto/Backend/Spring/usuario
     container_name: roomiegram-usuario
     ports:
       - "8088:8088"
@@ -133,20 +132,17 @@ services:
     restart: on-failure
 
   frontend:
-    build: ../../Frontend/Roomiegram
+    build: ./Proyecto/Frontend/Roomiegram
     container_name: roomiegram-frontend
     ports:
       - "5173:5173"
     volumes:
-      # Monta el código fuente para hot reload (cualquier cambio en src se refleja de inmediato)
-      - ../../Frontend/Roomiegram:/app
-      # Volumen anónimo: protege el node_modules del contenedor para que el host no lo sobreescriba
+      - ./Proyecto/Frontend/Roomiegram:/app
       - /app/node_modules
     networks:
       - roomiegram-net
     restart: on-failure
 
-# ── Volúmenes y redes ──────────────────────────────────────────────────────
 volumes:
   mysql_data:
 

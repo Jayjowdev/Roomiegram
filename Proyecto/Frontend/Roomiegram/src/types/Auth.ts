@@ -18,6 +18,10 @@ export type UserSession = {
   correo: string
   role: "ADMIN" | "CLIENTE"
   fotoPerfil?: string
+  descripcion?: string
+  intereses?: string[]
+  estaEnCasa?: boolean
+  hogarActual?: string
 }
 
 export type AuthResponse = {

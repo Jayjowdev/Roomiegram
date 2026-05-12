@@ -1,5 +1,5 @@
 import { getApiErrorMessage, usuarioApi } from "../config/api"
-import type { AuthResponse, LoginRequest, RegisterRequest, UserSession } from "../types/Auth"
+import type { AuthResponse, LoginRequest, RegisterRequest, UserSession } from "../types/auth"
 import type { LoginPayload, RegisterPayload, RegisterResponse, UsuarioAuth } from "../types/Usuario"
 
 const AUTH_STORAGE_KEY = "roomiegram.session"
@@ -30,6 +30,10 @@ function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
     correo: data.correo,
     role: "role" in data ? data.role : "CLIENTE",
     fotoPerfil: "fotoPerfil" in data ? data.fotoPerfil : undefined,
+    descripcion: "descripcion" in data ? data.descripcion : undefined,
+    intereses: "intereses" in data ? data.intereses : undefined,
+    estaEnCasa: "estaEnCasa" in data ? data.estaEnCasa : undefined,
+    hogarActual: "hogarActual" in data ? data.hogarActual : undefined,
   }
 }
 
@@ -53,6 +57,11 @@ export const authService = {
 
   async updateProfilePhoto(userId: number, fotoPerfil: string) {
     const { data } = await usuarioApi.put<UsuarioAuth>(`/auth/profile/${userId}/foto`, { fotoPerfil })
+    return normalizeUser(data)
+  },
+
+  async updateProfile(userId: number, changes: Partial<UserSession>) {
+    const { data } = await usuarioApi.put<UsuarioAuth>(`/auth/profile/${userId}`, changes)
     return normalizeUser(data)
   },
 

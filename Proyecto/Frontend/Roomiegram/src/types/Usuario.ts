@@ -7,6 +7,10 @@ export type UsuarioAuth = {
   correo: string
   role: UsuarioRole
   fotoPerfil?: string
+  descripcion?: string
+  intereses?: string[]
+  estaEnCasa?: boolean
+  hogarActual?: string
 }
 
 export type RegisterPayload = {
@@ -24,6 +28,10 @@ export type RegisterResponse = {
   usuario: string
   telefono: string
   fotoPerfil?: string
+  descripcion?: string
+  intereses?: string[]
+  estaEnCasa?: boolean
+  hogarActual?: string
 }
 
 export type LoginPayload = {

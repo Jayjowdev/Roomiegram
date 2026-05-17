@@ -10,6 +10,7 @@ import Compatibilidad from "./pages/Compatibilidad"
 import Perfil from "./pages/Perfil"
 import MiPerfil from "./pages/MiPerfil"
 import DetallePublicacion from "./pages/DetallePublicacion"
+import CrearPublicacion from "./pages/CrearPublicacion"
 import Tareas from "./pages/Tareas"
 import Gastos from "./pages/Gastos"
 import Comprobantes from "./pages/Comprobantes"
@@ -26,10 +27,11 @@ export default function App() {
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/compatibilidad" element={<ProtectedRoute><Compatibilidad /></ProtectedRoute>} />
         <Route path="/convivencia" element={<ProtectedRoute><Convivencia /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute requireAdmin><Dashboard /></ProtectedRoute>} />
         <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
         <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/detalle-publicacion/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
+        <Route path="/crear-publicacion" element={<ProtectedRoute><CrearPublicacion /></ProtectedRoute>} />
         <Route path="/publicaciones/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
         <Route path="/tareas" element={<ProtectedRoute><Tareas /></ProtectedRoute>} />
         <Route path="/gastos" element={<ProtectedRoute><Gastos /></ProtectedRoute>} />

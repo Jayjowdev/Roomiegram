@@ -38,9 +38,7 @@ export default function Dashboard() {
       gastoService.listar(),
       notificacionService.listar(),
     ]).then(([publicaciones, hogares, tareas, gastos, notificaciones]) => {
-      if (!isMounted) {
-        return;
-      }
+      if (!isMounted) return;
 
       setStats({
         publicaciones: publicaciones.status === "fulfilled" ? publicaciones.value.length : 0,
@@ -51,7 +49,7 @@ export default function Dashboard() {
       });
 
       if ([publicaciones, hogares, tareas, gastos, notificaciones].some((result) => result.status === "rejected")) {
-        setMessage("Algunos servicios no están disponibles. El dashboard se mantiene operativo con datos parciales.");
+        setMessage("Servicio no disponible. Intenta nuevamente.");
       }
     });
 
@@ -71,7 +69,6 @@ export default function Dashboard() {
         <div className="dashboard-header-left">
           <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         </div>
-
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>
             Panel convivencia
@@ -80,15 +77,15 @@ export default function Dashboard() {
             Volver al inicio
           </button>
           <button className="btn btn-outline-dark" onClick={handleLogout}>
-            Cerrar sesión
+            Cerrar sesion
           </button>
         </div>
       </header>
 
       <section className="dashboard-welcome">
-        <h1>Dashboard de administración</h1>
+        <h1>Dashboard de administracion</h1>
         <p>
-          Hola, {user?.nombre || user?.usuario || "usuario"}. Administra módulos, publicaciones,
+          Hola, {user?.nombre || user?.usuario || "usuario"}. Administra modulos, publicaciones,
           hogares, tareas, gastos y notificaciones de RoomieGram.
         </p>
       </section>
@@ -120,42 +117,21 @@ export default function Dashboard() {
 
       <section className="dashboard-content">
         <div className="dashboard-activity">
-          <h4>Gestión administrativa</h4>
+          <h4>Gestion administrativa</h4>
           <div className="module-grid">
-            <button className="module-link" onClick={() => navigate("/hogares")}>
-              <strong>Administrar hogares</strong>
-              <span>Crear hogares y revisar solicitudes de ingreso.</span>
-            </button>
-            <button className="module-link" onClick={() => navigate("/tareas")}>
-              <strong>Administrar tareas</strong>
-              <span>Crear y revisar tareas registradas.</span>
-            </button>
-            <button className="module-link" onClick={() => navigate("/gastos")}>
-              <strong>Administrar gastos</strong>
-              <span>Revisar cuentas compartidas y montos.</span>
-            </button>
-            <button className="module-link" onClick={() => navigate("/comprobantes")}>
-              <strong>Administrar comprobantes</strong>
-              <span>Registrar pagos asociados a gastos.</span>
-            </button>
-            <button className="module-link" onClick={() => navigate("/notificaciones")}>
-              <strong>Administrar notificaciones</strong>
-              <span>Crear y revisar avisos del sistema.</span>
-            </button>
+            <button className="module-link" onClick={() => navigate("/hogares")}><strong>Administrar hogares</strong><span>Crear hogares y revisar solicitudes de ingreso.</span></button>
+            <button className="module-link" onClick={() => navigate("/tareas")}><strong>Administrar tareas</strong><span>Crear y revisar tareas registradas.</span></button>
+            <button className="module-link" onClick={() => navigate("/gastos")}><strong>Administrar gastos</strong><span>Revisar cuentas compartidas y montos.</span></button>
+            <button className="module-link" onClick={() => navigate("/comprobantes")}><strong>Administrar comprobantes</strong><span>Registrar pagos asociados a gastos.</span></button>
+            <button className="module-link" onClick={() => navigate("/notificaciones")}><strong>Administrar notificaciones</strong><span>Crear y revisar avisos del sistema.</span></button>
           </div>
         </div>
 
         <div className="dashboard-profile">
-          <h4>Sesión administrativa</h4>
-          <p>
-            <strong>Nombre:</strong> {user?.nombre || "No informado"}
-          </p>
-          <p>
-            <strong>Usuario:</strong> {user?.usuario || "No informado"}
-          </p>
-          <p>
-            <strong>Rol:</strong> {user?.role || "CLIENTE"}
-          </p>
+          <h4>Sesion administrativa</h4>
+          <p><strong>Nombre:</strong> {user?.nombre || "No informado"}</p>
+          <p><strong>Usuario:</strong> {user?.usuario || "No informado"}</p>
+          <p><strong>Rol:</strong> {user?.role || "CLIENTE"}</p>
         </div>
       </section>
     </div>

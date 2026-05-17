@@ -82,7 +82,6 @@ services:
     networks:
       - roomiegram-net
     restart: on-failure
-
   publicacion:
     build: ./Proyecto/Backend/Spring/publicacion
     container_name: roomiegram-publicacion

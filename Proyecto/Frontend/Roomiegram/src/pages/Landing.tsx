@@ -7,7 +7,6 @@ const previewLinks = [
   { label: "Home", path: "/home" },
   { label: "Compatibilidad", path: "/compatibilidad" },
   { label: "Convivencia", path: "/convivencia" },
-  { label: "Admin", path: "/dashboard" },
   { label: "Hogares", path: "/hogares" },
   { label: "Tareas", path: "/tareas" },
   { label: "Gastos", path: "/gastos" },

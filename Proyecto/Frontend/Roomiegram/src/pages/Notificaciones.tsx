@@ -16,11 +16,6 @@ const initialForm: Notificacion = {
   mensaje: "",
 };
 
-const notificacionesDemo: Notificacion[] = [
-  { id: 1, usuarioEmisorId: 1, usuarioReceptorId: 2, hogarId: 1, tipo: "TAREA_HOGAR", estado: "PENDIENTE", titulo: "Turno de cocina", mensaje: "Hoy corresponde limpiar la cocina compartida.", fechaCreacion: "2026-04-27T10:00:00" },
-  { id: 2, usuarioEmisorId: 2, usuarioReceptorId: 1, hogarId: 1, tipo: "CUENTA_HOGAR", estado: "LEIDA", titulo: "Internet disponible", mensaje: "La cuenta de internet ya fue registrada para el mes.", fechaCreacion: "2026-04-26T18:30:00" },
-];
-
 function formatDate(value?: string) {
   return value ? new Date(value).toLocaleString("es-CL") : "Sin fecha";
 }
@@ -28,19 +23,19 @@ function formatDate(value?: string) {
 export default function Notificaciones() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(notificacionesDemo);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [form, setForm] = useState<Notificacion>({ ...initialForm, usuarioEmisorId: user?.id || 1 });
-  const [message, setMessage] = useState("Mostrando notificaciones demo.");
+  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     notificacionService
       .listar()
       .then((data) => {
-        setNotificaciones(data.length ? data : notificacionesDemo);
-        setMessage(data.length ? "" : "Mostrando notificaciones demo.");
+        setNotificaciones(data);
+        setMessage(data.length ? "" : "No hay notificaciones registradas.");
       })
-      .catch(() => setMessage("Mostrando notificaciones demo porque el servicio no esta disponible."));
+      .catch(() => setMessage("Servicio no disponible. Intenta nuevamente."));
   }, []);
 
   const validateForm = () => {
@@ -56,10 +51,7 @@ export default function Notificaciones() {
     setMessage("");
 
     const validationError = validateForm();
-    if (validationError) {
-      setMessage(validationError);
-      return;
-    }
+    if (validationError) return setMessage(validationError);
 
     setIsSaving(true);
     const payload = {
@@ -75,11 +67,10 @@ export default function Notificaciones() {
       const creada = await notificacionService.crear(payload);
       setNotificaciones((current) => [creada, ...current]);
       setMessage("Notificacion creada correctamente.");
-    } catch {
-      setNotificaciones((current) => [{ ...payload, id: Date.now(), fechaCreacion: new Date().toISOString() }, ...current]);
-      setMessage("Notificacion agregada en modo demo.");
-    } finally {
       setForm({ ...initialForm, usuarioEmisorId: user?.id || 1 });
+    } catch {
+      setMessage("Servicio no disponible. Intenta nuevamente.");
+    } finally {
       setIsSaving(false);
     }
   };
@@ -90,7 +81,9 @@ export default function Notificaciones() {
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
-          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
+          {user?.role === "ADMIN" && (
+            <button className="btn btn-outline-success" onClick={() => navigate("/dashboard")}>Admin</button>
+          )}
         </div>
       </header>
 
@@ -120,7 +113,9 @@ export default function Notificaciones() {
 
         <div className="module-list">
           <h3>Notificaciones registradas</h3>
-          {notificaciones.map((notificacion) => (
+          {notificaciones.length === 0 ? (
+            <div className="sin-resultados"><p>No hay notificaciones registradas.</p></div>
+          ) : notificaciones.map((notificacion) => (
             <article className="module-item" key={notificacion.id || notificacion.titulo}>
               <h4>{notificacion.titulo}</h4>
               <p>{notificacion.mensaje}</p>

@@ -23,12 +23,14 @@ export async function register(payload: RegisterPayload) {
 }
 
 function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
+  const role = "role" in data && String(data.role).toUpperCase() === "ADMIN" ? "ADMIN" : "CLIENTE"
+
   return {
     id: data.id,
     usuario: data.usuario,
     nombre: data.nombre,
     correo: data.correo,
-    role: "role" in data ? data.role : "CLIENTE",
+    role,
     fotoPerfil: "fotoPerfil" in data ? data.fotoPerfil : undefined,
     descripcion: "descripcion" in data ? data.descripcion : undefined,
     intereses: "intereses" in data ? data.intereses : undefined,

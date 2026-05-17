@@ -4,7 +4,6 @@ import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
-import { publicaciones as publicacionesDemo } from "../data/publicaciones";
 import { publicacionService } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
 import { getLocalPublicaciones } from "../utils/localPublicaciones";
@@ -40,7 +39,7 @@ export default function DetallePublicacion() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [publicacion, setPublicacion] = useState<Publicacion | null>(
-    [...getLocalPublicaciones(), ...publicacionesDemo].find((pub) => pub.tipo === "ofrezco_casa" && String(pub.id) === id) || null,
+    getLocalPublicaciones().find((pub) => pub.tipo === "ofrezco_casa" && String(pub.id) === id) || null,
   );
   const [message, setMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
@@ -59,7 +58,7 @@ export default function DetallePublicacion() {
       })
       .catch(() => {
         if (!publicacion) {
-          setMessage("No se pudo conectar con el servicio de publicaciones.");
+          setMessage("Servicio no disponible. Intenta nuevamente.");
         }
       });
   }, [id, publicacion]);

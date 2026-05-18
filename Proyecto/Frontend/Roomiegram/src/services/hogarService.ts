@@ -37,6 +37,18 @@ export async function eliminarHogar(id: number, administradorId: number) {
   }
 }
 
+export async function agregarPublicacionHogar(hogarId: number, administradorId: number, recursoId: number) {
+  try {
+    const { data } = await hogarApi.post<Hogar>(`/hogares/${hogarId}/publicaciones`, {
+      administradorId,
+      recursoId,
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const hogarService = {
   listar: listarHogares,
   crear: crearHogar,
@@ -64,5 +76,6 @@ export const hogarService = {
     hogarApi
       .post(`/hogares/${hogarId}/comprobantes`, payload)
       .then(({ data }) => data),
+  agregarPublicacion: agregarPublicacionHogar,
   eliminar: eliminarHogar,
 }

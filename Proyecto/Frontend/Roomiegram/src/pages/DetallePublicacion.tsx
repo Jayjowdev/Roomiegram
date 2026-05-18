@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
+import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
+import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
+import type { Hogar } from "../types/Hogar";
 import { getLocalPublicaciones } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 const fallbackGallery = [home1, home2, home3];
+
+function normalizarTexto(valor?: string) {
+  return valor?.trim().toLowerCase() || "";
+}
 
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
@@ -19,10 +27,14 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   return {
     id: pub.id,
     tipo: "ofrezco_casa",
+    usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
     titulo: pub.titulo || "Habitacion disponible",
     precioMensual: pub.precio || pub.precioMensual || 0,
     precio: pub.precio || pub.precioMensual || 0,
+    numeroHabitaciones: pub.numeroHabitaciones,
+    numeroPersonas: pub.numeroPersonas,
+    numeroBanos: pub.numeroBanos,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
     amenidades: [
@@ -38,9 +50,11 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
 export default function DetallePublicacion() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const [publicacion, setPublicacion] = useState<Publicacion | null>(
     getLocalPublicaciones().find((pub) => pub.tipo === "ofrezco_casa" && String(pub.id) === id) || null,
   );
+  const [hogares, setHogares] = useState<Hogar[]>([]);
   const [message, setMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState("");
@@ -61,7 +75,78 @@ export default function DetallePublicacion() {
           setMessage("Servicio no disponible. Intenta nuevamente.");
         }
       });
-  }, [id, publicacion]);
+  }, [id]);
+
+  useEffect(() => {
+    hogarService
+      .listar()
+      .then((data) => setHogares(data))
+      .catch(() => undefined);
+  }, []);
+
+  const hogarVinculado = useMemo(() => {
+    if (!publicacion?.id) return null;
+    return hogares.find((hogar) => hogar.publicacionIds?.includes(publicacion.id)) || null;
+  }, [hogares, publicacion?.id]);
+
+  const esCreadorPublicacion = !!publicacion?.usuarioCreador
+    && normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.usuario);
+
+  const puedeAdministrarSolicitudes = !!user?.id && !!hogarVinculado && (
+    hogarVinculado.usuarioAdministradorId === user.id
+    || hogarVinculado.usuarioCreadorId === user.id
+    || esCreadorPublicacion
+  );
+
+  const solicitudYaEnviada = !!user?.id && !!hogarVinculado?.solicitudesPendientesIds?.includes(user.id);
+
+  const solicitarIngreso = async () => {
+    if (!user?.id || !hogarVinculado?.id) {
+      setContactMessage("No se pudo identificar el hogar para esta publicación.");
+      return;
+    }
+
+    try {
+      const actualizado = await hogarService.solicitarIngreso(hogarVinculado.id, { usuarioId: user.id });
+      setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
+
+      const usuarioReceptorId = hogarVinculado.usuarioAdministradorId || hogarVinculado.usuarioCreadorId;
+      if (usuarioReceptorId) {
+        await notificacionService.crear({
+          usuarioEmisorId: user.id,
+          usuarioReceptorId,
+          hogarId: hogarVinculado.id,
+          referenciaId: user.id,
+          tipo: "INVITACION_HOGAR",
+          estado: "PENDIENTE",
+          titulo: "Solicitud de ingreso pendiente",
+          mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogarVinculado.nombre}.`,
+        });
+      }
+
+      setContactMessage("Solicitud enviada correctamente.");
+    } catch (error) {
+      setContactMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
+    }
+  };
+
+  const responderSolicitud = async (usuarioId: number, accion: "aprobar" | "rechazar") => {
+    if (!user?.id || !hogarVinculado?.id) {
+      setContactMessage("No se pudo identificar el hogar para gestionar la solicitud.");
+      return;
+    }
+
+    try {
+      const actualizado = accion === "aprobar"
+        ? await hogarService.aprobarSolicitud(hogarVinculado.id, usuarioId, { administradorId: user.id })
+        : await hogarService.rechazarSolicitud(hogarVinculado.id, usuarioId, { administradorId: user.id });
+
+      setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
+      setContactMessage(accion === "aprobar" ? "Solicitud aprobada correctamente." : "Solicitud rechazada correctamente.");
+    } catch (error) {
+      setContactMessage(error instanceof Error ? error.message : "No se pudo gestionar la solicitud.");
+    }
+  };
 
   const galeria = publicacion?.galeria?.length ? publicacion.galeria : fallbackGallery;
   const mainImage = selectedImage || publicacion?.imagen || galeria[0];
@@ -113,9 +198,34 @@ export default function DetallePublicacion() {
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
             <p><strong>Edad:</strong> {publicacion.edad || "No informada"}</p>
             <p><strong>Tipo:</strong> Oferta de habitacion/casa</p>
-            <button className="btn btn-success w-100 mt-3" onClick={() => setContactMessage(`Solicitud enviada a ${publicacion.nombre}.`)}>
-              Contactar
-            </button>
+            {puedeAdministrarSolicitudes ? (
+              <div className="mt-3">
+                <h4>Solicitudes del hogar</h4>
+                {!hogarVinculado?.solicitudesPendientesIds?.length ? (
+                  <p>No hay solicitudes pendientes por revisar.</p>
+                ) : (
+                  hogarVinculado.solicitudesPendientesIds.map((usuarioId) => (
+                    <div className="request-row" key={usuarioId}>
+                      <span>Usuario #{usuarioId}</span>
+                      <div>
+                        <button className="btn btn-outline-success btn-sm" onClick={() => responderSolicitud(usuarioId, "aprobar")}>Aprobar</button>
+                        <button className="btn btn-outline-danger btn-sm" onClick={() => responderSolicitud(usuarioId, "rechazar")}>Rechazar</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : hogarVinculado ? (
+              solicitudYaEnviada ? (
+                <span className="status-pill mt-3">Solicitud enviada</span>
+              ) : (
+                <button className="btn btn-success w-100 mt-3" onClick={solicitarIngreso}>
+                  Solicitar ingreso
+                </button>
+              )
+            ) : (
+              <p className="mt-3">Esta publicación no tiene un hogar vinculado para gestionar solicitudes.</p>
+            )}
           </aside>
         </div>
       )}

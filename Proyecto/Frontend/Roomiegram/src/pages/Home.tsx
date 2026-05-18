@@ -10,6 +10,10 @@ import type { Publicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
+function normalizarTexto(valor?: string) {
+  return valor?.trim().toLowerCase() || "";
+}
+
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
   const imagen = pub.imagen || imagenGuardada || home1;
@@ -19,6 +23,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     id: pub.id,
     tipo: "ofrezco_casa",
     origen: "backend",
+    usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
     titulo: pub.titulo || "Habitacion disponible",
     precioMensual: pub.precio || pub.precioMensual || 0,
@@ -42,6 +47,7 @@ export default function Home() {
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiMessage, setApiMessage] = useState("");
+  const usuarioActual = normalizarTexto(user?.usuario);
 
   const loadPublicaciones = () => {
     let isMounted = true;
@@ -75,16 +81,25 @@ export default function Home() {
     return loadPublicaciones();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const puedeEliminarPublicacion = (pub: Publicacion) => {
+    const creador = normalizarTexto(pub.usuarioCreador);
+    return !!usuarioActual && !!creador && creador === usuarioActual;
+  };
+
+  const handleDelete = async (pub: Publicacion) => {
     setApiMessage("");
+    if (!user?.usuario) {
+      setApiMessage("No se pudo identificar el usuario autenticado.");
+      return;
+    }
+
     try {
-      await publicacionService.eliminar(id, user?.usuario || user?.nombre || "RoomieGram", user?.role || "CLIENTE");
+      await publicacionService.eliminar(pub.id, user.usuario, user?.role || "CLIENTE");
+      setPublicaciones((current) => current.filter((currentPub) => currentPub.id !== pub.id));
+      deleteLocalPublicacion(pub.id);
       setApiMessage("Publicacion eliminada correctamente.");
     } catch (error) {
       setApiMessage(error instanceof Error ? error.message : "No se pudo eliminar en el servicio.");
-    } finally {
-      setPublicaciones((current) => current.filter((pub) => pub.id !== id));
-      deleteLocalPublicacion(id);
     }
   };
 
@@ -156,7 +171,7 @@ export default function Home() {
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.amenidades && <div className="home-tags">{pub.amenidades.map((amenidad) => <span key={amenidad} className="home-tag amenidad-tag">{amenidad}</span>)}</div>}
                     <button className="btn btn-outline-success w-100 mt-4" onClick={() => navigate(`/detalle-publicacion/${pub.id}`)}>Ver detalles</button>
-                    {pub.origen === "backend" && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub.id)}>Eliminar</button>}
+                    {puedeEliminarPublicacion(pub) && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub)}>Eliminar</button>}
                   </div>
                 </>
               )}

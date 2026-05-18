@@ -50,13 +50,15 @@ class PublicacionServiceTest {
     }
 
     @Test
-    void eliminaPublicacionCuandoUsuarioEsAdministrador() {
+    void rechazaEliminacionCuandoUsuarioEsAdministradorPeroNoEsPropietario() {
         Publicacion publicacion = crearPublicacion();
         when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
 
-        assertDoesNotThrow(() -> publicacionService.eliminarPublicacion(1L, "admin", "ADMIN"));
+        SecurityException exception = assertThrows(SecurityException.class,
+                () -> publicacionService.eliminarPublicacion(1L, "admin", "ADMIN"));
 
-        verify(publicacionRepository).delete(publicacion);
+        org.junit.jupiter.api.Assertions.assertNotNull(exception);
+        verify(publicacionRepository, never()).delete(publicacion);
     }
 
     @Test

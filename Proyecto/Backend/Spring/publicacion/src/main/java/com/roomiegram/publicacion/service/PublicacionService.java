@@ -1,12 +1,17 @@
 package com.roomiegram.publicacion.service;
 
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.roomiegram.publicacion.model.Publicacion;
+import com.roomiegram.publicacion.model.PublicacionConHogarRequest;
+import com.roomiegram.publicacion.model.PublicacionConHogarResponse;
 import com.roomiegram.publicacion.repository.PublicacionRepository;
 
 @Service
@@ -14,6 +19,12 @@ public class PublicacionService {
 
     @Autowired
     private PublicacionRepository publicacionRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${hogar.service.url}")
+    private String hogarServiceUrl;
 
     // Metodos para guardar y obtener publicaciones
     public Publicacion guardarPublicacion(Publicacion publicacion) {
@@ -66,21 +77,63 @@ public class PublicacionService {
         Publicacion publicacion = publicacionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("La publicación no existe"));
 
-        if (!puedeEliminar(publicacion, usuarioSolicitante, rolSolicitante)) {
+        if (!puedeEliminar(publicacion, usuarioSolicitante)) {
             throw new SecurityException("No tienes permisos para eliminar esta publicación");
         }
 
         publicacionRepository.delete(publicacion);
     }
 
-    private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante, String rolSolicitante) {
-        String rolNormalizado = rolSolicitante.trim().toUpperCase(Locale.ROOT);
-
-        if ("ADMIN".equals(rolNormalizado)) {
-            return true;
-        }
-
+    private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante) {
         return publicacion.getUsuarioCreador() != null
                 && publicacion.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
+    }
+
+    @SuppressWarnings("unchecked")
+    public PublicacionConHogarResponse guardarPublicacionConHogar(PublicacionConHogarRequest req) {
+        // 1. Create and persist the publication
+        Publicacion pub = new Publicacion();
+        pub.setUsuarioCreador(req.getUsuarioCreador());
+        pub.setTitulo(req.getTitulo());
+        pub.setUbicacion(req.getUbicacion());
+        pub.setDescripcion(req.getDescripcion());
+        pub.setPrecio(req.getPrecio());
+        pub.setNumeroHabitaciones(req.getNumeroHabitaciones());
+        pub.setNumeroPersonas(req.getNumeroPersonas());
+        pub.setNumeroBanos(req.getNumeroBanos());
+        pub.setImagen(req.getImagen());
+        pub.setGaleria(req.getGaleria());
+
+        Publicacion creada = guardarPublicacion(pub);
+
+        // 2. Create linked hogar — compensate on failure
+        Long hogarId;
+        try {
+            Map<String, Object> hogarPayload = Map.of(
+                    "nombre", req.getTitulo(),
+                    "descripcion", req.getDescripcion(),
+                    "usuarioCreadorId", req.getUsuarioId());
+            ResponseEntity<Map> hogarResp = restTemplate.postForEntity(
+                    hogarServiceUrl + "/hogares", hogarPayload, Map.class);
+            hogarId = ((Number) hogarResp.getBody().get("id")).longValue();
+        } catch (Exception e) {
+            publicacionRepository.delete(creada);
+            throw new RuntimeException("Error al crear el hogar vinculado: " + e.getMessage());
+        }
+
+        // 3. Link publication to hogar — compensate on failure
+        try {
+            Map<String, Object> recursoPayload = Map.of(
+                    "administradorId", req.getUsuarioId(),
+                    "recursoId", creada.getId());
+            restTemplate.postForEntity(
+                    hogarServiceUrl + "/hogares/" + hogarId + "/publicaciones", recursoPayload, Map.class);
+        } catch (Exception e) {
+            publicacionRepository.delete(creada);
+            restTemplate.delete(hogarServiceUrl + "/hogares/" + hogarId);
+            throw new RuntimeException("Error al vincular la publicación al hogar: " + e.getMessage());
+        }
+
+        return new PublicacionConHogarResponse(creada, hogarId);
     }
 }

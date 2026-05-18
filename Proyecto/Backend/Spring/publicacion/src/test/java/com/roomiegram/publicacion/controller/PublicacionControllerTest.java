@@ -112,11 +112,11 @@ class PublicacionControllerTest {
     @Test
     void eliminarDebeRetornar400CuandoPublicacionNoExiste() throws Exception {
         doThrow(new IllegalArgumentException("La publicación no existe"))
-                .when(publicacionService).eliminarPublicacion(eq(99L), eq("admin"), eq("ADMIN"));
+            .when(publicacionService).eliminarPublicacion(eq(99L), eq("juan"), eq("CLIENTE"));
 
         mockMvc.perform(delete("/publicaciones/99")
-                        .param("usuarioSolicitante", "admin")
-                        .param("rolSolicitante", "ADMIN"))
+                .param("usuarioSolicitante", "juan")
+                .param("rolSolicitante", "CLIENTE"))
                 .andExpect(status().isBadRequest());
     }
 

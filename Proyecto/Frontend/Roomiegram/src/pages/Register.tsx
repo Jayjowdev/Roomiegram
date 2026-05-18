@@ -31,6 +31,14 @@ export default function Register() {
   const [contrasena, setContrasena] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  const passwordRules = [
+    { label: "Mínimo 8 caracteres", ok: contrasena.length >= 8 },
+    { label: "Al menos una letra mayúscula", ok: /[A-ZÁÉÍÓÚÑ]/.test(contrasena) },
+    { label: "Al menos una letra minúscula", ok: /[a-záéíóúñ]/.test(contrasena) },
+    { label: "Al menos un número", ok: /\d/.test(contrasena) },
+  ];
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -96,7 +104,17 @@ export default function Register() {
           <input type="email" className="form-control" placeholder="Correo electrónico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
           <input type="tel" className="form-control" placeholder="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
-          <input type="password" className="form-control" placeholder="Contraseña segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+          <input type="password" className="form-control" placeholder="Contraseña segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} disabled={isLoading} />
+
+          {(passwordFocused || contrasena.length > 0) && (
+            <ul className="password-hints">
+              {passwordRules.map((rule) => (
+                <li key={rule.label} className={rule.ok ? "hint-ok" : "hint-pending"}>
+                  {rule.ok ? "✓" : "○"} {rule.label}
+                </li>
+              ))}
+            </ul>
+          )}
           <input type="password" className="form-control" placeholder="Confirmar contraseña" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
 
           <button className="btn btn-success w-100 mt-3" type="submit" disabled={isLoading}>

@@ -8,7 +8,7 @@ import home3 from "../assets/home3.svg";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { PublicacionRequest } from "../types/Backend";
-import type { Publicacion } from "../types/Publicacion";
+import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { saveLocalPublicacion } from "../utils/localPublicaciones";
 import { savePublicacionImage } from "../utils/publicacionImages";
 
@@ -27,6 +27,7 @@ export default function CrearPublicacion() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form, setForm] = useState<PublicacionRequest>(initialPublicacionForm);
+  const [tipoPublicacion, setTipoPublicacion] = useState<TipoPublicacion>("ofrezco_casa");
   const [imagenesPreview, setImagenesPreview] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -36,8 +37,47 @@ export default function CrearPublicacion() {
     if (form.ubicacion.trim().length < 3) return "Ingresa una ubicacion valida.";
     if (form.descripcion.trim().length < 20) return "La descripcion debe tener al menos 20 caracteres.";
     if (Number(form.precio) <= 0) return "El precio debe ser mayor a cero.";
+    if (tipoPublicacion === "busco_roomie") return "";
     if (Number(form.numeroHabitaciones) < 1 || Number(form.numeroPersonas) < 1 || Number(form.numeroBanos) < 1) return "Los detalles de la casa deben ser mayores a cero.";
     return "";
+  };
+
+  const guardarPublicacionLocal = (creador: string) => {
+    const imagenPrincipal = imagenesPreview[0] || home1;
+    const nuevaPublicacion: Publicacion = tipoPublicacion === "busco_roomie"
+      ? {
+          id: Date.now(),
+          tipo: "busco_roomie",
+          origen: "demo-local",
+          usuarioCreador: creador,
+          nombre: user?.nombre || user?.usuario || "RoomieGram",
+          titulo: form.titulo.trim(),
+          ubicacion: form.ubicacion.trim(),
+          descripcion: form.descripcion.trim(),
+          presupuestoMaximo: Number(form.precio),
+          imagen: imagenPrincipal,
+          galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
+        }
+      : {
+          id: Date.now(),
+          tipo: "ofrezco_casa",
+          origen: "demo-local",
+          usuarioCreador: creador,
+          nombre: user?.nombre || user?.usuario || "RoomieGram",
+          titulo: form.titulo.trim(),
+          precioMensual: Number(form.precio),
+          precio: Number(form.precio),
+          ubicacion: form.ubicacion.trim(),
+          descripcion: form.descripcion.trim(),
+          numeroHabitaciones: Number(form.numeroHabitaciones),
+          numeroPersonas: Number(form.numeroPersonas),
+          numeroBanos: Number(form.numeroBanos),
+          amenidades: [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`],
+          imagen: imagenPrincipal,
+          galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
+        };
+
+    saveLocalPublicacion(nuevaPublicacion);
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -80,43 +120,46 @@ export default function CrearPublicacion() {
     }
 
     setIsSaving(true);
+    const creador = user?.usuario?.trim() || form.usuarioCreador.trim() || "RoomieGram";
+    const tituloPublicacion = form.titulo.trim();
+    const ubicacionPublicacion = form.ubicacion.trim();
+    const descripcionPublicacion = form.descripcion.trim();
 
     try {
-      const creador = form.usuarioCreador.trim() || user?.nombre || user?.usuario || "RoomieGram";
-      const creada = await publicacionService.crear({
+      if (tipoPublicacion === "busco_roomie") {
+        guardarPublicacionLocal(creador);
+        navigate("/home");
+        return;
+      }
+
+      if (!user?.id) {
+        throw new Error("No se pudo identificar el usuario.");
+      }
+
+      const resultado = await publicacionService.crearConHogar({
         ...form,
         usuarioCreador: creador,
-        titulo: form.titulo.trim(),
-        ubicacion: form.ubicacion.trim(),
-        descripcion: form.descripcion.trim(),
+        titulo: tituloPublicacion,
+        ubicacion: ubicacionPublicacion,
+        descripcion: descripcionPublicacion,
         precio: Number(form.precio),
         numeroHabitaciones: Number(form.numeroHabitaciones),
         numeroPersonas: Number(form.numeroPersonas),
         numeroBanos: Number(form.numeroBanos),
         imagen: imagenesPreview[0] || undefined,
         galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
+        usuarioId: user.id,
       });
-      if (imagenesPreview[0]) savePublicacionImage(creada.id, imagenesPreview[0]);
+
+      if (imagenesPreview[0]) savePublicacionImage(resultado.publicacion.id, imagenesPreview[0]);
       navigate("/home");
-    } catch {
-      const localPublicacion: Publicacion = {
-        id: Date.now(),
-        tipo: "ofrezco_casa",
-        origen: "demo-local",
-        nombre: user?.nombre || user?.usuario || "RoomieGram",
-        titulo: form.titulo.trim(),
-        precioMensual: Number(form.precio),
-        precio: Number(form.precio),
-        ubicacion: form.ubicacion.trim(),
-        descripcion: form.descripcion.trim(),
-        numeroHabitaciones: Number(form.numeroHabitaciones),
-        numeroPersonas: Number(form.numeroPersonas),
-        numeroBanos: Number(form.numeroBanos),
-        amenidades: [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`],
-        imagen: imagenesPreview[0] || home1,
-        galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
-      };
-      saveLocalPublicacion(localPublicacion);
+    } catch (error) {
+      if (tipoPublicacion === "ofrezco_casa") {
+        setMessage(error instanceof Error ? error.message : "No se pudo crear la publicación y el hogar vinculado.");
+        return;
+      }
+
+      guardarPublicacionLocal(creador);
       navigate("/home");
     } finally {
       setIsSaving(false);
@@ -135,7 +178,7 @@ export default function CrearPublicacion() {
 
       <section className="module-title">
         <h1>Crear publicacion</h1>
-        <p>Publica una habitacion o casa disponible con fotos claras y datos utiles para futuros roomies.</p>
+        <p>Elige si quieres publicar un hogar disponible o un perfil de usuario que busca hogar.</p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -143,32 +186,73 @@ export default function CrearPublicacion() {
       <section className="create-publication-shell">
         <form className="create-publication-form" onSubmit={handleSubmit}>
           <div className="create-section">
-            <h3>Informacion principal</h3>
-            <input className="form-control" placeholder="Titulo de la publicacion" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
-            <input className="form-control" placeholder="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required />
-            <textarea className="form-control" placeholder="Describe el espacio, reglas basicas y ambiente del hogar" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
+            <h3>Tipo de publicacion</h3>
+            <div className="d-grid gap-2 gap-md-3">
+              <label className="form-check border rounded p-3">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="tipoPublicacion"
+                  value="ofrezco_casa"
+                  checked={tipoPublicacion === "ofrezco_casa"}
+                  onChange={() => setTipoPublicacion("ofrezco_casa")}
+                />
+                <span className="ms-2 fw-semibold">Quiero publicar un hogar o habitacion disponible</span>
+              </label>
+              <label className="form-check border rounded p-3">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="tipoPublicacion"
+                  value="busco_roomie"
+                  checked={tipoPublicacion === "busco_roomie"}
+                  onChange={() => setTipoPublicacion("busco_roomie")}
+                />
+                <span className="ms-2 fw-semibold">Quiero publicar un usuario que busca hogar</span>
+              </label>
+            </div>
+            <p className="create-section-help">
+              {tipoPublicacion === "ofrezco_casa"
+                ? "Esta publicacion se enviara al servicio de publicaciones de hogares."
+                : "Las publicaciones de usuarios que buscan hogar se guardan localmente en esta app por ahora."}
+            </p>
           </div>
 
           <div className="create-section">
-            <h3>Detalles de la casa</h3>
-            <p className="create-section-help">Estos datos aparecen en la ficha de la publicacion para que el roomie entienda rapido que se ofrece.</p>
+            <h3>Informacion principal</h3>
+            <input className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
+            <input className="form-control" placeholder="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required />
+            <textarea className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
+          </div>
+
+          <div className="create-section">
+            <h3>{tipoPublicacion === "ofrezco_casa" ? "Detalles de la casa" : "Preferencias de busqueda"}</h3>
+            <p className="create-section-help">
+              {tipoPublicacion === "ofrezco_casa"
+                ? "Estos datos aparecen en la ficha de la publicacion para que el roomie entienda rapido que se ofrece."
+                : "Comparte tu presupuesto para que otros usuarios sepan que tipo de hogar estas buscando."}
+            </p>
             <div className="create-details-grid">
               <label className="field-label">
-                <span>Precio mensual</span>
+                <span>{tipoPublicacion === "ofrezco_casa" ? "Precio mensual" : "Presupuesto maximo"}</span>
                 <input className="form-control" placeholder="Ej: 280000" type="number" min="1" value={form.precio || ""} onChange={(e) => setForm({ ...form, precio: Number(e.target.value) })} required />
               </label>
-              <label className="field-label">
-                <span>Habitaciones del hogar</span>
-                <input className="form-control" placeholder="Ej: 3" type="number" min="1" value={form.numeroHabitaciones} onChange={(e) => setForm({ ...form, numeroHabitaciones: Number(e.target.value) })} required />
-              </label>
-              <label className="field-label">
-                <span>Cupos disponibles</span>
-                <input className="form-control" placeholder="Ej: 1" type="number" min="1" value={form.numeroPersonas} onChange={(e) => setForm({ ...form, numeroPersonas: Number(e.target.value) })} required />
-              </label>
-              <label className="field-label">
-                <span>Banos disponibles</span>
-                <input className="form-control" placeholder="Ej: 2" type="number" min="1" value={form.numeroBanos} onChange={(e) => setForm({ ...form, numeroBanos: Number(e.target.value) })} required />
-              </label>
+              {tipoPublicacion === "ofrezco_casa" && (
+                <>
+                  <label className="field-label">
+                    <span>Habitaciones del hogar</span>
+                    <input className="form-control" placeholder="Ej: 3" type="number" min="1" value={form.numeroHabitaciones} onChange={(e) => setForm({ ...form, numeroHabitaciones: Number(e.target.value) })} required />
+                  </label>
+                  <label className="field-label">
+                    <span>Cupos disponibles</span>
+                    <input className="form-control" placeholder="Ej: 1" type="number" min="1" value={form.numeroPersonas} onChange={(e) => setForm({ ...form, numeroPersonas: Number(e.target.value) })} required />
+                  </label>
+                  <label className="field-label">
+                    <span>Banos disponibles</span>
+                    <input className="form-control" placeholder="Ej: 2" type="number" min="1" value={form.numeroBanos} onChange={(e) => setForm({ ...form, numeroBanos: Number(e.target.value) })} required />
+                  </label>
+                </>
+              )}
             </div>
           </div>
 

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.publicacion.model.Publicacion;
+import com.roomiegram.publicacion.model.PublicacionConHogarRequest;
+import com.roomiegram.publicacion.model.PublicacionConHogarResponse;
 import com.roomiegram.publicacion.service.PublicacionService;
 
 @RestController
@@ -33,6 +35,18 @@ public class PublicacionController {
             return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/guardar-con-hogar")
+    public ResponseEntity<?> guardarPublicacionConHogar(@RequestBody PublicacionConHogarRequest request) {
+        try {
+            PublicacionConHogarResponse resultado = publicacionService.guardarPublicacionConHogar(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 

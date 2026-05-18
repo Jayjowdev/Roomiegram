@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
+import { notificacionService } from "../services/notificacionService";
 import type { Hogar } from "../types/Hogar";
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
@@ -127,10 +128,28 @@ export default function Hogares() {
       return;
     }
 
+    const hogar = hogares.find((item) => item.id === hogarId);
+    const usuarioReceptorId = hogar?.usuarioAdministradorId || hogar?.usuarioCreadorId;
+
     try {
       const actualizado = await hogarService.solicitarIngreso(hogarId, { usuarioId: user.id });
       updateHogar(actualizado);
-      setMessage("Solicitud enviada correctamente.");
+      if (usuarioReceptorId) {
+        await notificacionService.crear({
+          usuarioEmisorId: user.id,
+          usuarioReceptorId,
+          hogarId,
+          referenciaId: user.id,
+          tipo: "INVITACION_HOGAR",
+          estado: "PENDIENTE",
+          titulo: "Solicitud de ingreso pendiente",
+          mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogar?.nombre || "seleccionado"}.`,
+        });
+      }
+
+      setMessage(usuarioReceptorId
+        ? "Solicitud enviada correctamente. Se notifico al administrador del hogar."
+        : "Solicitud enviada correctamente.");
     } catch {
       setMessage("No se pudo enviar la solicitud. Revisa que el servicio esté disponible.");
     }

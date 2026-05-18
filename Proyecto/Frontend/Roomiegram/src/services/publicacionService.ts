@@ -20,6 +20,18 @@ export async function guardarPublicacion(payload: CreatePublicacionPayload) {
   }
 }
 
+export async function guardarPublicacionConHogar(payload: CreatePublicacionPayload & { usuarioId: number }) {
+  try {
+    const { data } = await publicacionApi.post<{ publicacion: Publicacion; hogarId: number }>(
+      "/publicaciones/guardar-con-hogar",
+      payload,
+    )
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function eliminarPublicacion(id: number, usuarioSolicitante: string, rolSolicitante: string) {
   try {
     await publicacionApi.delete(`/publicaciones/${id}`, {
@@ -36,6 +48,7 @@ export async function eliminarPublicacion(id: number, usuarioSolicitante: string
 export const publicacionService = {
   listar: listarPublicaciones,
   crear: guardarPublicacion,
+  crearConHogar: guardarPublicacionConHogar,
   eliminar: eliminarPublicacion,
 }
 

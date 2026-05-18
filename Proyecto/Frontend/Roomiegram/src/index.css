@@ -449,6 +449,29 @@ p {
   text-align: center;
 }
 
+.password-hints {
+  list-style: none;
+  padding: 10px 14px;
+  margin: -8px 0 12px;
+  background-color: #f0f9f4;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.password-hints li {
+  margin-bottom: 4px;
+}
+
+.hint-ok {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.hint-pending {
+  color: #888;
+}
+
 /* ---------- HOME ---------- */
 
 .home-page {

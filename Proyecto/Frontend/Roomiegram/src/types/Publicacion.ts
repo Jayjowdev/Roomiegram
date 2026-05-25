@@ -3,6 +3,7 @@ export type TipoPublicacion = "busco_roomie" | "ofrezco_casa"
 export type Publicacion = {
   id: number
   tipo?: TipoPublicacion
+  usuarioId?: number
   usuarioCreador?: string
   nombre?: string
   edad?: number
@@ -11,6 +12,8 @@ export type Publicacion = {
   precioMensual?: number
   ubicacion: string
   descripcion: string
+  telefono?: string
+  correo?: string
   numeroHabitaciones?: number
   numeroPersonas?: number
   numeroBanos?: number
@@ -20,7 +23,7 @@ export type Publicacion = {
   amenidades?: string[]
   imagen?: string
   galeria?: string[]
-  origen?: "demo" | "backend" | "demo-local"
+  origen?: "backend" | "local"
 }
 
 export type CreatePublicacionPayload = {

@@ -21,7 +21,30 @@ export async function crearHogar(payload: CreateHogarPayload) {
 
 export async function solicitarIngresoHogar(hogarId: number, usuarioId: number) {
   try {
-    await hogarApi.post(`/hogares/${hogarId}/solicitudes`, { usuarioId })
+    const { data } = await hogarApi.post<Hogar>(`/hogares/${hogarId}/solicitudes`, { usuarioId })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function aprobarSolicitudHogar(hogarId: number, usuarioId: number, administradorId: number) {
+  try {
+    const { data } = await hogarApi.post<Hogar>(`/hogares/${hogarId}/solicitudes/${usuarioId}/aprobar`, {
+      administradorId,
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function rechazarSolicitudHogar(hogarId: number, usuarioId: number, administradorId: number) {
+  try {
+    const { data } = await hogarApi.post<Hogar>(`/hogares/${hogarId}/solicitudes/${usuarioId}/rechazar`, {
+      administradorId,
+    })
+    return data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }
@@ -53,17 +76,11 @@ export const hogarService = {
   listar: listarHogares,
   crear: crearHogar,
   solicitarIngreso: (hogarId: number, payload: { usuarioId: number }) =>
-    hogarApi
-      .post(`/hogares/${hogarId}/solicitudes`, payload)
-      .then(({ data }) => data),
+    solicitarIngresoHogar(hogarId, payload.usuarioId),
   aprobarSolicitud: (hogarId: number, usuarioId: number, payload: { administradorId: number }) =>
-    hogarApi
-      .post(`/hogares/${hogarId}/solicitudes/${usuarioId}/aprobar`, payload)
-      .then(({ data }) => data),
+    aprobarSolicitudHogar(hogarId, usuarioId, payload.administradorId),
   rechazarSolicitud: (hogarId: number, usuarioId: number, payload: { administradorId: number }) =>
-    hogarApi
-      .post(`/hogares/${hogarId}/solicitudes/${usuarioId}/rechazar`, payload)
-      .then(({ data }) => data),
+    rechazarSolicitudHogar(hogarId, usuarioId, payload.administradorId),
   agregarTarea: (hogarId: number, payload: { administradorId: number; recursoId: number }) =>
     hogarApi
       .post(`/hogares/${hogarId}/tareas`, payload)

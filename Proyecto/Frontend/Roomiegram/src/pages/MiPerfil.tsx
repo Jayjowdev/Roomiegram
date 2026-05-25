@@ -1,15 +1,85 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import avatarUser from "../assets/avatarUser.svg";
+import { LogoutButton } from "../components/LogoutButton";
+import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
+import { usuarioService } from "../services/usuarioService";
+import type { Hogar } from "../types/Hogar";
+import type { UsuarioResumen } from "../types/Usuario";
+import { getPreferenciasResumen } from "../utils/preferenciasCompatibilidad";
+
+function uniqueIds(ids: Array<number | undefined>) {
+  return [...new Set(ids.filter((id): id is number => typeof id === "number" && id > 0))];
+}
+
+function getMemberName(
+  usuarioId: number,
+  usuariosById: Map<number, UsuarioResumen>,
+  currentUser?: { id: number; nombre?: string; usuario?: string },
+) {
+  if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tu";
+
+  const usuario = usuariosById.get(usuarioId);
+  return usuario?.nombre || usuario?.usuario || "Integrante del hogar";
+}
 
 export default function MiPerfil() {
   const navigate = useNavigate();
   const { user, updateProfilePhoto } = useAuth();
   const [message, setMessage] = useState("");
+  const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const profileImage = user?.fotoPerfil || avatarUser;
+  const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([hogarService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, usuariosResult]) => {
+        if (!isMounted) return;
+
+        setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
+        setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
+        setIsLoadingGroup(false);
+
+        if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected") {
+          setMessage("No se pudo cargar toda la informacion de tu grupo.");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hogarActual = useMemo(() => {
+    if (!user?.id) return undefined;
+
+    return hogares.find((hogar) => {
+      const integrantes = hogar.integrantesIds || [];
+      return integrantes.includes(user.id) || hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id;
+    });
+  }, [hogares, user?.id]);
+
+  const integrantes = useMemo(() => {
+    if (!hogarActual) return [];
+
+    return uniqueIds([
+      hogarActual.usuarioAdministradorId,
+      hogarActual.usuarioCreadorId,
+      ...(hogarActual.integrantesIds || []),
+    ]);
+  }, [hogarActual]);
+
+  const usuariosById = useMemo(() => {
+    return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [usuarios]);
 
   const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,9 +113,12 @@ export default function MiPerfil() {
           <img src={logo} alt="RoomieGram" className="perfil-logo" onClick={() => navigate("/home")} />
         </div>
 
-        <button className="btn btn-outline-success" onClick={() => navigate("/home")}>
-          Volver al inicio
-        </button>
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/home")}>
+            Volver al inicio
+          </button>
+          <LogoutButton />
+        </div>
       </header>
 
       {message && <p className="api-message">{message}</p>}
@@ -73,26 +146,67 @@ export default function MiPerfil() {
 
         <aside className="mi-perfil-summary">
           <h3>Compatibilidad activa</h3>
-          <strong>0%</strong>
-          <p>La compatibilidad se calculara cuando existan perfiles disponibles.</p>
+          <strong>{preferenciasResumen.length ? "Lista" : "0%"}</strong>
+          <p>{preferenciasResumen.length ? "Tus preferencias ya estan guardadas para buscar matches." : "Completa tus preferencias para activar la busqueda por compatibilidad."}</p>
+          {preferenciasResumen.length ? (
+            <div className="home-tags profile-preferences">
+              {preferenciasResumen.map((item) => <span className="home-tag" key={item}>{item}</span>)}
+            </div>
+          ) : null}
+          <button className="btn btn-outline-success w-100 mb-2" onClick={() => navigate("/preferencias")}>
+            Editar preferencias
+          </button>
           <button className="btn btn-success w-100" onClick={() => navigate("/compatibilidad")}>
             Buscar matches
           </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/crear-publicacion")}>
             Crear publicacion
           </button>
+          <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />
         </aside>
       </section>
 
       <section className="mi-grupo">
         <div className="mi-grupo-header">
-          <h2>Mi grupo roomie</h2>
+          <div>
+            <h2>Mi grupo roomie</h2>
+            {hogarActual ? <p>{hogarActual.nombre}</p> : null}
+          </div>
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>
             Ver panel convivencia
           </button>
         </div>
 
-        <div className="sin-resultados"><p>Aun no hay integrantes registrados en tu hogar.</p></div>
+        {isLoadingGroup ? (
+          <div className="sin-resultados"><p>Cargando integrantes del hogar...</p></div>
+        ) : !hogarActual ? (
+          <div className="sin-resultados">
+            <p>Aun no perteneces a un grupo roomie.</p>
+            <button className="btn btn-success" onClick={() => navigate("/hogares")}>
+              Buscar o crear hogar
+            </button>
+          </div>
+        ) : (
+          <div className="roomie-list">
+            {integrantes.map((usuarioId) => {
+              const memberName = getMemberName(usuarioId, usuariosById, user || undefined);
+              const fotoPerfil = usuariosById.get(usuarioId)?.fotoPerfil || (usuarioId === user?.id ? user?.fotoPerfil : "");
+              const isAdmin = usuarioId === hogarActual.usuarioAdministradorId;
+
+              return (
+                <article className="roomie-card" key={usuarioId}>
+                  <div className="roomie-avatar">
+                    {fotoPerfil ? <img src={fotoPerfil} alt={memberName} /> : memberName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4>{memberName}</h4>
+                    <span>{isAdmin ? "Administrador del hogar" : "Integrante"}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

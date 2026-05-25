@@ -11,7 +11,6 @@ import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.repository.RegisterRepository;
 
-
 @Configuration
 public class LoadDatabase {
 
@@ -20,9 +19,7 @@ public class LoadDatabase {
     @Bean
     CommandLineRunner initDatabase(RegisterRepository registerRepository, LoginRepository loginRepository) {
         return args -> {
-            // Database initialization logic can be added here
-            if(registerRepository.count() == 0) {
-                // Crear usuario admin por defecto
+            if (registerRepository.count() == 0) {
                 Register admin = new Register();
                 admin.setNombre("Administrador");
                 admin.setCorreo("admin@example.com");
@@ -37,9 +34,8 @@ public class LoadDatabase {
                 loginAdmin.setRole(Role.ADMIN);
                 loginRepository.save(loginAdmin);
 
-                // Crear usuario cliente de ejemplo
                 Register cliente = new Register();
-                cliente.setNombre("Juan Pérez");
+                cliente.setNombre("Juan Perez");
                 cliente.setCorreo("juan@example.com");
                 cliente.setUsuario("juanperez");
                 cliente.setContrasena(passwordEncoder.encode("password123"));
@@ -53,10 +49,10 @@ public class LoadDatabase {
                 loginRepository.save(loginCliente);
 
                 System.out.println("Base de datos inicializada con usuarios de prueba:");
-                System.out.println("Admin - Usuario: admin, Contraseña: admin123");
-                System.out.println("Cliente - Usuario: juanperez, Contraseña: password123");
+                System.out.println("Admin - Usuario: admin, Contrasena: admin123");
+                System.out.println("Cliente - Usuario: juanperez, Contrasena: password123");
             } else {
-                System.out.println("La Base de datos ya contiene datos.");
+                System.out.println("La base de datos ya contiene datos.");
             }
         };
     }

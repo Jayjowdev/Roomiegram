@@ -4,6 +4,7 @@ import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
+import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
@@ -58,6 +59,8 @@ export default function DetallePublicacion() {
   const [message, setMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [processingRequest, setProcessingRequest] = useState("");
 
   useEffect(() => {
     publicacionService
@@ -107,6 +110,7 @@ export default function DetallePublicacion() {
     }
 
     try {
+      setIsRequesting(true);
       const actualizado = await hogarService.solicitarIngreso(hogarVinculado.id, { usuarioId: user.id });
       setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
 
@@ -127,6 +131,8 @@ export default function DetallePublicacion() {
       setContactMessage("Solicitud enviada correctamente.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -137,6 +143,7 @@ export default function DetallePublicacion() {
     }
 
     try {
+      setProcessingRequest(`${accion}-${usuarioId}`);
       const actualizado = accion === "aprobar"
         ? await hogarService.aprobarSolicitud(hogarVinculado.id, usuarioId, { administradorId: user.id })
         : await hogarService.rechazarSolicitud(hogarVinculado.id, usuarioId, { administradorId: user.id });
@@ -145,6 +152,8 @@ export default function DetallePublicacion() {
       setContactMessage(accion === "aprobar" ? "Solicitud aprobada correctamente." : "Solicitud rechazada correctamente.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo gestionar la solicitud.");
+    } finally {
+      setProcessingRequest("");
     }
   };
 
@@ -157,7 +166,10 @@ export default function DetallePublicacion() {
         <div className="perfil-header-left">
           <img src={logo} alt="RoomieGram" className="perfil-logo" onClick={() => navigate("/")} />
         </div>
-        <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Volver</button>
+        <div className="dashboard-actions">
+          <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Volver</button>
+          <LogoutButton />
+        </div>
       </header>
 
       {message && <p className="api-message">{message}</p>}
@@ -196,7 +208,6 @@ export default function DetallePublicacion() {
           <aside className="detalle-side">
             <h3>Datos del anfitrion</h3>
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
-            <p><strong>Edad:</strong> {publicacion.edad || "No informada"}</p>
             <p><strong>Tipo:</strong> Oferta de habitacion/casa</p>
             {puedeAdministrarSolicitudes ? (
               <div className="mt-3">
@@ -206,10 +217,22 @@ export default function DetallePublicacion() {
                 ) : (
                   hogarVinculado.solicitudesPendientesIds.map((usuarioId) => (
                     <div className="request-row" key={usuarioId}>
-                      <span>Usuario #{usuarioId}</span>
+                      <span>Solicitud de integrante</span>
                       <div>
-                        <button className="btn btn-outline-success btn-sm" onClick={() => responderSolicitud(usuarioId, "aprobar")}>Aprobar</button>
-                        <button className="btn btn-outline-danger btn-sm" onClick={() => responderSolicitud(usuarioId, "rechazar")}>Rechazar</button>
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          disabled={Boolean(processingRequest)}
+                          onClick={() => responderSolicitud(usuarioId, "aprobar")}
+                        >
+                          {processingRequest === `aprobar-${usuarioId}` ? "Aprobando..." : "Aprobar"}
+                        </button>
+                        <button
+                          className="btn btn-outline-danger btn-sm"
+                          disabled={Boolean(processingRequest)}
+                          onClick={() => responderSolicitud(usuarioId, "rechazar")}
+                        >
+                          {processingRequest === `rechazar-${usuarioId}` ? "Rechazando..." : "Rechazar"}
+                        </button>
                       </div>
                     </div>
                   ))
@@ -219,8 +242,8 @@ export default function DetallePublicacion() {
               solicitudYaEnviada ? (
                 <span className="status-pill mt-3">Solicitud enviada</span>
               ) : (
-                <button className="btn btn-success w-100 mt-3" onClick={solicitarIngreso}>
-                  Solicitar ingreso
+                <button className="btn btn-success w-100 mt-3" disabled={isRequesting} onClick={solicitarIngreso}>
+                  {isRequesting ? "Enviando solicitud..." : "Solicitar ingreso"}
                 </button>
               )
             ) : (

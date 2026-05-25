@@ -9,6 +9,7 @@ import Home from "./pages/Home"
 import Compatibilidad from "./pages/Compatibilidad"
 import Perfil from "./pages/Perfil"
 import MiPerfil from "./pages/MiPerfil"
+import Preferencias from "./pages/Preferencias"
 import DetallePublicacion from "./pages/DetallePublicacion"
 import CrearPublicacion from "./pages/CrearPublicacion"
 import Tareas from "./pages/Tareas"
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/convivencia" element={<ProtectedRoute><Convivencia /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute requireAdmin><Dashboard /></ProtectedRoute>} />
         <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
+        <Route path="/preferencias" element={<ProtectedRoute><Preferencias /></ProtectedRoute>} />
         <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/detalle-publicacion/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
         <Route path="/crear-publicacion" element={<ProtectedRoute><CrearPublicacion /></ProtectedRoute>} />

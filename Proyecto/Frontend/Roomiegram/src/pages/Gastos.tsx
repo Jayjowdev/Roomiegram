@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
+import { LogoutButton } from "../components/LogoutButton";
+import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
@@ -19,11 +21,11 @@ function isHogarAdmin(hogar?: Hogar, userId?: number) {
 
 function formatMemberName(usuarioId: number, currentUser?: { id: number; nombre?: string; usuario?: string }) {
   if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tú";
-  return `Integrante #${usuarioId}`;
+  return "Integrante del hogar";
 }
 
 function formatCurrency(value?: number) {
-  return `$${Number(value || 0).toLocaleString("es-CL")}`;
+  return `$${Math.round(Number(value || 0)).toLocaleString("es-CL", { maximumFractionDigits: 0 })}`;
 }
 
 function buildDeudores(ids: number[], monto: number): CuentaDeudor[] {
@@ -128,6 +130,9 @@ export default function Gastos() {
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/hogares")}>Mis hogares</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/comprobantes")}>Comprobantes</button>
+          <NotificationBell />
+          <LogoutButton />
         </div>
       </header>
 
@@ -179,6 +184,11 @@ export default function Gastos() {
                 <h4>{gasto.descripcion}</h4>
                 <p>{formatCurrency(gasto.monto)}</p>
                 <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
+                <div className="item-actions">
+                  <button className="btn btn-outline-success btn-sm" onClick={() => navigate(`/comprobantes?gasto=${gasto.id}`)}>
+                    Subir comprobante
+                  </button>
+                </div>
               </article>
             ))}
           </div>

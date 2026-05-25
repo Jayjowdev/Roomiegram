@@ -2,11 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
+import { LogoutButton } from "../components/LogoutButton";
+import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
+import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
+import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { Tarea } from "../types/Tarea";
+import type { UsuarioResumen } from "../types/Usuario";
 
 const initialForm = {
   titulo: "",
@@ -24,9 +29,20 @@ function isHogarAdmin(hogar?: Hogar, userId?: number) {
   return !!hogar && !!userId && (hogar.usuarioAdministradorId === userId || hogar.usuarioCreadorId === userId);
 }
 
+function formatRealMemberName(
+  usuarioId: number,
+  usuariosById: Map<number, UsuarioResumen>,
+  currentUser?: { id: number; nombre?: string; usuario?: string },
+) {
+  if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tu";
+
+  const usuario = usuariosById.get(usuarioId);
+  return usuario?.nombre || usuario?.usuario || formatMemberName(usuarioId, currentUser);
+}
+
 function formatMemberName(usuarioId: number, currentUser?: { id: number; nombre?: string; usuario?: string }) {
   if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tú";
-  return `Integrante #${usuarioId}`;
+  return "Integrante del hogar";
 }
 
 export default function Tareas() {
@@ -34,18 +50,20 @@ export default function Tareas() {
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.allSettled([hogarService.listar(), tareaService.listar()])
-      .then(([hogaresResult, tareasResult]) => {
+    Promise.allSettled([hogarService.listar(), tareaService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, tareasResult, usuariosResult]) => {
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setTareas(tareasResult.status === "fulfilled" ? tareasResult.value : []);
+        setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
 
-        if (hogaresResult.status === "rejected" || tareasResult.status === "rejected") {
+        if (hogaresResult.status === "rejected" || tareasResult.status === "rejected" || usuariosResult.status === "rejected") {
           setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios estén activos.");
         }
       })
@@ -60,6 +78,10 @@ export default function Tareas() {
     if (!hogarActual) return [];
     return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])];
   }, [hogarActual]);
+
+  const usuariosById = useMemo(() => {
+    return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [usuarios]);
 
   const tareasDelHogar = useMemo(() => {
     if (!hogarActual?.tareasIds?.length) return [];
@@ -94,7 +116,7 @@ export default function Tareas() {
     try {
       const creada = await tareaService.crear({
         titulo: form.titulo.trim(),
-        encargado: formatMemberName(encargadoId, user || undefined),
+        encargado: formatRealMemberName(encargadoId, usuariosById, user || undefined),
         descripcion: form.descripcion.trim(),
         fecha: form.fecha,
       });
@@ -104,10 +126,28 @@ export default function Tareas() {
         recursoId: creada.id,
       });
 
+      let notificacionEnviada = true;
+      try {
+        await notificacionService.crear({
+          usuarioEmisorId: user!.id,
+          usuarioReceptorId: encargadoId,
+          hogarId: hogarActual!.id,
+          referenciaId: creada.id,
+          tipo: "TAREA_HOGAR",
+          estado: "PENDIENTE",
+          titulo: "Nueva tarea asignada",
+          mensaje: `${user!.nombre || user!.usuario} te asigno la tarea "${creada.titulo}" en ${hogarActual!.nombre}.`,
+        });
+      } catch {
+        notificacionEnviada = false;
+      }
+
       setTareas((current) => [...current, creada]);
       setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
       setForm(initialForm);
-      setMessage("Tarea creada y asociada al hogar.");
+      setMessage(notificacionEnviada
+        ? "Tarea creada y asociada al hogar. Se aviso al encargado."
+        : "Tarea creada, pero no se pudo enviar la notificacion al encargado.");
     } catch {
       setMessage("No se pudo guardar la tarea. Revisa que los servicios estén disponibles.");
     } finally {
@@ -122,6 +162,8 @@ export default function Tareas() {
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/hogares")}>Mis hogares</button>
+          <NotificationBell />
+          <LogoutButton />
         </div>
       </header>
 
@@ -149,7 +191,7 @@ export default function Tareas() {
             <select className="form-control" value={form.encargadoId} onChange={(e) => setForm({ ...form, encargadoId: e.target.value })} required disabled={!canManage}>
               <option value="">Encargado</option>
               {integrantes.map((usuarioId) => (
-                <option key={usuarioId} value={usuarioId}>{formatMemberName(usuarioId, user || undefined)}</option>
+                <option key={usuarioId} value={usuarioId}>{formatRealMemberName(usuarioId, usuariosById, user || undefined)}</option>
               ))}
             </select>
             <textarea className="form-control" placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required disabled={!canManage} />

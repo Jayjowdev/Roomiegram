@@ -58,4 +58,8 @@ public class Register {
 
     @Column(length = 150)
     private String hogarActual;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String preferenciasCompatibilidad;
 }

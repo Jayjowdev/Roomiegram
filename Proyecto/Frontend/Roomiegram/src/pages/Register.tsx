@@ -17,7 +17,7 @@ function isValidPhone(value: string) {
 }
 
 function isStrongPassword(value: string) {
-  return value.length >= 8 && /[A-ZÁÉÍÓÚÑ]/.test(value) && /[a-záéíóúñ]/.test(value) && /\d/.test(value);
+  return value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value);
 }
 
 export default function Register() {
@@ -34,10 +34,10 @@ export default function Register() {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const passwordRules = [
-    { label: "Mínimo 8 caracteres", ok: contrasena.length >= 8 },
-    { label: "Al menos una letra mayúscula", ok: /[A-ZÁÉÍÓÚÑ]/.test(contrasena) },
-    { label: "Al menos una letra minúscula", ok: /[a-záéíóúñ]/.test(contrasena) },
-    { label: "Al menos un número", ok: /\d/.test(contrasena) },
+    { label: "Minimo 8 caracteres", ok: contrasena.length >= 8 },
+    { label: "Al menos una letra mayuscula", ok: /[A-Z]/.test(contrasena) },
+    { label: "Al menos una letra minuscula", ok: /[a-z]/.test(contrasena) },
+    { label: "Al menos un numero", ok: /\d/.test(contrasena) },
   ];
 
   const handleSubmit = async (e: FormEvent) => {
@@ -46,38 +46,38 @@ export default function Register() {
     clearError();
 
     if (nombre.trim().length < 3) {
-      setLocalError("Ingresa un nombre válido.");
+      setLocalError("Ingresa un nombre valido.");
       return;
     }
 
     if (!isValidEmail(correo)) {
-      setLocalError("Ingresa un correo válido con dominio, por ejemplo nombre@correo.com.");
+      setLocalError("Ingresa un correo valido con dominio, por ejemplo nombre@correo.com.");
       return;
     }
 
     if (!/^[a-zA-Z0-9._-]{3,20}$/.test(usuario.trim())) {
-      setLocalError("El usuario debe tener 3 a 20 caracteres y solo usar letras, números, punto, guion o guion bajo.");
+      setLocalError("El usuario debe tener 3 a 20 caracteres y solo usar letras, numeros, punto, guion o guion bajo.");
       return;
     }
 
     if (!isValidPhone(telefono)) {
-      setLocalError("Ingresa un teléfono válido de 8 a 12 dígitos.");
+      setLocalError("Ingresa un telefono valido de 8 a 12 digitos.");
       return;
     }
 
     if (!isStrongPassword(contrasena)) {
-      setLocalError("La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.");
+      setLocalError("La contrasena debe tener minimo 8 caracteres, una mayuscula, una minuscula y un numero.");
       return;
     }
 
     if (contrasena !== confirmPassword) {
-      setLocalError("Las contraseñas no coinciden.");
+      setLocalError("Las contrasenas no coinciden.");
       return;
     }
 
     try {
       await register({ nombre: nombre.trim(), correo: correo.trim(), usuario: usuario.trim(), telefono: telefono.trim(), contrasena });
-      navigate("/home");
+      navigate("/preferencias");
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Error en registro");
     }
@@ -101,27 +101,27 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="register-form">
           <input type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
-          <input type="email" className="form-control" placeholder="Correo electrónico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
+          <input type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-          <input type="tel" className="form-control" placeholder="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
-          <input type="password" className="form-control" placeholder="Contraseña segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} disabled={isLoading} />
+          <input type="tel" className="form-control" placeholder="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
+          <input type="password" className="form-control" placeholder="Contrasena segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} disabled={isLoading} />
 
           {(passwordFocused || contrasena.length > 0) && (
             <ul className="password-hints">
               {passwordRules.map((rule) => (
                 <li key={rule.label} className={rule.ok ? "hint-ok" : "hint-pending"}>
-                  {rule.ok ? "✓" : "○"} {rule.label}
+                  {rule.ok ? "OK" : "-"} {rule.label}
                 </li>
               ))}
             </ul>
           )}
-          <input type="password" className="form-control" placeholder="Confirmar contraseña" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+          <input type="password" className="form-control" placeholder="Confirmar contrasena" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
 
           <button className="btn btn-success w-100 mt-3" type="submit" disabled={isLoading}>
             {isLoading ? "Creando cuenta..." : "Crear cuenta"}
           </button>
 
-          <p className="register-legal">Al registrarte aceptas nuestros términos y condiciones.</p>
+          <p className="register-legal">Al registrarte aceptas nuestros terminos y condiciones.</p>
         </form>
       </div>
     </div>

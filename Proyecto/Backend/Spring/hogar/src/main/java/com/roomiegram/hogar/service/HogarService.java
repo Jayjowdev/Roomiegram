@@ -45,6 +45,13 @@ public class HogarService {
         validarUsuarioRequest(request);
 
         Hogar hogar = buscarHogar(hogarId);
+        if (hogar.getIntegrantesIds().contains(request.usuarioId())) {
+            throw new IllegalArgumentException("Ya formas parte de este hogar");
+        }
+        if (hogar.getSolicitudesPendientesIds().contains(request.usuarioId())) {
+            throw new IllegalArgumentException("Ya tienes una solicitud pendiente para este hogar");
+        }
+
         if (!hogar.solicitarIngreso(request.usuarioId())) {
             throw new IllegalArgumentException("La solicitud no se pudo registrar");
         }

@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
+import { LogoutButton } from "../components/LogoutButton";
+import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
+import { usuarioService } from "../services/usuarioService";
 import type { HogarCuenta, Notificacion } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { Tarea } from "../types/Tarea";
+import type { UsuarioResumen } from "../types/Usuario";
 
 type LoadState = {
   hogares: Hogar[];
   tareas: Tarea[];
   gastos: HogarCuenta[];
   notificaciones: Notificacion[];
+  usuarios: UsuarioResumen[];
 };
 
 const emptyState: LoadState = {
@@ -22,10 +27,11 @@ const emptyState: LoadState = {
   tareas: [],
   gastos: [],
   notificaciones: [],
+  usuarios: [],
 };
 
 function formatCurrency(value?: number) {
-  return `$${Number(value || 0).toLocaleString("es-CL")}`;
+  return `$${Math.round(Number(value || 0)).toLocaleString("es-CL", { maximumFractionDigits: 0 })}`;
 }
 
 function formatDate(value?: string) {
@@ -39,6 +45,17 @@ function formatDate(value?: string) {
 
 function uniqueIds(ids: Array<number | undefined>) {
   return [...new Set(ids.filter((id): id is number => typeof id === "number" && id > 0))];
+}
+
+function getMemberName(
+  usuarioId: number,
+  usuariosById: Map<number, UsuarioResumen>,
+  currentUser?: { id: number; nombre?: string; usuario?: string }
+) {
+  if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tu";
+
+  const usuario = usuariosById.get(usuarioId);
+  return usuario?.nombre || usuario?.usuario || "Integrante del hogar";
 }
 
 export default function Convivencia() {
@@ -56,7 +73,8 @@ export default function Convivencia() {
       tareaService.listar(),
       gastoService.listar(),
       notificacionService.listar(),
-    ]).then(([hogaresResult, tareasResult, gastosResult, notificacionesResult]) => {
+      usuarioService.listar(),
+    ]).then(([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult]) => {
       if (!isMounted) return;
 
       const partialData: LoadState = {
@@ -65,12 +83,13 @@ export default function Convivencia() {
         gastos: gastosResult.status === "fulfilled" ? gastosResult.value : [],
         notificaciones:
           notificacionesResult.status === "fulfilled" ? notificacionesResult.value : [],
+        usuarios: usuariosResult.status === "fulfilled" ? usuariosResult.value : [],
       };
 
       setData(partialData);
       setIsLoading(false);
 
-      if ([hogaresResult, tareasResult, gastosResult, notificacionesResult].some((result) => result.status === "rejected")) {
+      if ([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult].some((result) => result.status === "rejected")) {
         setMessage("Algunos datos del hogar no se pudieron cargar. Revisa que los microservicios estén activos.");
       } else {
         setMessage("");
@@ -132,6 +151,10 @@ export default function Convivencia() {
   }, 0);
   const pendientes = notificacionesDelHogar.filter((notificacion) => notificacion.estado === "PENDIENTE").length;
 
+  const usuariosById = useMemo(() => {
+    return new Map(data.usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [data.usuarios]);
+
   return (
     <div className="dashboard-page">
       <header className="dashboard-header">
@@ -142,6 +165,8 @@ export default function Convivencia() {
           <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/hogares")}>Mis hogares</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Inicio</button>
+          <NotificationBell />
+          <LogoutButton />
         </div>
       </header>
 
@@ -211,14 +236,17 @@ export default function Convivencia() {
 
               <div className="roomie-list">
                 {integrantes.map((usuarioId) => {
-                  const isCurrentUser = usuarioId === user?.id;
                   const isAdmin = usuarioId === hogarActual.usuarioAdministradorId;
+                  const memberName = getMemberName(usuarioId, usuariosById, user || undefined);
+                  const fotoPerfil = usuariosById.get(usuarioId)?.fotoPerfil || (usuarioId === user?.id ? user?.fotoPerfil : "");
 
                   return (
                     <article className="roomie-card" key={usuarioId}>
-                      <div className="roomie-avatar">{isCurrentUser ? (user?.nombre || user?.usuario || "Yo").charAt(0) : usuarioId}</div>
+                      <div className="roomie-avatar">
+                        {fotoPerfil ? <img src={fotoPerfil} alt={memberName} /> : memberName.charAt(0).toUpperCase()}
+                      </div>
                       <div>
-                        <h4>{isCurrentUser ? user?.nombre || user?.usuario : `Roomie registrado #${usuarioId}`}</h4>
+                        <h4>{memberName}</h4>
                         <span>{isAdmin ? "Administrador del hogar" : "Integrante"}</span>
                       </div>
                     </article>
@@ -315,7 +343,7 @@ export default function Convivencia() {
 
             <div className="dashboard-profile">
               <h4>Estado del grupo</h4>
-              <p><strong>Administrador:</strong> Usuario #{hogarActual.usuarioAdministradorId}</p>
+              <p><strong>Administrador:</strong> {getMemberName(hogarActual.usuarioAdministradorId, usuariosById, user || undefined)}</p>
               <p><strong>Creado:</strong> {formatDate(hogarActual.fechaCreacion)}</p>
               <p><strong>ID del hogar:</strong> {hogarActual.id}</p>
             </div>

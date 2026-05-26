@@ -105,8 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const updated = await authService.updateProfile(user.id, changes);
-      authService.saveSession(sessionId, updated);
-      setUser(updated);
+      const merged = { ...updated, ...changes };
+      authService.saveSession(sessionId, merged);
+      setUser(merged);
     } catch {
       updateUser(changes);
     }

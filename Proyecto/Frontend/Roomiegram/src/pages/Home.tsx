@@ -4,6 +4,8 @@ import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
+import { LogoutButton } from "../components/LogoutButton";
+import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
@@ -94,7 +96,10 @@ export default function Home() {
     }
 
     try {
-      await publicacionService.eliminar(pub.id, user.usuario, user?.role || "CLIENTE");
+      if (pub.origen === "backend") {
+        await publicacionService.eliminar(pub.id, user.usuario, user?.role || "CLIENTE");
+      }
+
       setPublicaciones((current) => current.filter((currentPub) => currentPub.id !== pub.id));
       deleteLocalPublicacion(pub.id);
       setApiMessage("Publicacion eliminada correctamente.");
@@ -113,10 +118,12 @@ export default function Home() {
         <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/")} />
         <div className="home-header-actions">
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
+          <NotificationBell className="me-2" />
           {/* <button className="btn btn-outline-success me-2" onClick={() => navigate("/compatibilidad")}>Buscar compatibilidad</button> */}
           {user?.role === "ADMIN" && (
             <button className="btn btn-success" onClick={() => navigate("/dashboard")}>Admin</button>
           )}
+          <LogoutButton />
         </div>
       </header>
 
@@ -144,7 +151,7 @@ export default function Home() {
           <div className="sin-resultados"><p>No hay publicaciones disponibles</p></div>
         ) : (
           publicacionesFiltradas.map((pub) => (
-            <article className="home-card" key={`${pub.origen || "demo"}-${pub.tipo || "publicacion"}-${pub.id}`}>
+            <article className="home-card" key={`${pub.origen || "publicacion"}-${pub.tipo || "publicacion"}-${pub.id}`}>
               {pub.tipo === "busco_roomie" ? (
                 <>
                   {pub.imagen && <img src={pub.imagen} alt={pub.nombre} className="home-card-img" />}
@@ -156,6 +163,7 @@ export default function Home() {
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}
                     <button className="btn btn-success w-100 mt-4" onClick={() => navigate(`/perfil/${pub.id}`)}>Ver perfil</button>
+                    {puedeEliminarPublicacion(pub) && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub)}>Eliminar</button>}
                   </div>
                 </>
               ) : (

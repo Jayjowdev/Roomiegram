@@ -5,6 +5,7 @@ import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
+import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { PublicacionRequest } from "../types/Backend";
@@ -48,9 +49,12 @@ export default function CrearPublicacion() {
       ? {
           id: Date.now(),
           tipo: "busco_roomie",
-          origen: "demo-local",
+          origen: "local",
+          usuarioId: user?.id,
           usuarioCreador: creador,
           nombre: user?.nombre || user?.usuario || "RoomieGram",
+          telefono: user?.telefono,
+          correo: user?.correo,
           titulo: form.titulo.trim(),
           ubicacion: form.ubicacion.trim(),
           descripcion: form.descripcion.trim(),
@@ -61,9 +65,12 @@ export default function CrearPublicacion() {
       : {
           id: Date.now(),
           tipo: "ofrezco_casa",
-          origen: "demo-local",
+          origen: "local",
+          usuarioId: user?.id,
           usuarioCreador: creador,
           nombre: user?.nombre || user?.usuario || "RoomieGram",
+          telefono: user?.telefono,
+          correo: user?.correo,
           titulo: form.titulo.trim(),
           precioMensual: Number(form.precio),
           precio: Number(form.precio),
@@ -173,6 +180,7 @@ export default function CrearPublicacion() {
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Cancelar</button>
+          <LogoutButton />
         </div>
       </header>
 

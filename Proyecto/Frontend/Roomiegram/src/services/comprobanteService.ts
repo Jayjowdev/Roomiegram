@@ -11,6 +11,15 @@ export async function crearComprobante(payload: CreateComprobantePayload) {
   }
 }
 
+export async function listarComprobantes() {
+  try {
+    const { data } = await comprobanteApi.get<Comprobante[]>("/comprobantes")
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function eliminarComprobante(id: number) {
   try {
     await comprobanteApi.delete(`/comprobantes/${id}`)
@@ -20,6 +29,7 @@ export async function eliminarComprobante(id: number) {
 }
 
 export const comprobanteService = {
+  listar: listarComprobantes,
   crear: (payload: Comprobante) => crearComprobante(payload as CreateComprobantePayload) as Promise<Comprobante>,
   eliminar: eliminarComprobante,
 }

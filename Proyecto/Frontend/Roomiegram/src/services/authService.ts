@@ -22,6 +22,38 @@ export async function register(payload: RegisterPayload) {
   }
 }
 
+function normalizePreferences(value: unknown): UserSession["preferenciasCompatibilidad"] {
+  if (!value) {
+    return undefined
+  }
+
+  const parsed = typeof value === "string" ? safeParseJson(value) : value
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined
+  }
+
+  const preferences = parsed as Partial<NonNullable<UserSession["preferenciasCompatibilidad"]>>
+  const values = {
+    limpieza: preferences.limpieza || "",
+    ambiente: preferences.ambiente || "",
+    horario: preferences.horario || "",
+    mascotas: preferences.mascotas || "",
+    fumar: preferences.fumar || "",
+    presupuesto: preferences.presupuesto || "",
+  }
+
+  return Object.values(values).some(Boolean) ? values : undefined
+}
+
+function safeParseJson(value: string) {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return undefined
+  }
+}
+
 function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
   const role = "role" in data && String(data.role).toUpperCase() === "ADMIN" ? "ADMIN" : "CLIENTE"
 
@@ -30,12 +62,14 @@ function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
     usuario: data.usuario,
     nombre: data.nombre,
     correo: data.correo,
+    telefono: "telefono" in data ? data.telefono : undefined,
     role,
     fotoPerfil: "fotoPerfil" in data ? data.fotoPerfil : undefined,
     descripcion: "descripcion" in data ? data.descripcion : undefined,
     intereses: "intereses" in data ? data.intereses : undefined,
     estaEnCasa: "estaEnCasa" in data ? data.estaEnCasa : undefined,
     hogarActual: "hogarActual" in data ? data.hogarActual : undefined,
+    preferenciasCompatibilidad: "preferenciasCompatibilidad" in data ? normalizePreferences(data.preferenciasCompatibilidad) : undefined,
   }
 }
 

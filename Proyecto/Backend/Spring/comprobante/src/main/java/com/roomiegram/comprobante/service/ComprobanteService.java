@@ -1,6 +1,7 @@
 package com.roomiegram.comprobante.service;
 
 import java.util.Optional;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,10 @@ public class ComprobanteService {
 
 	public Optional<Comprobante> obtenerPorId(Long id) {
 		return comprobanteRepository.findById(id);
+	}
+
+	public List<Comprobante> listarComprobantes() {
+		return comprobanteRepository.findAll();
 	}
 
 	public Comprobante actualizarComprobante(Long id, Comprobante comprobanteActualizado) {

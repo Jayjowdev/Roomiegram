@@ -5,12 +5,42 @@ export type UsuarioAuth = {
   usuario: string
   nombre: string
   correo: string
+  telefono?: string
   role: UsuarioRole
   fotoPerfil?: string
   descripcion?: string
   intereses?: string[]
   estaEnCasa?: boolean
   hogarActual?: string
+  preferenciasCompatibilidad?: {
+    limpieza: string
+    ambiente: string
+    horario: string
+    mascotas: string
+    fumar: string
+    presupuesto: string
+  }
+}
+
+export type UsuarioResumen = {
+  id: number
+  usuario: string
+  nombre: string
+  correo?: string
+  telefono?: string
+  fotoPerfil?: string
+  descripcion?: string
+  intereses?: string[]
+  estaEnCasa?: boolean
+  hogarActual?: string
+  preferenciasCompatibilidad?: {
+    limpieza: string
+    ambiente: string
+    horario: string
+    mascotas: string
+    fumar: string
+    presupuesto: string
+  }
 }
 
 export type RegisterPayload = {
@@ -32,6 +62,14 @@ export type RegisterResponse = {
   intereses?: string[]
   estaEnCasa?: boolean
   hogarActual?: string
+  preferenciasCompatibilidad?: {
+    limpieza: string
+    ambiente: string
+    horario: string
+    mascotas: string
+    fumar: string
+    presupuesto: string
+  }
 }
 
 export type LoginPayload = {

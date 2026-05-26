@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
+import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
@@ -18,7 +19,7 @@ type DashboardStats = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     publicaciones: 0,
     hogares: 0,
@@ -58,11 +59,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   return (
     <div className="dashboard-page">
       <header className="dashboard-header">
@@ -76,9 +72,7 @@ export default function Dashboard() {
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>
             Volver al inicio
           </button>
-          <button className="btn btn-outline-dark" onClick={handleLogout}>
-            Cerrar sesion
-          </button>
+          <LogoutButton />
         </div>
       </header>
 

@@ -3,6 +3,9 @@ package com.roomiegram.usuario.controller;
 import java.util.Map;
 import java.util.Optional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,8 @@ import com.roomiegram.usuario.service.LoginService;
 @RequestMapping("/auth")
 @CrossOrigin(origins = "*") // para conectar con frontend react 
 public class LoginController {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Autowired
     private LoginService loginService;
@@ -42,17 +47,32 @@ public class LoginController {
             Long id = reg.map(Register::getId).orElse(login.getId());
             String nombre = reg.map(Register::getNombre).orElse(login.getUsuario());
             String correo = reg.map(Register::getCorreo).orElse("");
+            String telefono = reg.map(Register::getTelefono).orElse("");
             String fotoPerfil = reg.map(Register::getFotoPerfil).orElse("");
+            String descripcion = reg.map(Register::getDescripcion).orElse("");
+            java.util.List<String> intereses = reg.map(Register::getIntereses).orElse(java.util.List.of());
+            boolean estaEnCasa = reg.map(Register::isEstaEnCasa).orElse(false);
+            String hogarActual = reg.map(Register::getHogarActual).orElse("");
+            Object preferenciasCompatibilidad = reg
+                    .map(Register::getPreferenciasCompatibilidad)
+                    .map(this::parsePreferencias)
+                    .orElse(Map.of());
 
             // Retornar informacion del usuario autenticado (sin la contraseña)
-            return ResponseEntity.ok(Map.of(
-                "id", id,
-                "usuario", login.getUsuario(),
-                "nombre", nombre,
-                "correo", correo,
-                "fotoPerfil", fotoPerfil == null ? "" : fotoPerfil,
-                "role", login.getRole().name(),
-                "mensaje", "Login exitoso"
+            return ResponseEntity.ok(Map.ofEntries(
+                Map.entry("id", id),
+                Map.entry("usuario", login.getUsuario()),
+                Map.entry("nombre", nombre),
+                Map.entry("correo", correo),
+                Map.entry("telefono", telefono == null ? "" : telefono),
+                Map.entry("fotoPerfil", fotoPerfil == null ? "" : fotoPerfil),
+                Map.entry("descripcion", descripcion == null ? "" : descripcion),
+                Map.entry("intereses", intereses == null ? java.util.List.of() : intereses),
+                Map.entry("estaEnCasa", estaEnCasa),
+                Map.entry("hogarActual", hogarActual == null ? "" : hogarActual),
+                Map.entry("preferenciasCompatibilidad", preferenciasCompatibilidad),
+                Map.entry("role", login.getRole().name()),
+                Map.entry("mensaje", "Login exitoso")
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
@@ -67,6 +87,18 @@ public class LoginController {
         return ResponseEntity.ok(Map.of(
             "existe", existe
         ));
+    }
+
+    private Object parsePreferencias(String preferencias) {
+        if (preferencias == null || preferencias.isBlank()) {
+            return Map.of();
+        }
+
+        try {
+            return objectMapper.readValue(preferencias, new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            return Map.of();
+        }
     }
 
 }

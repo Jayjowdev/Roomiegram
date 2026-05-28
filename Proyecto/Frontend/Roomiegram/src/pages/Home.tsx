@@ -31,24 +31,19 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
   const imagen = pub.imagen || imagenGuardada || home1;
   const galeria = pub.galeria?.length ? pub.galeria : [imagen, home2, home3];
-  const tipo = pub.tipo || "ofrezco_casa";
 
   return {
     id: pub.id,
-    tipo,
+    tipo: "ofrezco_casa",
     origen: "backend",
-    usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
-    nombre: pub.nombre || pub.usuarioCreador || "RoomieGram",
-    titulo: pub.titulo || (tipo === "busco_roomie" ? getRoomieTitle(pub) : "Habitacion disponible"),
+    nombre: pub.usuarioCreador || "RoomieGram",
+    titulo: pub.titulo || "Habitacion disponible",
     precioMensual: pub.precio || pub.precioMensual || 0,
     precio: pub.precio || pub.precioMensual || 0,
-    presupuestoMaximo: pub.presupuestoMaximo || pub.precio,
-    telefono: pub.telefono,
-    correo: pub.correo,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
-    amenidades: tipo === "busco_roomie" ? pub.amenidades : [
+    amenidades: [
       `${pub.numeroHabitaciones || 1} habitacion(es)`,
       `${pub.numeroPersonas || 1} cupo(s)`,
       `${pub.numeroBanos || 1} bano(s)`,

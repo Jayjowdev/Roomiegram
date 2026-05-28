@@ -1,15 +1,16 @@
 services:
-  # MySQL
-  mysql:
+  # --- MySQL por servicio ---
+
+  mysql-comprobante:
     image: mysql:8.4
-    container_name: roomiegram-mysql
+    container_name: roomiegram-mysql-comprobante
     environment:
       MYSQL_ROOT_PASSWORD: roomiegram
-      MYSQL_DATABASE: roomiegram
+      MYSQL_DATABASE: roomiegram_comprobante
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_comprobante_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
       interval: 10s
@@ -18,18 +19,127 @@ services:
     networks:
       - roomiegram-net
 
-  # Microservicios
+  mysql-hogar:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-hogar
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_hogar
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_hogar_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  mysql-hogarcuenta:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-hogarcuenta
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_hogarcuenta
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_hogarcuenta_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  mysql-notificacion:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-notificacion
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_notificacion
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql_notificacion_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  mysql-publicacion:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-publicacion
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_publicacion
+    ports:
+      - "3311:3306"
+    volumes:
+      - mysql_publicacion_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  mysql-tarea:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-tarea
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_tarea
+    ports:
+      - "3312:3306"
+    volumes:
+      - mysql_tarea_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  mysql-usuario:
+    image: mysql:8.4
+    container_name: roomiegram-mysql-usuario
+    environment:
+      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_DATABASE: roomiegram_usuario
+    ports:
+      - "3313:3306"
+    volumes:
+      - mysql_usuario_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - roomiegram-net
+
+  # --- Microservicios ---
+
   comprobante:
     build: ./Proyecto/Backend/Spring/comprobante
     container_name: roomiegram-comprobante
     ports:
       - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-comprobante:3306/roomiegram_comprobante?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-comprobante:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -41,11 +151,11 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-hogar:3306/roomiegram_hogar?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-hogar:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -57,11 +167,11 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-hogarcuenta:3306/roomiegram_hogarcuenta?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-hogarcuenta:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -73,27 +183,28 @@ services:
     ports:
       - "8085:8085"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-notificacion:3306/roomiegram_notificacion?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-notificacion:
         condition: service_healthy
     networks:
       - roomiegram-net
     restart: on-failure
+
   publicacion:
     build: ./Proyecto/Backend/Spring/publicacion
     container_name: roomiegram-publicacion
     ports:
       - "8086:8086"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-publicacion:3306/roomiegram_publicacion?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
       HOGAR_SERVICE_URL: http://hogar:8083
     depends_on:
-      mysql:
+      mysql-publicacion:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -105,11 +216,11 @@ services:
     ports:
       - "8087:8087"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-tarea:3306/roomiegram_tarea?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-tarea:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -121,11 +232,11 @@ services:
     ports:
       - "8088:8088"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-usuario:3306/roomiegram_usuario?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
     depends_on:
-      mysql:
+      mysql-usuario:
         condition: service_healthy
     networks:
       - roomiegram-net
@@ -144,8 +255,20 @@ services:
     restart: on-failure
 
 volumes:
-  mysql_data:
-    name: roomiegram_mysql_data
+  mysql_comprobante_data:
+    name: roomiegram_mysql_comprobante_data
+  mysql_hogar_data:
+    name: roomiegram_mysql_hogar_data
+  mysql_hogarcuenta_data:
+    name: roomiegram_mysql_hogarcuenta_data
+  mysql_notificacion_data:
+    name: roomiegram_mysql_notificacion_data
+  mysql_publicacion_data:
+    name: roomiegram_mysql_publicacion_data
+  mysql_tarea_data:
+    name: roomiegram_mysql_tarea_data
+  mysql_usuario_data:
+    name: roomiegram_mysql_usuario_data
 
 networks:
   roomiegram-net:

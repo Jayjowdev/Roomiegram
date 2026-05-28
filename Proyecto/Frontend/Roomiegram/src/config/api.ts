@@ -5,14 +5,18 @@ const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
 }
 
+function apiUrl(port: number) {
+  return `${window.location.protocol}//${window.location.hostname}:${port}`
+}
+
 const API_URLS = {
-  usuario: import.meta.env.VITE_USUARIO_API_URL ?? "http://localhost:8088",
-  hogar: import.meta.env.VITE_HOGAR_API_URL ?? "http://localhost:8083",
-  hogarCuenta: import.meta.env.VITE_HOGAR_CUENTA_API_URL ?? "http://localhost:8084",
-  comprobante: import.meta.env.VITE_COMPROBANTE_API_URL ?? "http://localhost:8082",
-  publicacion: import.meta.env.VITE_PUBLICACION_API_URL ?? "http://localhost:8086",
-  tarea: import.meta.env.VITE_TAREA_API_URL ?? "http://localhost:8087",
-  notificacion: import.meta.env.VITE_NOTIFICACION_API_URL ?? "http://localhost:8085",
+  usuario: import.meta.env.VITE_USUARIO_API_URL ?? apiUrl(8088),
+  hogar: import.meta.env.VITE_HOGAR_API_URL ?? apiUrl(8083),
+  hogarCuenta: import.meta.env.VITE_HOGAR_CUENTA_API_URL ?? apiUrl(8084),
+  comprobante: import.meta.env.VITE_COMPROBANTE_API_URL ?? apiUrl(8082),
+  publicacion: import.meta.env.VITE_PUBLICACION_API_URL ?? apiUrl(8086),
+  tarea: import.meta.env.VITE_TAREA_API_URL ?? apiUrl(8087),
+  notificacion: import.meta.env.VITE_NOTIFICACION_API_URL ?? apiUrl(8085),
 }
 
 function createApi(baseURL: string) {

@@ -10,13 +10,13 @@ function apiUrl(port: number) {
 }
 
 const API_URLS = {
-  usuario: import.meta.env.VITE_USUARIO_API_URL ?? apiUrl(8088),
-  hogar: import.meta.env.VITE_HOGAR_API_URL ?? apiUrl(8083),
-  hogarCuenta: import.meta.env.VITE_HOGAR_CUENTA_API_URL ?? apiUrl(8084),
-  comprobante: import.meta.env.VITE_COMPROBANTE_API_URL ?? apiUrl(8082),
-  publicacion: import.meta.env.VITE_PUBLICACION_API_URL ?? apiUrl(8086),
-  tarea: import.meta.env.VITE_TAREA_API_URL ?? apiUrl(8087),
-  notificacion: import.meta.env.VITE_NOTIFICACION_API_URL ?? apiUrl(8085),
+  usuario: apiUrl(8088),
+  hogar: apiUrl(8083),
+  hogarCuenta: apiUrl(8084),
+  comprobante: apiUrl(8082),
+  publicacion: apiUrl(8086),
+  tarea: apiUrl(8087),
+  notificacion: apiUrl(8085),
 }
 
 function createApi(baseURL: string) {

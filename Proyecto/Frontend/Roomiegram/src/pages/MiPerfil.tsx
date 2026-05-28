@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import avatarUser from "../assets/avatarUser.svg";
+import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
@@ -34,6 +35,7 @@ export default function MiPerfil() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
+  const [cropSource, setCropSource] = useState("");
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
 
@@ -98,12 +100,17 @@ export default function MiPerfil() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        updateProfilePhoto(reader.result).then(() => {
-          setMessage("Foto de perfil actualizada.");
-        });
+        setCropSource(reader.result);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const saveCroppedProfilePhoto = (image: string) => {
+    setCropSource("");
+    updateProfilePhoto(image).then(() => {
+      setMessage("Foto de perfil actualizada.");
+    });
   };
 
   return (
@@ -122,6 +129,18 @@ export default function MiPerfil() {
       </header>
 
       {message && <p className="api-message">{message}</p>}
+
+      {cropSource && (
+        <ImageCropper
+          source={cropSource}
+          title="Ajustar foto de perfil"
+          aspect={1}
+          outputWidth={700}
+          outputHeight={700}
+          onCancel={() => setCropSource("")}
+          onSave={saveCroppedProfilePhoto}
+        />
+      )}
 
       <section className="mi-perfil-hero">
         <div className="mi-perfil-card">

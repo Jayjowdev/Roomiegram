@@ -5,25 +5,82 @@ import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
+import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
-import { getLocalPublicaciones } from "../utils/localPublicaciones";
+import type { Publicacion } from "../types/Publicacion";
+import type { UsuarioResumen } from "../types/Usuario";
+import { getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
+
+function isGenericTitle(titulo?: string) {
+  return !titulo?.trim() || /^perfil de\s+/i.test(titulo);
+}
+
+function getPerfilTitle(perfil: Publicacion, usuario?: UsuarioResumen) {
+  if (!isGenericTitle(perfil.titulo)) return perfil.titulo;
+  return usuario?.nombre ? `${usuario.nombre} busca roomie` : `${perfil.nombre || "Usuario"} busca roomie`;
+}
+
+function getPerfilLocation(perfil: Publicacion) {
+  const ubicacion = perfil.ubicacion?.trim();
+  return ubicacion && ubicacion !== "Ubicacion no informada" ? ubicacion : "No informada por el usuario";
+}
 
 export default function Perfil() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const perfil = getLocalPublicaciones()
-    .find((publicacion) => publicacion.tipo === "busco_roomie" && String(publicacion.id) === id);
+  const perfilLocal = getLocalPublicaciones()
+    .find((publicacion) => publicacion.tipo === "busco_roomie" && String(publicacion.id) === id && !isGeneratedProfile(publicacion));
 
   useEffect(() => {
-    hogarService
-      .listar()
-      .then(setHogares)
-      .catch(() => setMessage("No se pudieron cargar los grupos hogar."));
+    Promise.allSettled([hogarService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, usuariosResult]) => {
+        if (hogaresResult.status === "fulfilled") setHogares(hogaresResult.value);
+        if (usuariosResult.status === "fulfilled") setUsuarios(usuariosResult.value);
+        if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected") {
+          setMessage("No se pudieron cargar todos los datos del perfil.");
+        }
+      });
   }, []);
+
+  const usuarioPerfil = useMemo(() => {
+    const usuarioId = perfilLocal?.usuarioId || Number(id);
+    return usuarios.find((item) => item.id === usuarioId);
+  }, [id, perfilLocal?.usuarioId, usuarios]);
+
+  const perfil = useMemo<Publicacion | null>(() => {
+    if (perfilLocal) return perfilLocal;
+    if (!usuarioPerfil) return null;
+
+    return {
+      id: usuarioPerfil.id,
+      tipo: "busco_roomie",
+      usuarioId: usuarioPerfil.id,
+      usuarioCreador: usuarioPerfil.usuario,
+      nombre: usuarioPerfil.nombre || usuarioPerfil.usuario,
+      titulo: `${usuarioPerfil.nombre || usuarioPerfil.usuario} busca roomie`,
+      ubicacion: usuarioPerfil.hogarActual || "Ubicacion no informada",
+      descripcion: usuarioPerfil.descripcion || "Usuario registrado con preferencias de convivencia.",
+      presupuestoMaximo: Number(usuarioPerfil.preferenciasCompatibilidad?.presupuesto || 0),
+      imagen: usuarioPerfil.fotoPerfil,
+      telefono: usuarioPerfil.telefono,
+      correo: usuarioPerfil.correo,
+      intereses: usuarioPerfil.intereses,
+      habitos: usuarioPerfil.preferenciasCompatibilidad
+        ? [
+            usuarioPerfil.preferenciasCompatibilidad.limpieza,
+            usuarioPerfil.preferenciasCompatibilidad.ambiente,
+            usuarioPerfil.preferenciasCompatibilidad.horario,
+            usuarioPerfil.preferenciasCompatibilidad.mascotas,
+            usuarioPerfil.preferenciasCompatibilidad.fumar,
+          ]
+        : [],
+    };
+  }, [perfilLocal, usuarioPerfil]);
 
   const perfilUsuarioId = perfil?.usuarioId || Number(id);
 
@@ -129,9 +186,17 @@ export default function Perfil() {
           </section>
 
           <section className="perfil-info">
-            <h2>{perfil.nombre}{perfil.edad ? `, ${perfil.edad}` : ""}</h2>
-            <p className="perfil-ubicacion">{perfil.ubicacion}</p>
-            <p className="perfil-bio">{perfil.descripcion}</p>
+            <div className="perfil-publication-summary">
+              <span className="demo-kicker">Publicacion</span>
+              <h1>{getPerfilTitle(perfil, usuarioPerfil)}</h1>
+              <p className="perfil-ubicacion">Ubicacion: {getPerfilLocation(perfil)}</p>
+              <p className="perfil-bio">{perfil.descripcion}</p>
+            </div>
+
+            <div className="perfil-section">
+              <h3>Publicado por</h3>
+              <p><strong>{perfil.nombre}{perfil.edad ? `, ${perfil.edad}` : ""}</strong></p>
+            </div>
 
             <div className="perfil-section">
               <h3>Busca hogar</h3>
@@ -143,8 +208,8 @@ export default function Perfil() {
 
             <div className="perfil-section">
               <h3>Contacto</h3>
-              <p><strong>Telefono:</strong> {perfil.telefono || "No informado"}</p>
-              {perfil.correo && <p><strong>Correo:</strong> {perfil.correo}</p>}
+              <p><strong>Telefono:</strong> {perfil.telefono || usuarioPerfil?.telefono || "No disponible en esta sesion"}</p>
+              {(perfil.correo || usuarioPerfil?.correo) && <p><strong>Correo:</strong> {perfil.correo || usuarioPerfil?.correo}</p>}
             </div>
 
             <div className="perfil-section">

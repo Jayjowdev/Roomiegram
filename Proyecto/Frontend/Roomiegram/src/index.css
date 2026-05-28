@@ -847,6 +847,22 @@ p {
   flex: 1;
 }
 
+.perfil-publication-summary {
+  background: #ffffff;
+  border: 1px solid #e2e8e5;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.perfil-publication-summary h1 {
+  color: #222;
+  font-size: 32px;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+
 .perfil-info h2 {
   margin-bottom: 10px;
 }
@@ -1775,6 +1791,59 @@ p {
   object-fit: cover;
   border-radius: 10px;
   display: block;
+}
+
+.cropper-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(36, 36, 36, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.cropper-panel {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
+}
+
+.cropper-select-area {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #d3ebe5;
+  border-radius: 14px;
+  background: #f5f7f6;
+  margin-bottom: 16px;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+}
+
+.cropper-select-area img {
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.cropper-selection {
+  position: absolute;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.38), 0 0 0 1px #1f7a63;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.cropper-panel input[type="range"] {
+  accent-color: #1f7a63;
 }
 
 .gallery-preview {

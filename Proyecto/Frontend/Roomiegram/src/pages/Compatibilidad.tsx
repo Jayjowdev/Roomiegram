@@ -16,7 +16,8 @@ type MatchCandidate = {
   nombre: string
   usuario: string
   correo?: string
-  telefono?: string
+  telefono: string
+  hogarActual?: string
   descripcion?: string
   imagen?: string
   preferencias: PreferenciasCompatibilidad
@@ -84,6 +85,7 @@ export default function Compatibilidad() {
           usuario: usuario.usuario,
           correo: usuario.correo,
           telefono: usuario.telefono,
+          hogarActual: usuario.hogarActual,
           descripcion: usuario.descripcion || "Usuario registrado con preferencias de convivencia.",
           imagen: usuario.fotoPerfil || avatar4,
           preferencias,
@@ -102,8 +104,8 @@ export default function Compatibilidad() {
       usuarioId: candidato.id,
       usuarioCreador: candidato.usuario,
       nombre: candidato.nombre,
-      titulo: `Perfil de ${candidato.nombre}`,
-      ubicacion: "Ubicacion no informada",
+      titulo: `${candidato.nombre} busca roomie`,
+      ubicacion: candidato.hogarActual || "Ubicacion no informada",
       descripcion: candidato.descripcion || "Usuario registrado con preferencias de convivencia.",
       presupuestoMaximo: Number(candidato.preferencias.presupuesto || 0),
       imagen: candidato.imagen,
@@ -236,7 +238,7 @@ export default function Compatibilidad() {
                   </div>
                   <small>{candidato.descripcion}</small>
                   <small>
-                    {candidato.telefono ? `Telefono: ${candidato.telefono}` : "Telefono no informado"}
+                    Telefono: {candidato.telefono}
                     {candidato.correo ? ` - ${candidato.correo}` : ""}
                   </small>
                   <div className="match-tags">

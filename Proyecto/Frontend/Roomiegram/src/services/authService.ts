@@ -62,7 +62,7 @@ function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
     usuario: data.usuario,
     nombre: data.nombre,
     correo: data.correo,
-    telefono: "telefono" in data ? data.telefono : undefined,
+    telefono: "telefono" in data ? data.telefono || "" : "",
     role,
     fotoPerfil: "fotoPerfil" in data ? data.fotoPerfil : undefined,
     descripcion: "descripcion" in data ? data.descripcion : undefined,
@@ -130,6 +130,7 @@ export const authService = {
       usuario: "demo",
       nombre: "Usuario demo",
       correo: "demo@roomiegram.cl",
+      telefono: "00000000",
       role: "CLIENTE",
     })
   },

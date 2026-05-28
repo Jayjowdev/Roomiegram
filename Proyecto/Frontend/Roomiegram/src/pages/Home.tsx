@@ -9,11 +9,22 @@ import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
-import { deleteLocalPublicacion, getLocalPublicaciones } from "../utils/localPublicaciones";
+import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
+}
+
+function getRoomieTitle(pub: Publicacion) {
+  const titulo = pub.titulo?.trim() || "";
+  if (titulo && !/^perfil de\s+/i.test(titulo)) return titulo;
+  return `${pub.nombre || "Usuario"} busca roomie`;
+}
+
+function getLocation(pub: Publicacion) {
+  const ubicacion = pub.ubicacion?.trim();
+  return ubicacion && ubicacion !== "Ubicacion no informada" ? ubicacion : "Ubicacion no informada";
 }
 
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
@@ -60,13 +71,13 @@ export default function Home() {
       .then((data) => {
         if (!isMounted) return;
         const mapped = data.map(mapBackendPublicacion);
-        const locales = getLocalPublicaciones();
+        const locales = getLocalPublicaciones().filter((pub) => !isGeneratedProfile(pub));
         setPublicaciones([...locales, ...mapped]);
         setApiMessage("");
       })
       .catch(() => {
         if (isMounted) {
-          setPublicaciones(getLocalPublicaciones());
+          setPublicaciones(getLocalPublicaciones().filter((pub) => !isGeneratedProfile(pub)));
           setApiMessage("Servicio no disponible. Intenta nuevamente.");
         }
       })
@@ -157,8 +168,9 @@ export default function Home() {
                   {pub.imagen && <img src={pub.imagen} alt={pub.nombre} className="home-card-img" />}
                   <div className="home-card-body">
                     <div className="home-card-top">
-                      <h3>{pub.nombre}{pub.edad ? `, ${pub.edad}` : ""}</h3>
-                      <p className="home-ubicacion">Ubicacion: {pub.ubicacion}</p>
+                      <h3>{getRoomieTitle(pub)}</h3>
+                      <p className="home-desc-oferta"><strong>Publicado por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} anos)` : ""}</p>
+                      <p className="home-ubicacion">Ubicacion: {getLocation(pub)}</p>
                     </div>
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}

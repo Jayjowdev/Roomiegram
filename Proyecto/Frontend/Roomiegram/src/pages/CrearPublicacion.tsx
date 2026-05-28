@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
+import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
-import { saveLocalPublicacion } from "../utils/localPublicaciones";
+import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
 import { savePublicacionImage } from "../utils/publicacionImages";
 
 const initialPublicacionForm: PublicacionRequest = {
@@ -24,14 +25,84 @@ const initialPublicacionForm: PublicacionRequest = {
   numeroBanos: 1,
 };
 
+function normalizarTexto(valor?: string) {
+  return valor?.trim().toLowerCase() || "";
+}
+
+function mapBackendPublicacion(pub: Publicacion): Publicacion {
+  return {
+    ...pub,
+    tipo: "ofrezco_casa",
+    origen: "backend",
+    nombre: pub.nombre || pub.usuarioCreador || "RoomieGram",
+    precioMensual: pub.precioMensual ?? pub.precio ?? 0,
+    precio: pub.precio ?? pub.precioMensual ?? 0,
+  };
+}
+
+function getTipoLabel(tipo?: TipoPublicacion) {
+  return tipo === "busco_roomie" ? "Busca roomie" : "Ofrece casa";
+}
+
+function getPrecioLabel(publicacion: Publicacion) {
+  const monto = publicacion.tipo === "busco_roomie"
+    ? publicacion.presupuestoMaximo || publicacion.precio
+    : publicacion.precioMensual || publicacion.precio;
+
+  return `$${Number(monto || 0).toLocaleString("es-CL")}`;
+}
+
 export default function CrearPublicacion() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form, setForm] = useState<PublicacionRequest>(initialPublicacionForm);
   const [tipoPublicacion, setTipoPublicacion] = useState<TipoPublicacion>("ofrezco_casa");
   const [imagenesPreview, setImagenesPreview] = useState<string[]>([]);
+  const [cropQueue, setCropQueue] = useState<string[]>([]);
+  const [cropSource, setCropSource] = useState("");
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingPublicaciones(true);
+
+    publicacionService
+      .listar()
+      .then((data) => {
+        if (!isMounted) return;
+
+        const locales = getLocalPublicaciones().filter((publicacion) => !isGeneratedProfile(publicacion));
+        const backend = data.map(mapBackendPublicacion);
+        setPublicaciones([...locales, ...backend]);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPublicaciones(getLocalPublicaciones().filter((publicacion) => !isGeneratedProfile(publicacion)));
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingPublicaciones(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const misPublicaciones = useMemo(() => {
+    const usuarioActual = normalizarTexto(user?.usuario);
+
+    return publicaciones.filter((publicacion) => {
+      const mismoId = !!user?.id && publicacion.usuarioId === user.id;
+      const mismoUsuario = !!usuarioActual && normalizarTexto(publicacion.usuarioCreador) === usuarioActual;
+
+      return mismoId || mismoUsuario;
+    });
+  }, [publicaciones, user?.id, user?.usuario]);
 
   const validatePublicacion = () => {
     if (form.titulo.trim().length < 5) return "El titulo debe tener al menos 5 caracteres.";
@@ -87,6 +158,31 @@ export default function CrearPublicacion() {
     saveLocalPublicacion(nuevaPublicacion);
   };
 
+  const handleDelete = async (publicacion: Publicacion) => {
+    if (!user?.usuario) {
+      setMessage("No se pudo identificar el usuario autenticado.");
+      return;
+    }
+
+    try {
+      setDeletingId(publicacion.id);
+
+      if (publicacion.origen === "backend") {
+        await publicacionService.eliminar(publicacion.id, user.usuario, user.role || "CLIENTE");
+      }
+
+      deleteLocalPublicacion(publicacion.id);
+      setPublicaciones((current) => current.filter((item) =>
+        item.id !== publicacion.id || item.origen !== publicacion.origen
+      ));
+      setMessage("Publicacion eliminada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
@@ -111,9 +207,24 @@ export default function CrearPublicacion() {
           }),
       ),
     ).then((images) => {
-      setImagenesPreview((current) => [...current, ...images.filter(Boolean)].slice(0, 6));
+      const validImages = images.filter(Boolean);
+      setCropQueue(validImages.slice(1));
+      setCropSource(validImages[0] || "");
       setMessage("");
     });
+  };
+
+  const saveCroppedPublicationImage = (image: string) => {
+    setImagenesPreview((current) => [...current, image].slice(0, 6));
+    const [nextImage, ...remainingImages] = cropQueue;
+    setCropQueue(remainingImages);
+    setCropSource(nextImage || "");
+  };
+
+  const cancelCrop = () => {
+    const [nextImage, ...remainingImages] = cropQueue;
+    setCropQueue(remainingImages);
+    setCropSource(nextImage || "");
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -190,6 +301,18 @@ export default function CrearPublicacion() {
       </section>
 
       {message && <p className="api-message">{message}</p>}
+
+      {cropSource && (
+        <ImageCropper
+          source={cropSource}
+          title="Ajustar foto de publicacion"
+          aspect={4 / 3}
+          outputWidth={1200}
+          outputHeight={900}
+          onCancel={cancelCrop}
+          onSave={saveCroppedPublicationImage}
+        />
+      )}
 
       <section className="create-publication-shell">
         <form className="create-publication-form" onSubmit={handleSubmit}>
@@ -287,6 +410,46 @@ export default function CrearPublicacion() {
             <button className="btn btn-success" disabled={isSaving}>{isSaving ? "Publicando..." : "Publicar"}</button>
           </div>
         </form>
+
+        <section className="create-section mt-4">
+          <h3>Mis publicaciones</h3>
+          <p className="create-section-help">
+            Revisa rapidamente lo que publicaste y elimina lo que ya no quieras mostrar.
+          </p>
+
+          {isLoadingPublicaciones ? (
+            <div className="sin-resultados"><p>Cargando tus publicaciones...</p></div>
+          ) : misPublicaciones.length === 0 ? (
+            <div className="sin-resultados"><p>Aun no tienes publicaciones creadas.</p></div>
+          ) : (
+            misPublicaciones.map((publicacion) => (
+              <article className="module-item" key={`${publicacion.origen || "local"}-${publicacion.id}`}>
+                <h4>{publicacion.titulo || "Publicacion sin titulo"}</h4>
+                <p>{publicacion.descripcion}</p>
+                <span>
+                  {getTipoLabel(publicacion.tipo)} - {publicacion.ubicacion || "Ubicacion no informada"} - {getPrecioLabel(publicacion)}
+                </span>
+                <div className="item-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline-success btn-sm"
+                    onClick={() => navigate(publicacion.tipo === "busco_roomie" ? `/perfil/${publicacion.id}` : `/detalle-publicacion/${publicacion.id}`)}
+                  >
+                    Ver
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    disabled={deletingId === publicacion.id}
+                    onClick={() => handleDelete(publicacion)}
+                  >
+                    {deletingId === publicacion.id ? "Eliminando..." : "Eliminar"}
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+        </section>
       </section>
     </div>
   );

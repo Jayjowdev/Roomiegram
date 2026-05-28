@@ -25,7 +25,7 @@ export type UserSession = {
   usuario: string
   nombre: string
   correo: string
-  telefono?: string
+  telefono: string
   role: "ADMIN" | "CLIENTE"
   fotoPerfil?: string
   descripcion?: string

@@ -1,6 +1,14 @@
 import type { Publicacion } from "../types/Publicacion";
 
 const STORAGE_KEY = "roomiegram-publicaciones-locales";
+const GENERATED_PROFILE_TITLE = /^perfil de\s+/i;
+
+export function isGeneratedProfile(publicacion: Publicacion) {
+  return (
+    publicacion.tipo === "busco_roomie" &&
+    GENERATED_PROFILE_TITLE.test(publicacion.titulo || "")
+  );
+}
 
 export function getLocalPublicaciones(): Publicacion[] {
   try {

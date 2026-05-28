@@ -5,7 +5,7 @@ export type UsuarioAuth = {
   usuario: string
   nombre: string
   correo: string
-  telefono?: string
+  telefono: string
   role: UsuarioRole
   fotoPerfil?: string
   descripcion?: string
@@ -27,7 +27,7 @@ export type UsuarioResumen = {
   usuario: string
   nombre: string
   correo?: string
-  telefono?: string
+  telefono: string
   fotoPerfil?: string
   descripcion?: string
   intereses?: string[]

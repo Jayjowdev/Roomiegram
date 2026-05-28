@@ -1,36 +1,50 @@
 package com.roomiegram.usuario.config;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origin-patterns:http://localhost:5173,http://127.0.0.1:5173,http://*:[5173],https://*:[5173]}")
-    private String allowedOriginPatterns;
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        List<String> originPatterns = Arrays.stream(allowedOriginPatterns.split(","))
-            .map(String::trim)
-            .filter(origin -> !origin.isEmpty())
-            .toList();
+        return request -> {
+            String origin = request.getHeader("Origin");
+            CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(originPatterns);
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+            if (isAllowedOrigin(origin)) {
+                configuration.setAllowedOrigins(List.of(origin));
+            }
+
+            configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            configuration.setAllowedHeaders(Arrays.asList("*"));
+            configuration.setAllowCredentials(true);
+            return configuration;
+        };
+    }
+
+    private boolean isAllowedOrigin(String origin) {
+        if (origin == null || origin.isBlank()) {
+            return false;
+        }
+
+        try {
+            URI uri = URI.create(origin);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            int port = uri.getPort();
+
+            return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                && host != null
+                && port == 5173;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

@@ -6,7 +6,7 @@ const DEFAULT_HEADERS = {
 }
 
 function apiUrl(port: number) {
-  return `${window.location.protocol}//${window.location.hostname}:${port}`
+  return `http://${window.location.hostname}:${port}`
 }
 
 const API_URLS = {

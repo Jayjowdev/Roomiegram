@@ -6,9 +6,7 @@ import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { usuarioService } from "../services/usuarioService";
 import type { PreferenciasCompatibilidad } from "../types/auth";
-import type { Publicacion } from "../types/Publicacion";
 import type { UsuarioResumen } from "../types/Usuario";
-import { saveLocalPublicacion } from "../utils/localPublicaciones";
 import { preferenciasIniciales, preferenciasLabels } from "../utils/preferenciasCompatibilidad";
 
 type MatchCandidate = {
@@ -97,31 +95,6 @@ export default function Compatibilidad() {
   }, [compatibilidad, user?.id, usuarios]);
 
   const verPerfil = (candidato: MatchCandidate) => {
-    const perfil: Publicacion = {
-      id: candidato.id,
-      tipo: "busco_roomie",
-      origen: "local",
-      usuarioId: candidato.id,
-      usuarioCreador: candidato.usuario,
-      nombre: candidato.nombre,
-      titulo: `${candidato.nombre} busca roomie`,
-      ubicacion: candidato.hogarActual || "Ubicacion no informada",
-      descripcion: candidato.descripcion || "Usuario registrado con preferencias de convivencia.",
-      presupuestoMaximo: Number(candidato.preferencias.presupuesto || 0),
-      imagen: candidato.imagen,
-      telefono: candidato.telefono,
-      correo: candidato.correo,
-      intereses: candidato.intereses,
-      habitos: [
-        candidato.preferencias.limpieza,
-        candidato.preferencias.ambiente,
-        candidato.preferencias.horario,
-        candidato.preferencias.mascotas,
-        candidato.preferencias.fumar,
-      ],
-    };
-
-    saveLocalPublicacion(perfil);
     navigate(`/perfil/${candidato.id}`);
   };
 

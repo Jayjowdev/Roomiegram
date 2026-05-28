@@ -1,10 +1,16 @@
 export type BackendPublicacion = {
   id: number;
+  tipo?: "busco_roomie" | "ofrezco_casa";
+  usuarioId?: number;
   usuarioCreador?: string;
+  nombre?: string;
   titulo: string;
   ubicacion: string;
   descripcion: string;
   precio: number;
+  presupuestoMaximo?: number;
+  telefono?: string;
+  correo?: string;
   numeroHabitaciones?: number;
   numeroPersonas?: number;
   numeroBanos?: number;
@@ -13,11 +19,17 @@ export type BackendPublicacion = {
 };
 
 export type PublicacionRequest = {
+  tipo?: "busco_roomie" | "ofrezco_casa";
+  usuarioId?: number;
   usuarioCreador: string;
+  nombre?: string;
+  telefono?: string;
+  correo?: string;
   titulo: string;
   ubicacion: string;
   descripcion: string;
   precio: number;
+  presupuestoMaximo?: number;
   numeroHabitaciones: number;
   numeroPersonas: number;
   numeroBanos: number;

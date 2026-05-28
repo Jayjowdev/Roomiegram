@@ -53,14 +53,17 @@ export const publicacionService = {
 }
 
 export function mapBackendPublicacionToOferta(pub: Publicacion): Publicacion {
+  const tipo = pub.tipo || "ofrezco_casa";
+
   return {
     ...pub,
-    tipo: "ofrezco_casa",
+    tipo,
     nombre: pub.usuarioCreador || pub.nombre || "RoomieGram",
     titulo: pub.titulo || "Habitacion disponible",
     precioMensual: pub.precioMensual ?? pub.precio ?? 0,
     precio: pub.precio ?? pub.precioMensual ?? 0,
-    amenidades: pub.amenidades ?? [
+    presupuestoMaximo: pub.presupuestoMaximo ?? pub.precio ?? 0,
+    amenidades: tipo === "busco_roomie" ? pub.amenidades : pub.amenidades ?? [
       `${pub.numeroHabitaciones || 1} habitacion(es)`,
       `${pub.numeroPersonas || 1} cupo(s)`,
       `${pub.numeroBanos || 1} bano(s)`,

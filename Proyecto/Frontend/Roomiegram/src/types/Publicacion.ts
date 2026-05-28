@@ -27,9 +27,15 @@ export type Publicacion = {
 }
 
 export type CreatePublicacionPayload = {
+  tipo?: TipoPublicacion
+  usuarioId?: number
   usuarioCreador: string
+  nombre?: string
+  telefono?: string
+  correo?: string
   titulo: string
   precio: number
+  presupuestoMaximo?: number
   ubicacion: string
   descripcion: string
   numeroHabitaciones: number

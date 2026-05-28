@@ -16,6 +16,7 @@ public class LoadDatabase {
             // Database initialization logic can be added here
             if(publicacionRepository.count() == 0) {
                 Publicacion publicacion = new Publicacion();
+                publicacion.setTipo("ofrezco_casa");
                 publicacion.setUsuarioCreador("admin");
                 publicacion.setTitulo("Se busca roomie para departamento amoblado");
                 publicacion.setUbicacion("Santiago Centro");

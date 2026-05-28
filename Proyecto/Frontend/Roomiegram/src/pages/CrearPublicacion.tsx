@@ -2,16 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
-import home1 from "../assets/home1.svg";
-import home2 from "../assets/home2.svg";
-import home3 from "../assets/home3.svg";
 import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
 import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
-import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
+import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { savePublicacionImage } from "../utils/publicacionImages";
 
 const initialPublicacionForm: PublicacionRequest = {
@@ -30,13 +27,16 @@ function normalizarTexto(valor?: string) {
 }
 
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
+  const tipo = pub.tipo || "ofrezco_casa";
+
   return {
     ...pub,
-    tipo: "ofrezco_casa",
+    tipo,
     origen: "backend",
     nombre: pub.nombre || pub.usuarioCreador || "RoomieGram",
     precioMensual: pub.precioMensual ?? pub.precio ?? 0,
     precio: pub.precio ?? pub.precioMensual ?? 0,
+    presupuestoMaximo: pub.presupuestoMaximo ?? pub.precio ?? 0,
   };
 }
 
@@ -112,50 +112,6 @@ export default function CrearPublicacion() {
     if (tipoPublicacion === "busco_roomie") return "";
     if (Number(form.numeroHabitaciones) < 1 || Number(form.numeroPersonas) < 1 || Number(form.numeroBanos) < 1) return "Los detalles de la casa deben ser mayores a cero.";
     return "";
-  };
-
-  const guardarPublicacionLocal = (creador: string) => {
-    const imagenPrincipal = imagenesPreview[0] || home1;
-    const nuevaPublicacion: Publicacion = tipoPublicacion === "busco_roomie"
-      ? {
-          id: Date.now(),
-          tipo: "busco_roomie",
-          origen: "local",
-          usuarioId: user?.id,
-          usuarioCreador: creador,
-          nombre: user?.nombre || user?.usuario || "RoomieGram",
-          telefono: user?.telefono,
-          correo: user?.correo,
-          titulo: form.titulo.trim(),
-          ubicacion: form.ubicacion.trim(),
-          descripcion: form.descripcion.trim(),
-          presupuestoMaximo: Number(form.precio),
-          imagen: imagenPrincipal,
-          galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
-        }
-      : {
-          id: Date.now(),
-          tipo: "ofrezco_casa",
-          origen: "local",
-          usuarioId: user?.id,
-          usuarioCreador: creador,
-          nombre: user?.nombre || user?.usuario || "RoomieGram",
-          telefono: user?.telefono,
-          correo: user?.correo,
-          titulo: form.titulo.trim(),
-          precioMensual: Number(form.precio),
-          precio: Number(form.precio),
-          ubicacion: form.ubicacion.trim(),
-          descripcion: form.descripcion.trim(),
-          numeroHabitaciones: Number(form.numeroHabitaciones),
-          numeroPersonas: Number(form.numeroPersonas),
-          numeroBanos: Number(form.numeroBanos),
-          amenidades: [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`],
-          imagen: imagenPrincipal,
-          galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
-        };
-
-    saveLocalPublicacion(nuevaPublicacion);
   };
 
   const handleDelete = async (publicacion: Publicacion) => {
@@ -245,7 +201,27 @@ export default function CrearPublicacion() {
 
     try {
       if (tipoPublicacion === "busco_roomie") {
-        guardarPublicacionLocal(creador);
+        const resultado = await publicacionService.crear({
+          ...form,
+          tipo: "busco_roomie",
+          usuarioId: user?.id,
+          usuarioCreador: creador,
+          nombre: user?.nombre || user?.usuario || "RoomieGram",
+          telefono: user?.telefono,
+          correo: user?.correo,
+          titulo: tituloPublicacion,
+          ubicacion: ubicacionPublicacion,
+          descripcion: descripcionPublicacion,
+          precio: Number(form.precio),
+          presupuestoMaximo: Number(form.precio),
+          numeroHabitaciones: 1,
+          numeroPersonas: 1,
+          numeroBanos: 1,
+          imagen: imagenesPreview[0] || undefined,
+          galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
+        });
+
+        if (imagenesPreview[0]) savePublicacionImage(resultado.id, imagenesPreview[0]);
         navigate("/home");
         return;
       }
@@ -272,13 +248,8 @@ export default function CrearPublicacion() {
       if (imagenesPreview[0]) savePublicacionImage(resultado.publicacion.id, imagenesPreview[0]);
       navigate("/home");
     } catch (error) {
-      if (tipoPublicacion === "ofrezco_casa") {
-        setMessage(error instanceof Error ? error.message : "No se pudo crear la publicación y el hogar vinculado.");
-        return;
-      }
-
-      guardarPublicacionLocal(creador);
-      navigate("/home");
+      setMessage(error instanceof Error ? error.message : "No se pudo crear la publicacion.");
+      return;
     } finally {
       setIsSaving(false);
     }

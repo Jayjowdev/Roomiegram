@@ -27,8 +27,16 @@ public class Publicacion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 30)
+    private String tipo = "ofrezco_casa";
+
+    private Long usuarioId;
+
     @Column(nullable = false, length = 100)
     private String usuarioCreador;
+
+    @Column(length = 150)
+    private String nombre;
 
     @Column(nullable = false, length = 300)
     private String titulo;
@@ -41,6 +49,14 @@ public class Publicacion {
 
     @Column(nullable = false)
     private Double precio;
+
+    private Double presupuestoMaximo;
+
+    @Column(length = 50)
+    private String telefono;
+
+    @Column(length = 150)
+    private String correo;
 
     @Column(nullable = false)
     private int numeroHabitaciones;

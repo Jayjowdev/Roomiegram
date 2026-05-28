@@ -26,59 +26,60 @@ public class PublicacionService {
     @Value("${hogar.service.url}")
     private String hogarServiceUrl;
 
-    // Metodos para guardar y obtener publicaciones
     public Publicacion guardarPublicacion(Publicacion publicacion) {
+        normalizarPublicacion(publicacion);
+
         if (publicacion.getUsuarioCreador() == null || publicacion.getUsuarioCreador().isBlank()) {
-            throw new IllegalArgumentException("El usuario creador no puede estar vacío");
+            throw new IllegalArgumentException("El usuario creador no puede estar vacio");
         }
-        
         if (publicacion.getTitulo() == null || publicacion.getTitulo().isEmpty()) {
-            throw new IllegalArgumentException("El título no puede estar vacío");
+            throw new IllegalArgumentException("El titulo no puede estar vacio");
         }
         if (publicacion.getUbicacion() == null || publicacion.getUbicacion().isEmpty()) {
-            throw new IllegalArgumentException("La ubicación no puede estar vacía");
+            throw new IllegalArgumentException("La ubicacion no puede estar vacia");
         }
         if (publicacion.getPrecio() == null || publicacion.getPrecio() <= 0) {
             throw new IllegalArgumentException("El precio debe ser mayor que cero");
         }
         if (publicacion.getDescripcion() == null || publicacion.getDescripcion().isEmpty()) {
-            throw new IllegalArgumentException("La descripción no puede estar vacía");
+            throw new IllegalArgumentException("La descripcion no puede estar vacia");
         }
-        if (publicacion.getNumeroHabitaciones() <= 0) {
-            throw new IllegalArgumentException("El número de habitaciones debe ser mayor que cero");
-        }
-        if (publicacion.getNumeroPersonas() <= 0) {
-            throw new IllegalArgumentException("El número de personas debe ser mayor que cero");
-        }
-        if (publicacion.getNumeroBanos() <= 0) {
-            throw new IllegalArgumentException("El número de baños debe ser mayor que cero");
+
+        if (esPublicacionDeHogar(publicacion)) {
+            if (publicacion.getNumeroHabitaciones() <= 0) {
+                throw new IllegalArgumentException("El numero de habitaciones debe ser mayor que cero");
+            }
+            if (publicacion.getNumeroPersonas() <= 0) {
+                throw new IllegalArgumentException("El numero de personas debe ser mayor que cero");
+            }
+            if (publicacion.getNumeroBanos() <= 0) {
+                throw new IllegalArgumentException("El numero de banos debe ser mayor que cero");
+            }
         }
 
         return publicacionRepository.save(publicacion);
     }
 
-    //metodo para listar todas las publicaciones
     public List<Publicacion> listarPublicaciones() {
         return publicacionRepository.findAll();
     }
-    
-    // Método para eliminar una publicación con validación de permisos
+
     public void eliminarPublicacion(Long id, String usuarioSolicitante, String rolSolicitante) {
         if (id == null) {
-            throw new IllegalArgumentException("El id de la publicación es obligatorio");
+            throw new IllegalArgumentException("El id de la publicacion es obligatorio");
         }
         if (usuarioSolicitante == null || usuarioSolicitante.isBlank()) {
-            throw new IllegalArgumentException("El usuario solicitante no puede estar vacío");
+            throw new IllegalArgumentException("El usuario solicitante no puede estar vacio");
         }
         if (rolSolicitante == null || rolSolicitante.isBlank()) {
-            throw new IllegalArgumentException("El rol solicitante no puede estar vacío");
+            throw new IllegalArgumentException("El rol solicitante no puede estar vacio");
         }
 
         Publicacion publicacion = publicacionRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("La publicación no existe"));
+                .orElseThrow(() -> new IllegalArgumentException("La publicacion no existe"));
 
         if (!puedeEliminar(publicacion, usuarioSolicitante)) {
-            throw new SecurityException("No tienes permisos para eliminar esta publicación");
+            throw new SecurityException("No tienes permisos para eliminar esta publicacion");
         }
 
         publicacionRepository.delete(publicacion);
@@ -89,10 +90,32 @@ public class PublicacionService {
                 && publicacion.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
     }
 
+    private void normalizarPublicacion(Publicacion publicacion) {
+        if (publicacion == null) {
+            throw new IllegalArgumentException("La publicacion es obligatoria");
+        }
+
+        String tipo = publicacion.getTipo();
+        publicacion.setTipo(tipo == null || tipo.isBlank() ? "ofrezco_casa" : tipo.trim());
+
+        if (!esPublicacionDeHogar(publicacion)) {
+            publicacion.setNumeroHabitaciones(1);
+            publicacion.setNumeroPersonas(1);
+            publicacion.setNumeroBanos(1);
+            if (publicacion.getPresupuestoMaximo() == null) {
+                publicacion.setPresupuestoMaximo(publicacion.getPrecio());
+            }
+        }
+    }
+
+    private boolean esPublicacionDeHogar(Publicacion publicacion) {
+        return !"busco_roomie".equalsIgnoreCase(publicacion.getTipo());
+    }
+
     @SuppressWarnings("unchecked")
     public PublicacionConHogarResponse guardarPublicacionConHogar(PublicacionConHogarRequest req) {
-        // 1. Create and persist the publication
         Publicacion pub = new Publicacion();
+        pub.setTipo("ofrezco_casa");
         pub.setUsuarioCreador(req.getUsuarioCreador());
         pub.setTitulo(req.getTitulo());
         pub.setUbicacion(req.getUbicacion());
@@ -106,7 +129,6 @@ public class PublicacionService {
 
         Publicacion creada = guardarPublicacion(pub);
 
-        // 2. Create linked hogar — compensate on failure
         Long hogarId;
         try {
             Map<String, Object> hogarPayload = Map.of(
@@ -121,7 +143,6 @@ public class PublicacionService {
             throw new RuntimeException("Error al crear el hogar vinculado: " + e.getMessage());
         }
 
-        // 3. Link publication to hogar — compensate on failure
         try {
             Map<String, Object> recursoPayload = Map.of(
                     "administradorId", req.getUsuarioId(),
@@ -131,7 +152,7 @@ public class PublicacionService {
         } catch (Exception e) {
             publicacionRepository.delete(creada);
             restTemplate.delete(hogarServiceUrl + "/hogares/" + hogarId);
-            throw new RuntimeException("Error al vincular la publicación al hogar: " + e.getMessage());
+            throw new RuntimeException("Error al vincular la publicacion al hogar: " + e.getMessage());
         }
 
         return new PublicacionConHogarResponse(creada, hogarId);

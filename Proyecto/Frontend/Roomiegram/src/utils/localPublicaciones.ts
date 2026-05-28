@@ -4,17 +4,9 @@ const STORAGE_KEY = "roomiegram-publicaciones-locales";
 const GENERATED_PROFILE_TITLE = /^perfil de\s+/i;
 
 export function isGeneratedProfile(publicacion: Publicacion) {
-  const titulo = publicacion.titulo?.trim().toLowerCase() || "";
-  const nombre = publicacion.nombre?.trim().toLowerCase();
-  const usuario = publicacion.usuarioCreador?.trim().toLowerCase();
-  const generatedRoomieTitle = titulo === `${nombre} busca roomie` || titulo === `${usuario} busca roomie`;
-
   return (
     publicacion.tipo === "busco_roomie" &&
-    (
-      GENERATED_PROFILE_TITLE.test(publicacion.titulo || "") ||
-      (publicacion.id === publicacion.usuarioId && generatedRoomieTitle)
-    )
+    GENERATED_PROFILE_TITLE.test(publicacion.titulo || "")
   );
 }
 

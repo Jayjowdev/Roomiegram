@@ -7,7 +7,6 @@ services:
       MYSQL_ROOT_PASSWORD: roomiegram
       MYSQL_DATABASE: roomiegram
     ports:
-      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -124,6 +123,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roomiegram?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: roomiegram
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@roomiegram.com}
     depends_on:
       mysql:
         condition: service_healthy

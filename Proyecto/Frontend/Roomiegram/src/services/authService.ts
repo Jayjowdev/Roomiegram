@@ -22,6 +22,15 @@ export async function register(payload: RegisterPayload) {
   }
 }
 
+export async function recoverPassword(correo: string) {
+  try {
+    const { data } = await usuarioApi.post<{ mensaje: string }>("/auth/recover-password", { correo })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 function normalizePreferences(value: unknown): UserSession["preferenciasCompatibilidad"] {
   if (!value) {
     return undefined
@@ -89,6 +98,10 @@ export const authService = {
   async register(userData: RegisterRequest) {
     const user = await register(userData)
     return createSession(normalizeUser(user))
+  },
+
+  async recoverPassword(correo: string) {
+    return recoverPassword(correo)
   },
 
   async updateProfilePhoto(userId: number, fotoPerfil: string) {

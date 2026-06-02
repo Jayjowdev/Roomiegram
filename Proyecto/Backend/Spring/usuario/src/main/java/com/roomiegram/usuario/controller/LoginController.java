@@ -78,6 +78,26 @@ public class LoginController {
             ));
         }
     }
+
+    @PostMapping("/recover-password")
+    public ResponseEntity<?> recuperarContrasena(@RequestBody Map<String, String> request) {
+        try {
+            String correo = request.get("correo");
+            loginService.recuperarContrasena(correo);
+
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "Te enviamos una contraseña temporal a tu correo"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "mensaje", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
     
     @GetMapping("/check/{usuario}")
     public ResponseEntity<?> verificarUsuario(@PathVariable String usuario) {

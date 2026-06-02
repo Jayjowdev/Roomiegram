@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -95,6 +97,47 @@ class LoginControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.existe").value(false));
     }
+
+        @Test
+        void recuperarContrasenaDebeRetornar200CuandoEnvioEsExitoso() throws Exception {
+        doNothing().when(loginService).recuperarContrasena("juan@example.com");
+
+        Map<String, String> request = Map.of("correo", "juan@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mensaje").value("Te enviamos una contraseña temporal a tu correo"));
+        }
+
+        @Test
+        void recuperarContrasenaDebeRetornar400CuandoCorreoNoExiste() throws Exception {
+            doThrow(new IllegalArgumentException("No existe una cuenta con ese correo"))
+                .when(loginService).recuperarContrasena("noexiste@example.com");
+
+        Map<String, String> request = Map.of("correo", "noexiste@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.mensaje").value("No existe una cuenta con ese correo"));
+        }
+
+        @Test
+        void recuperarContrasenaDebeRetornar500CuandoFallaEnvioCorreo() throws Exception {
+            doThrow(new IllegalStateException("No fue posible enviar el correo de recuperacion"))
+                .when(loginService).recuperarContrasena("juan@example.com");
+
+        Map<String, String> request = Map.of("correo", "juan@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.mensaje").value("No fue posible enviar el correo de recuperacion"));
+        }
 
     private Login crearLogin(String usuario, Role role) {
         Login login = new Login();

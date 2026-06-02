@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import roomies from "../assets/login.png";
 import { useAuth } from "../context/AuthContext";
+import { authService } from "../services/authService";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,6 +13,11 @@ export default function Login() {
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [localError, setLocalError] = useState("");
+  const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false);
+  const [correoRecuperacion, setCorreoRecuperacion] = useState("");
+  const [recuperacionMensaje, setRecuperacionMensaje] = useState("");
+  const [recuperacionError, setRecuperacionError] = useState("");
+  const [recuperandoContrasena, setRecuperandoContrasena] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -36,6 +42,28 @@ export default function Login() {
     }
   };
 
+  const handleRecuperarContrasena = async (e: FormEvent) => {
+    e.preventDefault();
+    setRecuperacionMensaje("");
+    setRecuperacionError("");
+
+    if (!correoRecuperacion.trim()) {
+      setRecuperacionError("Ingresa el correo de tu cuenta.");
+      return;
+    }
+
+    try {
+      setRecuperandoContrasena(true);
+      const response = await authService.recoverPassword(correoRecuperacion.trim());
+      setRecuperacionMensaje(response.mensaje || "Te enviamos una contraseña temporal por correo.");
+      setCorreoRecuperacion("");
+    } catch (err) {
+      setRecuperacionError(err instanceof Error ? err.message : "No se pudo recuperar la contraseña");
+    } finally {
+      setRecuperandoContrasena(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <header className="login-header">
@@ -50,11 +78,54 @@ export default function Login() {
         <div className="login-form">
           <h2>Iniciar sesión</h2>
           {(error || localError) && <div className="form-error">{error || localError}</div>}
-          <form onSubmit={handleSubmit}>
-            <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-            <input className="form-control mb-3" type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
-            <button className="btn btn-success w-100 mb-3" type="submit" disabled={isLoading}>{isLoading ? "Cargando..." : "Ingresar"}</button>
-          </form>
+          {!mostrarRecuperacion ? (
+            <form onSubmit={handleSubmit}>
+              <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
+              <input className="form-control mb-3" type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+              <button
+                type="button"
+                className="login-forgot-link"
+                onClick={() => {
+                  setMostrarRecuperacion(true);
+                  setRecuperacionMensaje("");
+                  setRecuperacionError("");
+                }}
+                disabled={isLoading || recuperandoContrasena}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+              <button className="btn btn-success w-100 mb-3" type="submit" disabled={isLoading}>{isLoading ? "Cargando..." : "Ingresar"}</button>
+            </form>
+          ) : (
+            <form onSubmit={handleRecuperarContrasena} className="login-recover-form">
+              <h3 className="login-recover-title">Recuperar contraseña</h3>
+              <input
+                className="form-control mb-2"
+                type="email"
+                placeholder="Correo de tu cuenta"
+                value={correoRecuperacion}
+                onChange={(e) => setCorreoRecuperacion(e.target.value)}
+                disabled={recuperandoContrasena || isLoading}
+              />
+              {recuperacionError && <div className="form-error">{recuperacionError}</div>}
+              {recuperacionMensaje && <div className="form-success">{recuperacionMensaje}</div>}
+              <button className="btn btn-outline-success w-100" type="submit" disabled={recuperandoContrasena || isLoading}>
+                {recuperandoContrasena ? "Enviando..." : "Enviar contraseña temporal"}
+              </button>
+              <button
+                type="button"
+                className="login-forgot-link login-recover-back"
+                onClick={() => {
+                  setMostrarRecuperacion(false);
+                  setRecuperacionMensaje("");
+                  setRecuperacionError("");
+                }}
+                disabled={recuperandoContrasena || isLoading}
+              >
+                Volver al inicio de sesión
+              </button>
+            </form>
+          )}
           <p className="login-legal">Al continuar aceptas nuestros términos y condiciones.</p>
         </div>
       </div>

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -94,6 +96,99 @@ class LoginControllerTest {
         mockMvc.perform(get("/auth/check/noExiste"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.existe").value(false));
+    }
+
+    @Test
+    void recuperarContrasenaDebeRetornar200CuandoEnvioEsExitoso() throws Exception {
+        doNothing().when(loginService).recuperarContrasena("juan@example.com");
+
+        Map<String, String> request = Map.of("correo", "juan@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensaje").value("Te enviamos una contrasena temporal a tu correo"));
+    }
+
+    @Test
+    void recuperarContrasenaDebeRetornar400CuandoCorreoNoExiste() throws Exception {
+        doThrow(new IllegalArgumentException("No existe una cuenta con ese correo"))
+                .when(loginService).recuperarContrasena("noexiste@example.com");
+
+        Map<String, String> request = Map.of("correo", "noexiste@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("No existe una cuenta con ese correo"));
+    }
+
+    @Test
+    void recuperarContrasenaDebeRetornar500CuandoFallaEnvioCorreo() throws Exception {
+        String mensajeError = "No se pudo enviar el correo de recuperacion. Verifica la configuracion de correo.";
+
+        doThrow(new IllegalStateException(mensajeError))
+                .when(loginService).recuperarContrasena("juan@example.com");
+
+        Map<String, String> request = Map.of("correo", "juan@example.com");
+
+        mockMvc.perform(post("/auth/recover-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.mensaje").value(mensajeError));
+    }
+
+    @Test
+    void cambiarContrasenaDebeRetornar200CuandoDatosSonValidos() throws Exception {
+        Map<String, String> request = Map.of(
+                "contrasenaActual", "Temporal123",
+                "nuevaContrasena", "Nueva1234",
+                "confirmarContrasena", "Nueva1234");
+
+        doNothing().when(loginService).cambiarContrasena(1L, "Temporal123", "Nueva1234", "Nueva1234");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/auth/change-password/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensaje").value("Contrasena actualizada correctamente"));
+    }
+
+    @Test
+    void cambiarContrasenaDebeRetornar400CuandoActualEsIncorrecta() throws Exception {
+        Map<String, String> request = Map.of(
+                "contrasenaActual", "Incorrecta123",
+                "nuevaContrasena", "Nueva1234",
+                "confirmarContrasena", "Nueva1234");
+
+        doThrow(new IllegalArgumentException("La contrasena actual es incorrecta"))
+                .when(loginService).cambiarContrasena(1L, "Incorrecta123", "Nueva1234", "Nueva1234");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/auth/change-password/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("La contrasena actual es incorrecta"));
+    }
+
+    @Test
+    void cambiarContrasenaDebeRetornar400CuandoConfirmacionNoCoincide() throws Exception {
+        Map<String, String> request = Map.of(
+                "contrasenaActual", "Temporal123",
+                "nuevaContrasena", "Nueva1234",
+                "confirmarContrasena", "Otra1234");
+
+        doThrow(new IllegalArgumentException("La nueva contrasena y la confirmacion no coinciden"))
+                .when(loginService).cambiarContrasena(1L, "Temporal123", "Nueva1234", "Otra1234");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/auth/change-password/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("La nueva contrasena y la confirmacion no coinciden"));
     }
 
     private Login crearLogin(String usuario, Role role) {

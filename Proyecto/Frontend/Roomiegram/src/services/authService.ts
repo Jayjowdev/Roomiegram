@@ -22,6 +22,27 @@ export async function register(payload: RegisterPayload) {
   }
 }
 
+export async function recoverPassword(correo: string) {
+  try {
+    const { data } = await usuarioApi.post<{ mensaje: string }>("/auth/recover-password", { correo })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function changePassword(
+  userId: number,
+  payload: { contrasenaActual: string; nuevaContrasena: string; confirmarContrasena: string },
+) {
+  try {
+    const { data } = await usuarioApi.put<{ mensaje: string }>(`/auth/change-password/${userId}`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 function normalizePreferences(value: unknown): UserSession["preferenciasCompatibilidad"] {
   if (!value) {
     return undefined
@@ -89,6 +110,17 @@ export const authService = {
   async register(userData: RegisterRequest) {
     const user = await register(userData)
     return createSession(normalizeUser(user))
+  },
+
+  async recoverPassword(correo: string) {
+    return recoverPassword(correo)
+  },
+
+  async changePassword(
+    userId: number,
+    payload: { contrasenaActual: string; nuevaContrasena: string; confirmarContrasena: string },
+  ) {
+    return changePassword(userId, payload)
   },
 
   async updateProfilePhoto(userId: number, fotoPerfil: string) {

@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -75,6 +76,49 @@ public class LoginController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/recover-password")
+    public ResponseEntity<?> recuperarContrasena(@RequestBody Map<String, String> request) {
+        try {
+            String correo = request.get("correo");
+            loginService.recuperarContrasena(correo);
+
+            return ResponseEntity.ok(Map.of(
+                "mensaje", "Te enviamos una contrasena temporal a tu correo"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "mensaje", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/change-password/{id}")
+    public ResponseEntity<?> cambiarContrasena(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            loginService.cambiarContrasena(
+                    id,
+                    request.get("contrasenaActual"),
+                    request.get("nuevaContrasena"),
+                    request.get("confirmarContrasena"));
+
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "Contrasena actualizada correctamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "mensaje", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "mensaje", e.getMessage()
             ));
         }
     }

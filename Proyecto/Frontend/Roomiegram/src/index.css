@@ -382,6 +382,40 @@ p {
   background-color: #17614f;
 }
 
+.login-forgot-link {
+  width: 100%;
+  text-align: right;
+  border: none;
+  background: transparent;
+  color: #1f7a63;
+  font-size: 14px;
+  margin: 0 0 16px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.login-forgot-link:disabled {
+  color: #8da59d;
+  cursor: not-allowed;
+}
+
+.login-recover-form {
+  border-top: 1px solid #e9ecef;
+  margin-top: 8px;
+  padding-top: 14px;
+}
+
+.login-recover-title {
+  margin: 0 0 12px;
+  color: #222;
+  font-size: 20px;
+}
+
+.login-recover-back {
+  text-align: center;
+  margin-top: 12px;
+}
+
 .login-legal {
   margin-top: 20px;
   font-size: 12px;
@@ -910,6 +944,7 @@ p {
 
 .mi-perfil-card,
 .mi-perfil-summary,
+.profile-password-card,
 .mi-grupo {
   background: white;
   border-radius: 16px;
@@ -981,6 +1016,33 @@ p {
   font-size: 48px;
   line-height: 1;
   margin-bottom: 10px;
+}
+
+.profile-password-section {
+  margin-bottom: 28px;
+}
+
+.profile-password-card {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.profile-password-card h2 {
+  color: #222;
+  margin-bottom: 8px;
+}
+
+.profile-password-card p {
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.profile-password-form {
+  display: grid;
+  gap: 12px;
 }
 
 .mi-grupo-header {
@@ -1857,7 +1919,8 @@ p {
 }
 
 .api-message,
-.form-error {
+.form-error,
+.form-success {
   background: #e6f4f1;
   color: #1f7a63;
   border-radius: 10px;
@@ -2128,6 +2191,7 @@ p {
   .roomie-list,
   .hogar-meta-grid,
   .mi-perfil-hero,
+  .profile-password-card,
   .mi-grupo-grid,
   .module-layout,
   .module-grid,

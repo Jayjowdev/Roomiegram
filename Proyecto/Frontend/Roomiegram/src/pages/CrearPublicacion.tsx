@@ -9,6 +9,7 @@ import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService } from "../services/publicacionService";
+import type { UserSession } from "../types/auth";
 import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
@@ -38,6 +39,45 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     precioMensual: pub.precioMensual ?? pub.precio ?? 0,
     precio: pub.precio ?? pub.precioMensual ?? 0,
   };
+}
+
+function mapLocalPublicacion(pub: Publicacion): Publicacion {
+  return {
+    ...pub,
+    origen: "local",
+  };
+}
+
+function localPublicacionPerteneceAlUsuario(publicacion: Publicacion, user: UserSession | null) {
+  const usuarioActual = normalizarTexto(user?.usuario);
+  const creadorPublicacion = normalizarTexto(publicacion.usuarioCreador);
+
+  if (!usuarioActual || creadorPublicacion !== usuarioActual) {
+    return false;
+  }
+
+  const correoActual = normalizarTexto(user?.correo);
+  const correoPublicacion = normalizarTexto(publicacion.correo);
+
+  if (correoActual && correoPublicacion) {
+    return correoActual === correoPublicacion;
+  }
+
+  const nombreActual = normalizarTexto(user?.nombre);
+  const nombrePublicacion = normalizarTexto(publicacion.nombre);
+
+  if (nombrePublicacion) {
+    return nombrePublicacion === nombreActual || nombrePublicacion === usuarioActual;
+  }
+
+  return false;
+}
+
+function getLocalPublicacionesDelUsuario(user: UserSession | null) {
+  return getLocalPublicaciones()
+    .filter((publicacion) => !isGeneratedProfile(publicacion))
+    .map(mapLocalPublicacion)
+    .filter((publicacion) => localPublicacionPerteneceAlUsuario(publicacion, user));
 }
 
 function getTipoLabel(tipo?: TipoPublicacion) {
@@ -75,13 +115,14 @@ export default function CrearPublicacion() {
       .then((data) => {
         if (!isMounted) return;
 
-        const locales = getLocalPublicaciones().filter((publicacion) => !isGeneratedProfile(publicacion));
+        const locales = getLocalPublicacionesDelUsuario(user);
         const backend = data.map(mapBackendPublicacion);
+
         setPublicaciones([...locales, ...backend]);
       })
       .catch(() => {
         if (isMounted) {
-          setPublicaciones(getLocalPublicaciones().filter((publicacion) => !isGeneratedProfile(publicacion)));
+          setPublicaciones(getLocalPublicacionesDelUsuario(user));
         }
       })
       .finally(() => {
@@ -91,18 +132,22 @@ export default function CrearPublicacion() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user]);
 
   const misPublicaciones = useMemo(() => {
     const usuarioActual = normalizarTexto(user?.usuario);
 
     return publicaciones.filter((publicacion) => {
-      const mismoId = !!user?.id && publicacion.usuarioId === user.id;
       const mismoUsuario = !!usuarioActual && normalizarTexto(publicacion.usuarioCreador) === usuarioActual;
 
+      if (publicacion.origen === "local") {
+        return localPublicacionPerteneceAlUsuario(publicacion, user);
+      }
+
+      const mismoId = !!user?.id && publicacion.usuarioId === user.id;
       return mismoId || mismoUsuario;
     });
-  }, [publicaciones, user?.id, user?.usuario]);
+  }, [publicaciones, user]);
 
   const validatePublicacion = () => {
     if (form.titulo.trim().length < 5) return "El titulo debe tener al menos 5 caracteres.";

@@ -5,14 +5,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-comprobante
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_comprobante
     ports:
       - "3307:3306"
     volumes:
       - mysql_comprobante_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -23,14 +23,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-hogar
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_hogar
     ports:
       - "3308:3306"
     volumes:
       - mysql_hogar_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -41,14 +41,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-hogarcuenta
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_hogarcuenta
     ports:
       - "3309:3306"
     volumes:
       - mysql_hogarcuenta_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -59,14 +59,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-notificacion
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_notificacion
     ports:
       - "3310:3306"
     volumes:
       - mysql_notificacion_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -77,14 +77,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-publicacion
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_publicacion
     ports:
       - "3311:3306"
     volumes:
       - mysql_publicacion_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -95,14 +95,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-tarea
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_tarea
     ports:
       - "3312:3306"
     volumes:
       - mysql_tarea_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -113,14 +113,14 @@ services:
     image: mysql:8.4
     container_name: roomiegram-mysql-usuario
     environment:
-      MYSQL_ROOT_PASSWORD: roomiegram
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-roomiegram}
       MYSQL_DATABASE: roomiegram_usuario
     ports:
       - "3313:3306"
     volumes:
       - mysql_usuario_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proomiegram"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-roomiegram}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -135,9 +135,10 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-comprobante:3306/roomiegram_comprobante?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${COMPROBANTE_DATASOURCE_URL:-jdbc:mysql://mysql-comprobante:3306/roomiegram_comprobante?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-comprobante:
         condition: service_healthy
@@ -151,9 +152,10 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-hogar:3306/roomiegram_hogar?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${HOGAR_DATASOURCE_URL:-jdbc:mysql://mysql-hogar:3306/roomiegram_hogar?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-hogar:
         condition: service_healthy
@@ -167,9 +169,10 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-hogarcuenta:3306/roomiegram_hogarcuenta?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${HOGARCUENTA_DATASOURCE_URL:-jdbc:mysql://mysql-hogarcuenta:3306/roomiegram_hogarcuenta?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-hogarcuenta:
         condition: service_healthy
@@ -183,9 +186,10 @@ services:
     ports:
       - "8085:8085"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-notificacion:3306/roomiegram_notificacion?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${NOTIFICACION_DATASOURCE_URL:-jdbc:mysql://mysql-notificacion:3306/roomiegram_notificacion?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-notificacion:
         condition: service_healthy
@@ -199,10 +203,11 @@ services:
     ports:
       - "8086:8086"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-publicacion:3306/roomiegram_publicacion?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
-      HOGAR_SERVICE_URL: http://hogar:8083
+      SPRING_DATASOURCE_URL: ${PUBLICACION_DATASOURCE_URL:-jdbc:mysql://mysql-publicacion:3306/roomiegram_publicacion?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
+      HOGAR_SERVICE_URL: ${HOGAR_SERVICE_URL:-http://hogar:8083}
     depends_on:
       mysql-publicacion:
         condition: service_healthy
@@ -216,9 +221,10 @@ services:
     ports:
       - "8087:8087"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-tarea:3306/roomiegram_tarea?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${TAREA_DATASOURCE_URL:-jdbc:mysql://mysql-tarea:3306/roomiegram_tarea?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-tarea:
         condition: service_healthy
@@ -232,9 +238,10 @@ services:
     ports:
       - "8088:8088"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-usuario:3306/roomiegram_usuario?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: roomiegram
+      SPRING_DATASOURCE_URL: ${USUARIO_DATASOURCE_URL:-jdbc:mysql://mysql-usuario:3306/roomiegram_usuario?useSSL=false&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-roomiegram}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*,http://*:5173}
     depends_on:
       mysql-usuario:
         condition: service_healthy
@@ -247,6 +254,8 @@ services:
     container_name: roomiegram-frontend
     ports:
       - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost}
     volumes:
       - ./Proyecto/Frontend/Roomiegram:/app
       - /app/node_modules

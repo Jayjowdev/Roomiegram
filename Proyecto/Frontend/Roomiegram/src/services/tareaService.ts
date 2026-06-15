@@ -19,7 +19,17 @@ export async function guardarTarea(payload: CreateTareaPayload) {
   }
 }
 
+export async function actualizarTarea(id: number, payload: CreateTareaPayload) {
+  try {
+    const { data } = await tareaApi.put<Tarea>(`/tareas/${id}`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const tareaService = {
   listar: listarTareas,
   crear: guardarTarea,
+  actualizar: actualizarTarea,
 }

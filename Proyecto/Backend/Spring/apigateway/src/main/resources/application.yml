@@ -30,6 +30,9 @@ spring:
                 allow-credentials: false
                 max-age: 3600
 
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
           routes:
             # ── usuario (auth) ────────────────────────────────────────
             - id: usuario-service

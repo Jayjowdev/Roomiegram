@@ -2,6 +2,7 @@ package com.roomiegram.tarea.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -112,6 +113,39 @@ class TareaServiceTest {
         List<Tarea> resultado = tareaService.listarTareas();
 
         assertEquals(0, resultado.size());
+    }
+
+    @Test
+    void actualizarTareaDebeActualizarCamposPermitidos() {
+        Tarea existente = crearTarea();
+        Tarea cambios = crearTarea();
+        cambios.setTitulo("Limpiar living");
+        cambios.setEncargado("maria");
+        cambios.setDescripcion("Ordenar el living del hogar");
+        cambios.setFecha(LocalDate.of(2026, 5, 21));
+
+        when(tareaRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(tareaRepository.save(existente)).thenReturn(existente);
+
+        Tarea resultado = tareaService.actualizarTarea(1L, cambios);
+
+        assertEquals(1L, resultado.getId());
+        assertEquals("Limpiar living", resultado.getTitulo());
+        assertEquals("maria", resultado.getEncargado());
+        assertEquals("Ordenar el living del hogar", resultado.getDescripcion());
+        assertEquals(LocalDate.of(2026, 5, 21), resultado.getFecha());
+        verify(tareaRepository).findById(1L);
+        verify(tareaRepository).save(existente);
+    }
+
+    @Test
+    void actualizarTareaDebeFallarSiNoExiste() {
+        when(tareaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> tareaService.actualizarTarea(99L, crearTarea()));
+
+        assertEquals("La tarea no existe", exception.getMessage());
     }
 
     private Tarea crearTarea() {

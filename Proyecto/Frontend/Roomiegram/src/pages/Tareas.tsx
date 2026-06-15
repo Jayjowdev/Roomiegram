@@ -45,6 +45,20 @@ function formatMemberName(usuarioId: number, currentUser?: { id: number; nombre?
   return "Integrante del hogar";
 }
 
+function findMemberIdByName(
+  encargado: string,
+  integrantes: number[],
+  usuariosById: Map<number, UsuarioResumen>,
+  currentUser?: { id: number; nombre?: string; usuario?: string },
+) {
+  const normalized = encargado.trim().toLowerCase();
+  const match = integrantes.find((usuarioId) =>
+    formatRealMemberName(usuarioId, usuariosById, currentUser).trim().toLowerCase() === normalized
+  );
+
+  return match ? String(match) : "";
+}
+
 export default function Tareas() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -55,6 +69,7 @@ export default function Tareas() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.allSettled([hogarService.listar(), tareaService.listar(), usuarioService.listar()])
@@ -89,6 +104,7 @@ export default function Tareas() {
   }, [hogarActual, tareas]);
 
   const canManage = isHogarAdmin(hogarActual, user?.id);
+  const isEditing = editingTaskId !== null;
 
   const validateForm = () => {
     if (!hogarActual) return "Debes pertenecer a un hogar para crear tareas.";
@@ -98,6 +114,26 @@ export default function Tareas() {
     if (form.descripcion.trim().length < 10) return "La descripción debe tener al menos 10 caracteres.";
     if (!form.fecha) return "Selecciona una fecha para la tarea.";
     return "";
+  };
+
+  const cancelEdit = () => {
+    setEditingTaskId(null);
+    setForm(initialForm);
+    setMessage("");
+  };
+
+  const startEdit = (tarea: Tarea) => {
+    if (!canManage) return;
+
+    const encargadoId = findMemberIdByName(tarea.encargado, integrantes, usuariosById, user || undefined);
+    setEditingTaskId(tarea.id);
+    setForm({
+      titulo: tarea.titulo,
+      encargadoId,
+      descripcion: tarea.descripcion,
+      fecha: tarea.fecha,
+    });
+    setMessage(encargadoId ? "" : "Selecciona nuevamente el encargado para editar esta tarea.");
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -114,11 +150,24 @@ export default function Tareas() {
     setIsSaving(true);
 
     try {
-      const creada = await tareaService.crear({
+      const payload = {
         titulo: form.titulo.trim(),
         encargado: formatRealMemberName(encargadoId, usuariosById, user || undefined),
         descripcion: form.descripcion.trim(),
         fecha: form.fecha,
+      };
+
+      if (isEditing) {
+        const actualizada = await tareaService.actualizar(editingTaskId!, payload);
+        setTareas((current) => current.map((tarea) => (tarea.id === actualizada.id ? actualizada : tarea)));
+        setEditingTaskId(null);
+        setForm(initialForm);
+        setMessage("Tarea actualizada correctamente.");
+        return;
+      }
+
+      const creada = await tareaService.crear({
+        ...payload,
       });
 
       const hogarActualizado = await hogarService.agregarTarea(hogarActual!.id, {
@@ -185,7 +234,7 @@ export default function Tareas() {
       ) : (
         <section className="module-layout">
           <form className="module-form" onSubmit={handleSubmit}>
-            <h3>Nueva tarea</h3>
+            <h3>{isEditing ? "Editar tarea" : "Nueva tarea"}</h3>
             {!canManage && <p className="form-helper">Solo el administrador del hogar puede crear tareas asociadas al grupo.</p>}
             <input className="form-control" placeholder="Título" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required disabled={!canManage} />
             <select className="form-control" value={form.encargadoId} onChange={(e) => setForm({ ...form, encargadoId: e.target.value })} required disabled={!canManage}>
@@ -196,7 +245,12 @@ export default function Tareas() {
             </select>
             <textarea className="form-control" placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required disabled={!canManage} />
             <input className="form-control" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required disabled={!canManage} />
-            <button className="btn btn-success w-100" disabled={isSaving || !canManage}>{isSaving ? "Guardando..." : "Asignar tarea"}</button>
+            <button className="btn btn-success w-100" disabled={isSaving || !canManage}>{isSaving ? "Guardando..." : isEditing ? "Guardar cambios" : "Asignar tarea"}</button>
+            {isEditing && (
+              <button className="btn btn-outline-success w-100" type="button" onClick={cancelEdit} disabled={isSaving}>
+                Cancelar edicion
+              </button>
+            )}
           </form>
 
           <div className="module-list">
@@ -208,6 +262,11 @@ export default function Tareas() {
                 <h4>{tarea.titulo}</h4>
                 <p>{tarea.descripcion}</p>
                 <span>{tarea.encargado} · {tarea.fecha}</span>
+                {canManage && (
+                  <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
+                    Editar
+                  </button>
+                )}
               </article>
             ))}
           </div>

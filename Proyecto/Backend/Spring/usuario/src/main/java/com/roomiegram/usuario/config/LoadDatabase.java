@@ -19,21 +19,10 @@ public class LoadDatabase {
     @Bean
     CommandLineRunner initDatabase(RegisterRepository registerRepository, LoginRepository loginRepository) {
         return args -> {
-            if (registerRepository.count() == 0) {
-                Register admin = new Register();
-                admin.setNombre("Administrador");
-                admin.setCorreo("admin@example.com");
-                admin.setUsuario("admin");
-                admin.setContrasena(passwordEncoder.encode("admin123"));
-                admin.setTelefono("1234567890");
-                registerRepository.save(admin);
+            boolean baseVacia = registerRepository.count() == 0;
+            asegurarAdmin(registerRepository, loginRepository);
 
-                Login loginAdmin = new Login();
-                loginAdmin.setUsuario("admin");
-                loginAdmin.setContrasena(passwordEncoder.encode("admin123"));
-                loginAdmin.setRole(Role.ADMIN);
-                loginRepository.save(loginAdmin);
-
+            if (baseVacia && !registerRepository.existsByUsuario("juanperez")) {
                 Register cliente = new Register();
                 cliente.setNombre("Juan Perez");
                 cliente.setCorreo("juan@example.com");
@@ -55,5 +44,25 @@ public class LoadDatabase {
                 System.out.println("La base de datos ya contiene datos.");
             }
         };
+    }
+
+    private void asegurarAdmin(RegisterRepository registerRepository, LoginRepository loginRepository) {
+        if (!registerRepository.existsByUsuario("admin")) {
+            Register admin = new Register();
+            admin.setNombre("Administrador");
+            admin.setCorreo("admin@example.com");
+            admin.setUsuario("admin");
+            admin.setContrasena(passwordEncoder.encode("admin123"));
+            admin.setTelefono("1234567890");
+            registerRepository.save(admin);
+        }
+
+        if (!loginRepository.existsByUsuario("admin")) {
+            Login loginAdmin = new Login();
+            loginAdmin.setUsuario("admin");
+            loginAdmin.setContrasena(passwordEncoder.encode("admin123"));
+            loginAdmin.setRole(Role.ADMIN);
+            loginRepository.save(loginAdmin);
+        }
     }
 }

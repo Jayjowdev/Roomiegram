@@ -8,6 +8,7 @@ import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { tareaService } from "../services/tareaService";
+import type { Publicacion } from "../types/Publicacion";
 
 type DashboardStats = {
   publicaciones: number;
@@ -27,6 +28,8 @@ export default function Dashboard() {
     gastos: 0,
     notificaciones: 0,
   });
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [deletingPublicationId, setDeletingPublicationId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export default function Dashboard() {
         gastos: gastos.status === "fulfilled" ? gastos.value.length : 0,
         notificaciones: notificaciones.status === "fulfilled" ? notificaciones.value.length : 0,
       });
+      setPublicaciones(publicaciones.status === "fulfilled" ? publicaciones.value : []);
 
       if ([publicaciones, hogares, tareas, gastos, notificaciones].some((result) => result.status === "rejected")) {
         setMessage("Servicio no disponible. Intenta nuevamente.");
@@ -58,6 +62,33 @@ export default function Dashboard() {
       isMounted = false;
     };
   }, []);
+
+  const eliminarPublicacion = async (publicacion: Publicacion) => {
+    if (!user?.usuario || user.role !== "ADMIN") {
+      setMessage("Solo un administrador puede moderar publicaciones.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Eliminar la publicacion "${publicacion.titulo || publicacion.id}"?`);
+    if (!confirmar) return;
+
+    setDeletingPublicationId(publicacion.id);
+    setMessage("");
+
+    try {
+      await publicacionService.eliminar(publicacion.id, user.usuario, user.role);
+      setPublicaciones((current) => current.filter((item) => item.id !== publicacion.id));
+      setStats((current) => ({
+        ...current,
+        publicaciones: Math.max(0, current.publicaciones - 1),
+      }));
+      setMessage("Publicacion eliminada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
+    } finally {
+      setDeletingPublicationId(null);
+    }
+  };
 
   return (
     <div className="dashboard-page">
@@ -126,6 +157,38 @@ export default function Dashboard() {
           <p><strong>Nombre:</strong> {user?.nombre || "No informado"}</p>
           <p><strong>Usuario:</strong> {user?.usuario || "No informado"}</p>
           <p><strong>Rol:</strong> {user?.role || "CLIENTE"}</p>
+        </div>
+      </section>
+
+      <section className="dashboard-content">
+        <div className="dashboard-activity">
+          <h4>Moderacion de publicaciones</h4>
+          {publicaciones.length === 0 ? (
+            <div className="sin-resultados"><p>No hay publicaciones para moderar.</p></div>
+          ) : (
+            <div className="module-list">
+              {publicaciones.map((publicacion) => (
+                <article className="module-item" key={publicacion.id}>
+                  <div className="section-heading-row">
+                    <h4>{publicacion.titulo || "Publicacion sin titulo"}</h4>
+                    <span className="status-pill">{publicacion.usuarioCreador || "Sin creador"}</span>
+                  </div>
+                  <p>{publicacion.descripcion}</p>
+                  <span>{publicacion.ubicacion} · ${publicacion.precio?.toLocaleString("es-CL") || 0}</span>
+                  <div className="item-actions">
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      type="button"
+                      onClick={() => eliminarPublicacion(publicacion)}
+                      disabled={deletingPublicationId === publicacion.id}
+                    >
+                      {deletingPublicationId === publicacion.id ? "Eliminando..." : "Eliminar"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

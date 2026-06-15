@@ -768,6 +768,13 @@ p {
   justify-content: center;
 }
 
+.home-filter-panel {
+  width: min(920px, calc(100% - 32px));
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
 .filtros-container {
   display: flex;
   gap: 12px;
@@ -776,6 +783,28 @@ p {
   border-radius: 50px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   animation: softReveal 0.4s ease both;
+}
+
+.home-location-filter {
+  width: min(620px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.home-location-filter .form-control {
+  min-height: 44px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  color: #2f3a36;
+}
+
+.home-results-count {
+  margin: 0;
+  color: #52615c;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .filtro-btn {

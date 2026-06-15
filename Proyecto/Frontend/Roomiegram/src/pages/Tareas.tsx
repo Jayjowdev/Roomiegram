@@ -59,6 +59,10 @@ function findMemberIdByName(
   return match ? String(match) : "";
 }
 
+function isTaskCompleted(tarea: Tarea) {
+  return tarea.completada === true;
+}
+
 export default function Tareas() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -70,6 +74,7 @@ export default function Tareas() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.allSettled([hogarService.listar(), tareaService.listar(), usuarioService.listar()])
@@ -204,6 +209,26 @@ export default function Tareas() {
     }
   };
 
+  const toggleTaskStatus = async (tarea: Tarea) => {
+    if (!canManage) return;
+
+    setMessage("");
+    setUpdatingTaskId(tarea.id);
+
+    try {
+      const actualizada = isTaskCompleted(tarea)
+        ? await tareaService.pendiente(tarea.id)
+        : await tareaService.completar(tarea.id);
+
+      setTareas((current) => current.map((item) => (item.id === actualizada.id ? actualizada : item)));
+      setMessage(isTaskCompleted(actualizada) ? "Tarea marcada como completada." : "Tarea marcada como pendiente.");
+    } catch {
+      setMessage("No se pudo actualizar el estado de la tarea. Revisa que los servicios estÃ©n disponibles.");
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   return (
     <div className="module-page">
       <header className="module-header">
@@ -259,13 +284,32 @@ export default function Tareas() {
               <div className="sin-resultados"><p>No hay tareas asociadas a este hogar.</p></div>
             ) : tareasDelHogar.map((tarea) => (
               <article className="module-item" key={tarea.id}>
-                <h4>{tarea.titulo}</h4>
+                <div className="section-heading-row">
+                  <h4>{tarea.titulo}</h4>
+                  <span className={isTaskCompleted(tarea) ? "status-pill success" : "status-pill"}>
+                    {isTaskCompleted(tarea) ? "Completada" : "Pendiente"}
+                  </span>
+                </div>
                 <p>{tarea.descripcion}</p>
                 <span>{tarea.encargado} · {tarea.fecha}</span>
                 {canManage && (
-                  <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
-                    Editar
-                  </button>
+                  <div className="item-actions">
+                    <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
+                      Editar
+                    </button>
+                    <button
+                      className={isTaskCompleted(tarea) ? "btn btn-outline-success btn-sm" : "btn btn-success btn-sm"}
+                      type="button"
+                      onClick={() => toggleTaskStatus(tarea)}
+                      disabled={updatingTaskId === tarea.id}
+                    >
+                      {updatingTaskId === tarea.id
+                        ? "Actualizando..."
+                        : isTaskCompleted(tarea)
+                          ? "Marcar pendiente"
+                          : "Marcar completada"}
+                    </button>
+                  </div>
                 )}
               </article>
             ))}

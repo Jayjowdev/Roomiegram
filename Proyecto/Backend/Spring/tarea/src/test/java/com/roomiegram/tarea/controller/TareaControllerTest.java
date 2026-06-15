@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,7 +56,8 @@ class TareaControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.titulo").value("Limpiar cocina"))
-                .andExpect(jsonPath("$.encargado").value("juan"));
+                .andExpect(jsonPath("$.encargado").value("juan"))
+                .andExpect(jsonPath("$.completada").value(false));
     }
 
     @Test
@@ -95,7 +97,34 @@ class TareaControllerTest {
                 .andExpect(jsonPath("$.titulo").value("Limpiar living"))
                 .andExpect(jsonPath("$.encargado").value("maria"))
                 .andExpect(jsonPath("$.descripcion").value("Ordenar el living del hogar"))
-                .andExpect(jsonPath("$.fecha").value("2026-05-21"));
+                .andExpect(jsonPath("$.fecha").value("2026-05-21"))
+                .andExpect(jsonPath("$.completada").value(false));
+    }
+
+    @Test
+    void completarDebeRetornar200() throws Exception {
+        Tarea request = crearTarea();
+        request.setCompletada(true);
+
+        when(tareaService.cambiarEstadoTarea(1L, true)).thenReturn(request);
+
+        mockMvc.perform(patch("/tareas/1/completar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.completada").value(true));
+    }
+
+    @Test
+    void pendienteDebeRetornar200() throws Exception {
+        Tarea request = crearTarea();
+        request.setCompletada(false);
+
+        when(tareaService.cambiarEstadoTarea(1L, false)).thenReturn(request);
+
+        mockMvc.perform(patch("/tareas/1/pendiente"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.completada").value(false));
     }
 
     private Tarea crearTarea() {
@@ -105,6 +134,7 @@ class TareaControllerTest {
         tarea.setEncargado("juan");
         tarea.setDescripcion("Limpiar la cocina del hogar");
         tarea.setFecha(LocalDate.of(2026, 5, 20));
+        tarea.setCompletada(false);
         return tarea;
     }
 }

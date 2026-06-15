@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +39,7 @@ class TareaServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Limpiar cocina", resultado.getTitulo());
+        assertFalse(resultado.getCompletada());
         verify(tareaRepository).save(tarea);
     }
 
@@ -134,6 +137,7 @@ class TareaServiceTest {
         assertEquals("maria", resultado.getEncargado());
         assertEquals("Ordenar el living del hogar", resultado.getDescripcion());
         assertEquals(LocalDate.of(2026, 5, 21), resultado.getFecha());
+        assertFalse(resultado.getCompletada());
         verify(tareaRepository).findById(1L);
         verify(tareaRepository).save(existente);
     }
@@ -148,6 +152,43 @@ class TareaServiceTest {
         assertEquals("La tarea no existe", exception.getMessage());
     }
 
+    @Test
+    void cambiarEstadoTareaDebeMarcarComoCompletada() {
+        Tarea tarea = crearTarea();
+        when(tareaRepository.findById(1L)).thenReturn(Optional.of(tarea));
+        when(tareaRepository.save(tarea)).thenReturn(tarea);
+
+        Tarea resultado = tareaService.cambiarEstadoTarea(1L, true);
+
+        assertTrue(resultado.getCompletada());
+        verify(tareaRepository).findById(1L);
+        verify(tareaRepository).save(tarea);
+    }
+
+    @Test
+    void cambiarEstadoTareaDebeMarcarComoPendiente() {
+        Tarea tarea = crearTarea();
+        tarea.setCompletada(true);
+        when(tareaRepository.findById(1L)).thenReturn(Optional.of(tarea));
+        when(tareaRepository.save(tarea)).thenReturn(tarea);
+
+        Tarea resultado = tareaService.cambiarEstadoTarea(1L, false);
+
+        assertFalse(resultado.getCompletada());
+        verify(tareaRepository).findById(1L);
+        verify(tareaRepository).save(tarea);
+    }
+
+    @Test
+    void cambiarEstadoTareaDebeFallarSiNoExiste() {
+        when(tareaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> tareaService.cambiarEstadoTarea(99L, true));
+
+        assertEquals("La tarea no existe", exception.getMessage());
+    }
+
     private Tarea crearTarea() {
         Tarea tarea = new Tarea();
         tarea.setId(1L);
@@ -155,6 +196,7 @@ class TareaServiceTest {
         tarea.setEncargado("juan");
         tarea.setDescripcion("Limpiar la cocina del hogar");
         tarea.setFecha(LocalDate.of(2026, 5, 20));
+        tarea.setCompletada(false);
         return tarea;
     }
 }

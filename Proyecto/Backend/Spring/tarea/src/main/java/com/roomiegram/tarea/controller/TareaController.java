@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -69,6 +70,32 @@ public class TareaController {
         }
     }
 
+    @Operation(summary = "Marcar tarea como completada", description = "Cambia el estado de una tarea existente a completada")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Tarea marcada como completada",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Tarea.class))),
+        @ApiResponse(responseCode = "404", description = "Tarea no encontrada", content = @Content)
+    })
+    @PatchMapping("/{id}/completar")
+    public ResponseEntity<?> completarTarea(
+            @Parameter(description = "Id de la tarea a completar", required = true)
+            @PathVariable Long id) {
+        return cambiarEstado(id, true);
+    }
+
+    @Operation(summary = "Marcar tarea como pendiente", description = "Cambia el estado de una tarea existente a pendiente")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Tarea marcada como pendiente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Tarea.class))),
+        @ApiResponse(responseCode = "404", description = "Tarea no encontrada", content = @Content)
+    })
+    @PatchMapping("/{id}/pendiente")
+    public ResponseEntity<?> marcarPendiente(
+            @Parameter(description = "Id de la tarea a marcar como pendiente", required = true)
+            @PathVariable Long id) {
+        return cambiarEstado(id, false);
+    }
+
     @Operation(summary = "Listar todas las tareas", 
                description = "Obtiene una lista completa de todas las tareas registradas")
     @ApiResponses(value = {
@@ -81,5 +108,15 @@ public class TareaController {
     public ResponseEntity<List<Tarea>> listarTareas() {
         List<Tarea> tareas = tareaService.listarTareas();
         return ResponseEntity.ok(tareas);
+    }
+
+    private ResponseEntity<?> cambiarEstado(Long id, boolean completada) {
+        try {
+            Tarea resultado = tareaService.cambiarEstadoTarea(id, completada);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            HttpStatus status = "La tarea no existe".equals(e.getMessage()) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(Map.of("mensaje", e.getMessage()));
+        }
     }
 }

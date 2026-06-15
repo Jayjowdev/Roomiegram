@@ -16,6 +16,7 @@ public class TareaService {
 
     public Tarea guardarTarea(Tarea tarea) {
         validarTarea(tarea);
+        normalizarEstado(tarea);
         return tareaRepository.save(tarea);
     }
 
@@ -32,12 +33,27 @@ public class TareaService {
         existente.setEncargado(datos.getEncargado());
         existente.setDescripcion(datos.getDescripcion());
         existente.setFecha(datos.getFecha());
+        normalizarEstado(existente);
 
         return tareaRepository.save(existente);
     }
 
+    public Tarea cambiarEstadoTarea(Long id, boolean completada) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la tarea es obligatorio");
+        }
+
+        Tarea existente = tareaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La tarea no existe"));
+
+        existente.setCompletada(completada);
+        return tareaRepository.save(existente);
+    }
+
     public List<Tarea> listarTareas() {
-        return tareaRepository.findAll();
+        return tareaRepository.findAll().stream()
+                .peek(this::normalizarEstado)
+                .toList();
     }
 
     private void validarTarea(Tarea tarea) {
@@ -55,6 +71,12 @@ public class TareaService {
         }
         if (tarea.getFecha() == null) {
             throw new IllegalArgumentException("La fecha de la tarea no puede estar vacía");
+        }
+    }
+
+    private void normalizarEstado(Tarea tarea) {
+        if (tarea.getCompletada() == null) {
+            tarea.setCompletada(false);
         }
     }
 }

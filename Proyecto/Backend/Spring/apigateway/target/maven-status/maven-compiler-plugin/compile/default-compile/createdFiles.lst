@@ -1,0 +1,2 @@
+com\roomiegram\apigateway\ApigatewayApplication.class
+com\roomiegram\apigateway\controller\FallbackController.class

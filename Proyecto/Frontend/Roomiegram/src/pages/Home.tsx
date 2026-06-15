@@ -129,6 +129,7 @@ export default function Home() {
         <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/")} />
         <div className="home-header-actions">
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
+          <button className="btn btn-outline-success me-2" onClick={() => navigate("/planes")}>Planes</button>
           <NotificationBell className="me-2" />
           {/* <button className="btn btn-outline-success me-2" onClick={() => navigate("/compatibilidad")}>Buscar compatibilidad</button> */}
           {user?.role === "ADMIN" && (

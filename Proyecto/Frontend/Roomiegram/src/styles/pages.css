@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════
+   PLANES / PRICING PAGE
+   ═══════════════════════════════════════════════ */
+
+.planes-page {
+  min-height: 100vh;
+  background: #f8fdf9;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hero */
+.planes-hero {
+  text-align: center;
+  padding: 4rem 1.5rem 2rem;
+  background: linear-gradient(135deg, #1a7a4a 0%, #2d9e64 100%);
+  color: white;
+}
+
+.planes-kicker {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.planes-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.planes-hero p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  max-width: 540px;
+  margin: 0 auto 1.5rem;
+}
+
+/* Badge plan activo en hero */
+.plan-activo-badge {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.plan-activo-fecha {
+  font-weight: 400;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* Mensaje */
+.planes-mensaje {
+  text-align: center;
+  margin: 1.25rem auto 0;
+  max-width: 480px;
+}
+
+.planes-mensaje-ok {
+  color: #1a7a4a;
+  font-weight: 600;
+}
+
+/* Grid de planes */
+.planes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.75rem;
+  max-width: 1100px;
+  margin: 3rem auto 2rem;
+  padding: 0 1.5rem;
+}
+
+/* Tarjeta de plan */
+.plan-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  position: relative;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.plan-card-gratis {
+  border-color: #e2e8f0;
+}
+
+.plan-card-premium {
+  border-color: #2d9e64;
+  box-shadow: 0 6px 28px rgba(45, 158, 100, 0.2);
+}
+
+.plan-card-hogar {
+  border-color: #1a4a7a;
+  box-shadow: 0 6px 28px rgba(26, 74, 122, 0.15);
+}
+
+.plan-card-activo {
+  background: linear-gradient(135deg, #f0fdf5 0%, #ffffff 100%);
+}
+
+/* Badge popular */
+.plan-popular-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d9e64;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.plan-card-icon {
+  font-size: 2.4rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.plan-card-nombre {
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  color: #1a2e1e;
+  margin: 0;
+}
+
+.plan-card-desc {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Precio */
+.plan-card-precio {
+  text-align: center;
+  margin: 0.75rem 0;
+}
+
+.plan-precio-gratis {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.plan-precio-valor {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a7a4a;
+}
+
+.plan-precio-periodo {
+  font-size: 1rem;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+/* Lista de beneficios */
+.plan-beneficios {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+}
+
+.plan-beneficio-item {
+  font-size: 0.92rem;
+  color: #374151;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.plan-check {
+  color: #2d9e64;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* FAQ */
+.planes-faq {
+  max-width: 900px;
+  margin: 2rem auto 3rem;
+  padding: 0 1.5rem;
+}
+
+.planes-faq h2 {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a2e1e;
+  margin-bottom: 1.75rem;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.faq-item {
+  background: white;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.faq-item strong {
+  display: block;
+  color: #1a2e1e;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.faq-item p {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════
+   BADGES DE PLAN (usados en MiPerfil y otros)
+   ═══════════════════════════════════════════════ */
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.3px;
+}
+
+.plan-badge-gratis {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.plan-badge-premium {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.plan-badge-hogar {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .planes-hero {
+    padding: 3rem 1rem 1.5rem;
+  }
+
+  .planes-grid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+}

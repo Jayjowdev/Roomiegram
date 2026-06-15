@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.roomiegram.apigateway.ApigatewayApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.339 s -- in com.roomiegram.apigateway.ApigatewayApplicationTests

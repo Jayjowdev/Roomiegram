@@ -6,7 +6,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: roomiegram
       MYSQL_DATABASE: roomiegram
-    ports:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:

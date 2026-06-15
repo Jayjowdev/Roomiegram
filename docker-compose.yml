@@ -256,12 +256,48 @@ services:
       - roomiegram-net
     restart: on-failure
 
+  redis:
+    image: redis:7-alpine
+    container_name: roomiegram-redis
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
+  apigateway:
+    build: ./Proyecto/Backend/Spring/apigateway
+    container_name: roomiegram-apigateway
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      USUARIO_HOST: usuario
+      HOGAR_HOST: hogar
+      HOGARCUENTA_HOST: hogarcuenta
+      COMPROBANTE_HOST: comprobante
+      PUBLICACION_HOST: publicacion
+      TAREA_HOST: tarea
+      NOTIFICACION_HOST: notificacion
+    depends_on:
+      - redis
+      - usuario
+      - hogar
+      - hogarcuenta
+      - comprobante
+      - publicacion
+      - tarea
+      - notificacion
+    networks:
+      - roomiegram-net
+    restart: on-failure
+
   frontend:
     build: ./Proyecto/Frontend/Roomiegram
     container_name: roomiegram-frontend
     ports:
       - "5173:5173"
     environment:
+      VITE_API_GATEWAY_URL: ${VITE_API_GATEWAY_URL:-}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost}
     volumes:
       - ./Proyecto/Frontend/Roomiegram:/app

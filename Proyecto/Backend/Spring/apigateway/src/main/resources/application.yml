@@ -1,0 +1,169 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: apigateway
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 2s
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origin-patterns: "*"
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                  - PATCH
+                allowed-headers: "*"
+                allow-credentials: false
+                max-age: 3600
+
+          routes:
+            # ── usuario (auth) ────────────────────────────────────────
+            - id: usuario-service
+              uri: http://${USUARIO_HOST:usuario}:8088
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: usuario-cb
+                    fallbackUri: forward:/fallback
+
+            # ── publicacion ───────────────────────────────────────────
+            - id: publicacion-service
+              uri: http://${PUBLICACION_HOST:publicacion}:8086
+              predicates:
+                - Path=/publicaciones/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: publicacion-cb
+                    fallbackUri: forward:/fallback
+
+            # ── hogar ─────────────────────────────────────────────────
+            - id: hogar-service
+              uri: http://${HOGAR_HOST:hogar}:8083
+              predicates:
+                - Path=/hogares/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: hogar-cb
+                    fallbackUri: forward:/fallback
+
+            # ── hogarcuenta ───────────────────────────────────────────
+            - id: hogarcuenta-service
+              uri: http://${HOGARCUENTA_HOST:hogarcuenta}:8084
+              predicates:
+                - Path=/hogar-cuentas/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: hogarcuenta-cb
+                    fallbackUri: forward:/fallback
+
+            # ── notificacion ──────────────────────────────────────────
+            - id: notificacion-service
+              uri: http://${NOTIFICACION_HOST:notificacion}:8085
+              predicates:
+                - Path=/notificaciones/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: notificacion-cb
+                    fallbackUri: forward:/fallback
+
+            # ── tarea ─────────────────────────────────────────────────
+            - id: tarea-service
+              uri: http://${TAREA_HOST:tarea}:8087
+              predicates:
+                - Path=/tareas/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: tarea-cb
+                    fallbackUri: forward:/fallback
+
+            # ── comprobante ───────────────────────────────────────────
+            - id: comprobante-service
+              uri: http://${COMPROBANTE_HOST:comprobante}:8082
+              predicates:
+                - Path=/comprobantes/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: comprobante-cb
+                    fallbackUri: forward:/fallback
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 20s
+        cancel-running-future: false
+    instances:
+      usuario-cb:
+        base-config: default
+      publicacion-cb:
+        base-config: default
+      hogar-cb:
+        base-config: default
+      hogarcuenta-cb:
+        base-config: default
+      notificacion-cb:
+        base-config: default
+      tarea-cb:
+        base-config: default
+      comprobante-cb:
+        base-config: default
+
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      usuario-cb:
+        base-config: default
+      publicacion-cb:
+        base-config: default
+      hogar-cb:
+        base-config: default
+      hogarcuenta-cb:
+        base-config: default
+      notificacion-cb:
+        base-config: default
+      tarea-cb:
+        base-config: default
+      comprobante-cb:
+        base-config: default
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO

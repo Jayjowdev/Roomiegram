@@ -19,19 +19,31 @@ function readEnv(value?: string) {
   return value?.trim() || undefined
 }
 
+function cleanBaseUrl(value: string) {
+  return value.replace(/\/+$/, "")
+}
+
 function buildServiceUrl(port: number) {
   const apiBaseUrl = readEnv(import.meta.env.VITE_API_BASE_URL) ?? "http://localhost"
-  return `${apiBaseUrl.replace(/\/+$/, "")}:${port}`
+  return `${cleanBaseUrl(apiBaseUrl)}:${port}`
+}
+
+function resolveServiceUrl(overrideUrl: string | undefined, port: number) {
+  return (
+    readEnv(overrideUrl) ??
+    readEnv(import.meta.env.VITE_API_GATEWAY_URL)?.replace(/\/+$/, "") ??
+    buildServiceUrl(port)
+  )
 }
 
 const API_URLS = {
-  usuario: readEnv(import.meta.env.VITE_USUARIO_API_URL) ?? buildServiceUrl(SERVICE_PORTS.usuario),
-  hogar: readEnv(import.meta.env.VITE_HOGAR_API_URL) ?? buildServiceUrl(SERVICE_PORTS.hogar),
-  hogarCuenta: readEnv(import.meta.env.VITE_HOGAR_CUENTA_API_URL) ?? buildServiceUrl(SERVICE_PORTS.hogarCuenta),
-  comprobante: readEnv(import.meta.env.VITE_COMPROBANTE_API_URL) ?? buildServiceUrl(SERVICE_PORTS.comprobante),
-  publicacion: readEnv(import.meta.env.VITE_PUBLICACION_API_URL) ?? buildServiceUrl(SERVICE_PORTS.publicacion),
-  tarea: readEnv(import.meta.env.VITE_TAREA_API_URL) ?? buildServiceUrl(SERVICE_PORTS.tarea),
-  notificacion: readEnv(import.meta.env.VITE_NOTIFICACION_API_URL) ?? buildServiceUrl(SERVICE_PORTS.notificacion),
+  usuario: resolveServiceUrl(import.meta.env.VITE_USUARIO_API_URL, SERVICE_PORTS.usuario),
+  hogar: resolveServiceUrl(import.meta.env.VITE_HOGAR_API_URL, SERVICE_PORTS.hogar),
+  hogarCuenta: resolveServiceUrl(import.meta.env.VITE_HOGAR_CUENTA_API_URL, SERVICE_PORTS.hogarCuenta),
+  comprobante: resolveServiceUrl(import.meta.env.VITE_COMPROBANTE_API_URL, SERVICE_PORTS.comprobante),
+  publicacion: resolveServiceUrl(import.meta.env.VITE_PUBLICACION_API_URL, SERVICE_PORTS.publicacion),
+  tarea: resolveServiceUrl(import.meta.env.VITE_TAREA_API_URL, SERVICE_PORTS.tarea),
+  notificacion: resolveServiceUrl(import.meta.env.VITE_NOTIFICACION_API_URL, SERVICE_PORTS.notificacion),
 }
 
 function createApi(baseURL: string) {

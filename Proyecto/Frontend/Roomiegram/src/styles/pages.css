@@ -1,0 +1,169 @@
+.planes-page {
+  min-height: 100vh;
+  background: #f8fdf9;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.planes-hero {
+  text-align: center;
+  padding: 48px 24px 32px;
+  background: #1f7a63;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.planes-kicker {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.planes-hero h1 {
+  margin-bottom: 10px;
+}
+
+.planes-hero p {
+  max-width: 620px;
+  margin: 0 auto 16px;
+}
+
+.plan-activo-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.plan-activo-fecha {
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.planes-mensaje {
+  max-width: 560px;
+  margin: 18px auto 0;
+}
+
+.planes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  width: min(1120px, 100%);
+  margin: 32px auto;
+}
+
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  background: #fff;
+  border: 1px solid #e2e8e5;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.plan-card-premium,
+.plan-card-hogar {
+  border-color: #1f7a63;
+}
+
+.plan-card-activo {
+  background: #eef8f5;
+}
+
+.plan-popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  background: #1f7a63;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.plan-card-nombre {
+  color: #222;
+  margin-bottom: 0;
+}
+
+.plan-card-desc {
+  color: #555;
+  min-height: 44px;
+}
+
+.plan-card-precio {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.plan-precio-gratis,
+.plan-precio-valor {
+  color: #1f7a63;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.plan-precio-periodo {
+  color: #555;
+}
+
+.plan-beneficios {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 12px;
+  list-style: none;
+}
+
+.plan-beneficio-item {
+  color: #333;
+  line-height: 1.4;
+}
+
+.plan-check {
+  color: #1f7a63;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.plan-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.plan-badge-gratis {
+  background: #edf2f0;
+  color: #4a5752;
+}
+
+.plan-badge-premium,
+.plan-badge-hogar {
+  background: #e6f4f1;
+  color: #1f7a63;
+}
+
+@media (max-width: 640px) {
+  .planes-page {
+    padding: 16px;
+  }
+
+  .planes-hero {
+    padding: 36px 18px 24px;
+  }
+}

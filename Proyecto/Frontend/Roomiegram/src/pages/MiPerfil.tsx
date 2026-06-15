@@ -9,6 +9,7 @@ import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { authService } from "../services/authService";
 import { hogarService } from "../services/hogarService";
+import { membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -43,18 +44,26 @@ export default function MiPerfil() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
 
   useEffect(() => {
     let isMounted = true;
 
-    Promise.allSettled([hogarService.listar(), usuarioService.listar()])
-      .then(([hogaresResult, usuariosResult]) => {
+    Promise.allSettled([
+      hogarService.listar(),
+      usuarioService.listar(),
+      user?.id ? membresiaService.obtenerActiva(user.id) : Promise.resolve(null),
+    ])
+      .then(([hogaresResult, usuariosResult, suscripcionResult]) => {
         if (!isMounted) return;
 
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
+        if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
+          setSuscripcion(suscripcionResult.value as Suscripcion);
+        }
         setIsLoadingGroup(false);
 
         if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected") {
@@ -65,7 +74,7 @@ export default function MiPerfil() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   const hogarActual = useMemo(() => {
     if (!user?.id) return undefined;
@@ -204,6 +213,11 @@ export default function MiPerfil() {
           <div>
             <span className="demo-kicker">Mi perfil</span>
             <h1>{user?.nombre || "Martina"}</h1>
+            {suscripcion && (
+              <span className={`plan-badge ${PLAN_BADGE_CLASS[suscripcion.plan as PlanId]}`}>
+                {PLAN_LABELS[suscripcion.plan as PlanId]}
+              </span>
+            )}
             <p>{user?.descripcion || "Completa tu descripcion para que otros usuarios conozcan tu estilo de convivencia."}</p>
             {user?.intereses?.length ? (
               <div className="home-tags">
@@ -230,6 +244,9 @@ export default function MiPerfil() {
           </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/crear-publicacion")}>
             Crear publicacion
+          </button>
+          <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/planes")}>
+            {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>
           <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />
         </aside>

@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ProtectedRoute } from "./components/ProtectedRoute"
+import "./styles/pages.css"
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
+import Planes from "./pages/Planes"
 import Dashboard from "./pages/Dashboard"
 import Convivencia from "./pages/Convivencia"
 import Home from "./pages/Home"
@@ -40,6 +42,7 @@ export default function App() {
         <Route path="/comprobantes" element={<ProtectedRoute><Comprobantes /></ProtectedRoute>} />
         <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
         <Route path="/hogares" element={<ProtectedRoute><Hogares /></ProtectedRoute>} />
+        <Route path="/planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )

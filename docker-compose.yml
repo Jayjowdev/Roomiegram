@@ -18,6 +18,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-hogar:
     image: mysql:8.4
@@ -36,6 +37,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-hogarcuenta:
     image: mysql:8.4
@@ -54,6 +56,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-notificacion:
     image: mysql:8.4
@@ -72,6 +75,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-publicacion:
     image: mysql:8.4
@@ -90,6 +94,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-tarea:
     image: mysql:8.4
@@ -108,6 +113,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   mysql-usuario:
     image: mysql:8.4
@@ -126,6 +132,7 @@ services:
       retries: 10
     networks:
       - roomiegram-net
+    restart: unless-stopped
 
   # --- Microservicios ---
 
@@ -144,7 +151,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   hogar:
     build: ./Proyecto/Backend/Spring/hogar
@@ -161,7 +168,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   hogarcuenta:
     build: ./Proyecto/Backend/Spring/hogarcuenta
@@ -178,7 +185,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   notificacion:
     build: ./Proyecto/Backend/Spring/notificacion
@@ -195,7 +202,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   publicacion:
     build: ./Proyecto/Backend/Spring/publicacion
@@ -213,7 +220,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   tarea:
     build: ./Proyecto/Backend/Spring/tarea
@@ -230,7 +237,7 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   usuario:
     build: ./Proyecto/Backend/Spring/usuario
@@ -255,14 +262,14 @@ services:
         condition: service_healthy
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: roomiegram-redis
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   apigateway:
     build: ./Proyecto/Backend/Spring/apigateway
@@ -290,7 +297,7 @@ services:
       - notificacion
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
   frontend:
     build: ./Proyecto/Frontend/Roomiegram
@@ -305,7 +312,7 @@ services:
       - /app/node_modules
     networks:
       - roomiegram-net
-    restart: on-failure
+    restart: unless-stopped
 
 volumes:
   mysql_comprobante_data:

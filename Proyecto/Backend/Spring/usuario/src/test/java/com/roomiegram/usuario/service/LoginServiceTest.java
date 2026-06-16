@@ -45,6 +45,7 @@ class LoginServiceTest {
     @BeforeEach
     void initMailFrom() {
         ReflectionTestUtils.setField(loginService, "mailFrom", "no-reply@roomiegram.com");
+        ReflectionTestUtils.setField(loginService, "frontendUrl", "http://localhost:5173");
     }
 
     @Test

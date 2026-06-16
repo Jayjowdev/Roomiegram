@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import avatarUser from "../assets/avatarUser.svg";
@@ -7,7 +7,6 @@ import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
-import { authService } from "../services/authService";
 import { hogarService } from "../services/hogarService";
 import { membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { usuarioService } from "../services/usuarioService";
@@ -38,12 +37,6 @@ export default function MiPerfil() {
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [cropSource, setCropSource] = useState("");
-  const [contrasenaActual, setContrasenaActual] = useState("");
-  const [nuevaContrasena, setNuevaContrasena] = useState("");
-  const [confirmarContrasena, setConfirmarContrasena] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
@@ -129,49 +122,6 @@ export default function MiPerfil() {
     });
   };
 
-  const handleChangePassword = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPasswordMessage("");
-    setPasswordError("");
-
-    if (!user?.id) {
-      setPasswordError("Debes iniciar sesion para cambiar tu contrasena.");
-      return;
-    }
-
-    if (!contrasenaActual.trim()) {
-      setPasswordError("Ingresa tu contrasena actual.");
-      return;
-    }
-
-    if (nuevaContrasena.length < 8) {
-      setPasswordError("La nueva contrasena debe tener al menos 8 caracteres.");
-      return;
-    }
-
-    if (nuevaContrasena !== confirmarContrasena) {
-      setPasswordError("La nueva contrasena y la confirmacion no coinciden.");
-      return;
-    }
-
-    try {
-      setIsChangingPassword(true);
-      const response = await authService.changePassword(user.id, {
-        contrasenaActual,
-        nuevaContrasena,
-        confirmarContrasena,
-      });
-      setPasswordMessage(response.mensaje || "Contrasena actualizada correctamente.");
-      setContrasenaActual("");
-      setNuevaContrasena("");
-      setConfirmarContrasena("");
-    } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : "No se pudo cambiar la contrasena.");
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-
   return (
     <div className="perfil-page">
       <header className="perfil-header">
@@ -249,48 +199,8 @@ export default function MiPerfil() {
             {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>
           <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />
+
         </aside>
-      </section>
-
-      <section className="profile-password-section">
-        <div className="profile-password-card">
-          <div>
-            <h2>Cambiar contrasena</h2>
-            <p>Usa tu contrasena temporal o actual para definir una nueva.</p>
-          </div>
-
-          <form onSubmit={handleChangePassword} className="profile-password-form">
-            {passwordError && <div className="form-error">{passwordError}</div>}
-            {passwordMessage && <div className="form-success">{passwordMessage}</div>}
-            <input
-              className="form-control"
-              type="password"
-              placeholder="Contrasena actual"
-              value={contrasenaActual}
-              onChange={(event) => setContrasenaActual(event.target.value)}
-              disabled={isChangingPassword}
-            />
-            <input
-              className="form-control"
-              type="password"
-              placeholder="Nueva contrasena"
-              value={nuevaContrasena}
-              onChange={(event) => setNuevaContrasena(event.target.value)}
-              disabled={isChangingPassword}
-            />
-            <input
-              className="form-control"
-              type="password"
-              placeholder="Confirmar nueva contrasena"
-              value={confirmarContrasena}
-              onChange={(event) => setConfirmarContrasena(event.target.value)}
-              disabled={isChangingPassword}
-            />
-            <button className="btn btn-success" type="submit" disabled={isChangingPassword}>
-              {isChangingPassword ? "Actualizando..." : "Actualizar contrasena"}
-            </button>
-          </form>
-        </div>
       </section>
 
       <section className="mi-grupo">

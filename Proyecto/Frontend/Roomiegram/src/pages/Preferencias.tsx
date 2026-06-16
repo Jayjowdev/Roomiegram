@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { authService } from "../services/authService";
 import type { PreferenciasCompatibilidad } from "../types/auth";
 import { preferenciasIniciales } from "../utils/preferenciasCompatibilidad";
 
@@ -13,6 +14,12 @@ export default function Preferencias() {
   const [preferencias, setPreferencias] = useState<PreferenciasCompatibilidad>(user?.preferenciasCompatibilidad || preferenciasIniciales);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [contrasenaActual, setContrasenaActual] = useState("");
+  const [nuevaContrasena, setNuevaContrasena] = useState("");
+  const [confirmarContrasena, setConfirmarContrasena] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const validate = () => {
     if (!preferencias.limpieza || !preferencias.ambiente || !preferencias.horario || !preferencias.mascotas || !preferencias.fumar) {
@@ -48,6 +55,49 @@ export default function Preferencias() {
       setMessage("No se pudieron guardar las preferencias.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordMessage("");
+    setPasswordError("");
+
+    if (!user?.id) {
+      setPasswordError("Debes iniciar sesion para cambiar tu contrasena.");
+      return;
+    }
+
+    if (!contrasenaActual.trim()) {
+      setPasswordError("Ingresa tu contrasena actual.");
+      return;
+    }
+
+    if (nuevaContrasena.length < 8) {
+      setPasswordError("La nueva contrasena debe tener al menos 8 caracteres.");
+      return;
+    }
+
+    if (nuevaContrasena !== confirmarContrasena) {
+      setPasswordError("La nueva contrasena y la confirmacion no coinciden.");
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      const response = await authService.changePassword(user.id, {
+        contrasenaActual,
+        nuevaContrasena,
+        confirmarContrasena,
+      });
+      setPasswordMessage(response.mensaje || "Contrasena actualizada correctamente.");
+      setContrasenaActual("");
+      setNuevaContrasena("");
+      setConfirmarContrasena("");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "No se pudo cambiar la contrasena.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -128,6 +178,40 @@ export default function Preferencias() {
 
           <button className="btn btn-success w-100" disabled={isLoading || isSaving}>
             {isSaving ? "Guardando..." : "Guardar preferencias"}
+          </button>
+        </form>
+
+        <form className="module-form profile-password-form" onSubmit={handleChangePassword}>
+          <h3>Cambiar contrasena</h3>
+          <p className="form-helper">Usa tu contrasena temporal o actual para definir una nueva.</p>
+          {passwordError && <div className="form-error">{passwordError}</div>}
+          {passwordMessage && <div className="form-success">{passwordMessage}</div>}
+          <input
+            className="form-control"
+            type="password"
+            placeholder="Contrasena actual"
+            value={contrasenaActual}
+            onChange={(event) => setContrasenaActual(event.target.value)}
+            disabled={isChangingPassword}
+          />
+          <input
+            className="form-control"
+            type="password"
+            placeholder="Nueva contrasena"
+            value={nuevaContrasena}
+            onChange={(event) => setNuevaContrasena(event.target.value)}
+            disabled={isChangingPassword}
+          />
+          <input
+            className="form-control"
+            type="password"
+            placeholder="Confirmar nueva contrasena"
+            value={confirmarContrasena}
+            onChange={(event) => setConfirmarContrasena(event.target.value)}
+            disabled={isChangingPassword}
+          />
+          <button className="btn btn-success w-100" type="submit" disabled={isChangingPassword}>
+            {isChangingPassword ? "Actualizando..." : "Actualizar contrasena"}
           </button>
         </form>
       </section>

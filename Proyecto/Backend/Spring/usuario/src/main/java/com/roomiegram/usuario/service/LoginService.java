@@ -39,6 +39,9 @@ public class LoginService {
     @Value("${app.mail.from:no-reply@roomiegram.com}")
     private String mailFrom;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Metodo para validar el inicio de sesión
@@ -155,7 +158,8 @@ public class LoginService {
                     "Hola " + (nombre == null || nombre.isBlank() ? "Roomie" : nombre) + ",\n\n"
                             + "Recibimos una solicitud para recuperar tu contrasena.\n"
                             + "Tu nueva contrasena temporal es: " + contrasenaTemporal + "\n\n"
-                            + "Te recomendamos iniciar sesion y cambiarla de inmediato.\n\n"
+                            + "Te recomendamos iniciar sesion y cambiarla de inmediato.\n"
+                            + "Entrar a Roomiegram: " + frontendUrl + "\n\n"
                             + "Equipo Roomiegram");
 
             mailSender.send(mailMessage);

@@ -77,6 +77,14 @@ function isTaskAssignedToCurrentUser(tarea: Tarea, currentUser?: { nombre?: stri
     .includes(encargado);
 }
 
+function getTaskSortValue(tarea: Tarea) {
+  const taskWithDates = tarea as Tarea & { createdAt?: string; fechaCreacion?: string };
+  const dateValue = taskWithDates.createdAt || taskWithDates.fechaCreacion;
+  const parsedDate = dateValue ? new Date(dateValue).getTime() : Number.NaN;
+
+  return Number.isNaN(parsedDate) ? tarea.id || 0 : parsedDate;
+}
+
 export default function Tareas() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -119,7 +127,9 @@ export default function Tareas() {
 
   const tareasDelHogar = useMemo(() => {
     if (!hogarActual?.tareasIds?.length) return [];
-    return tareas.filter((tarea) => hogarActual.tareasIds.includes(tarea.id));
+    return tareas
+      .filter((tarea) => hogarActual.tareasIds.includes(tarea.id))
+      .sort((a, b) => getTaskSortValue(b) - getTaskSortValue(a));
   }, [hogarActual, tareas]);
 
   const canManage = isHogarAdmin(hogarActual, user?.id);
@@ -366,6 +376,7 @@ export default function Tareas() {
         </div>
       ) : (
         <section className="module-layout">
+          {canManage ? (
           <form className="module-form" onSubmit={handleSubmit}>
             <h3>{isEditing ? "Editar tarea" : "Nueva tarea"}</h3>
             {!canManage && <p className="form-helper">Solo el administrador del hogar puede crear tareas asociadas al grupo.</p>}
@@ -388,6 +399,12 @@ export default function Tareas() {
               </button>
             )}
           </form>
+          ) : (
+            <aside className="module-form task-permission-panel">
+              <h3>Tareas del hogar</h3>
+              <p className="form-helper">Solo el administrador del hogar puede crear y editar tareas.</p>
+            </aside>
+          )}
 
           <div className="module-list">
             <h3>Tareas de {hogarActual.nombre}</h3>

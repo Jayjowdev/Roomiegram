@@ -28,6 +28,9 @@ public class NotificationEmailService {
     @Value("${app.mail.from:no-reply@roomiegram.com}")
     private String mailFrom;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     public boolean enviarCorreoTareaAsignada(TaskAssignmentEmailRequest request) {
         validarSolicitudTarea(request);
 
@@ -51,7 +54,8 @@ public class NotificationEmailService {
                         + "Tarea: " + request.titulo().trim() + "\n"
                         + "Descripcion: " + request.descripcion().trim() + "\n"
                         + "Fecha limite: " + request.fecha().trim() + "\n\n"
-                        + "Entra a Roomiegram para revisar los detalles y marcarla cuando este lista.\n\n"
+                        + "Entra a Roomiegram para revisar los detalles y marcarla cuando este lista.\n"
+                        + frontendLinkLine() + "\n\n"
                         + "Equipo Roomiegram",
                 "tarea asignada",
                 request.usuarioId());
@@ -82,7 +86,8 @@ public class NotificationEmailService {
                 "Hola " + nombreReceptor + ",\n\n"
                         + solicitanteNombre + " envio una solicitud para unirse a tu grupo en Roomiegram.\n\n"
                         + referencia
-                        + "\nEntra a Roomiegram para revisar, aprobar o rechazar la solicitud.\n\n"
+                        + "\nEntra a Roomiegram para revisar, aprobar o rechazar la solicitud.\n"
+                        + frontendLinkLine() + "\n\n"
                         + "Equipo Roomiegram",
                 "solicitud recibida",
                 request.usuarioReceptorId());
@@ -114,7 +119,8 @@ public class NotificationEmailService {
                 "Tu solicitud fue " + estado + " en Roomiegram",
                 "Hola " + nombreSolicitante + ",\n\n"
                         + administradorNombre + " ha " + estado + " tu solicitud para unirte a " + hogarNombre + ".\n\n"
-                        + accion + "\n\n"
+                        + accion + "\n"
+                        + frontendLinkLine() + "\n\n"
                         + "Equipo Roomiegram",
                 "solicitud " + estado,
                 request.usuarioSolicitanteId());
@@ -145,7 +151,8 @@ public class NotificationEmailService {
                         + "\" en el hogar " + hogarNombre + ".\n\n"
                         + "Descripción: " + valueOrDefault(request.descripcion(), "Sin descripción") + "\n"
                         + "Fecha límite: " + request.fecha().trim() + "\n\n"
-                        + "Entra a Roomiegram para revisar el estado de las tareas del hogar.\n\n"
+                        + "Entra a Roomiegram para revisar el estado de las tareas del hogar.\n"
+                        + frontendLinkLine() + "\n\n"
                         + "Equipo Roomiegram",
                 "tarea completada",
                 request.usuarioReceptorId());
@@ -163,7 +170,8 @@ public class NotificationEmailService {
                 "Bienvenido a Roomiegram",
                 "Hola " + nombre + ",\n\n"
                         + "Tu cuenta en Roomiegram fue creada correctamente.\n"
-                        + "Ya puedes iniciar sesion, crear publicaciones, unirte a un hogar y organizar tareas con tus roomies.\n\n"
+                        + "Ya puedes iniciar sesion, crear publicaciones, unirte a un hogar y organizar tareas con tus roomies.\n"
+                        + frontendLinkLine() + "\n\n"
                         + "Equipo Roomiegram",
                 "bienvenida",
                 usuario.getId());
@@ -253,5 +261,9 @@ public class NotificationEmailService {
 
     private String valueOrDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private String frontendLinkLine() {
+        return "Entrar a Roomiegram: " + valueOrDefault(frontendUrl, "http://localhost:5173");
     }
 }

@@ -545,14 +545,22 @@ p {
 
 .notification-bell {
   position: relative;
-  width: 42px;
+  width: 44px;
+  min-width: 44px;
   height: 38px;
+  min-height: 38px;
   border: 1px solid #1f7a63;
   border-radius: 8px;
   background: #ffffff;
   color: #1f7a63;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-weight: 600;
+  font-size: 0;
+  line-height: 0;
+  box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
@@ -588,8 +596,8 @@ p {
 }
 
 .notification-bell svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -617,6 +625,8 @@ p {
 
 .notification-bell-wide {
   width: 100%;
+  min-width: 100%;
+  height: 38px;
   margin-top: 8px;
 }
 
@@ -1041,6 +1051,24 @@ p {
   margin-bottom: 28px;
 }
 
+.profile-password-inline {
+  border-top: 1px solid #edf1ef;
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.profile-password-inline h3 {
+  color: #222;
+  margin-bottom: 6px;
+}
+
+.profile-password-inline p {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
 .profile-password-card {
   display: grid;
   grid-template-columns: 0.7fr 1fr;
@@ -1327,6 +1355,53 @@ p {
 
 .hogares-layout {
   align-items: start;
+}
+
+.hogares-product-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.hogares-loading-panel {
+  max-width: none;
+}
+
+.hogares-primary-panel {
+  border: 1px solid #d3ebe5;
+}
+
+.hogares-primary-heading {
+  margin-bottom: 18px;
+}
+
+.hogares-primary-heading h2 {
+  color: #222;
+  margin-top: 4px;
+}
+
+.hogares-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.hogares-secondary-panel {
+  align-self: start;
+}
+
+.hogares-secondary-panel .module-item {
+  border-bottom-color: #edf1ef;
+}
+
+.hogares-section-secondary {
+  color: #4f5d59;
+}
+
+.hogar-card-mine {
+  background: #f8fbfa;
+  border: 1px solid #d3ebe5;
+  border-radius: 14px;
+  padding: 18px;
 }
 
 .hogares-section {
@@ -2222,7 +2297,7 @@ p {
 
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
 }
@@ -2250,6 +2325,45 @@ p {
 .dashboard-card h2 {
   font-size: 32px;
   color: #1f7a63;
+}
+
+.dashboard-filter-panel {
+  align-items: end;
+  background: #ffffff;
+  border: 1px solid #dcebe7;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr) auto;
+  margin-bottom: 28px;
+  padding: 22px;
+}
+
+.dashboard-filter-panel label {
+  color: #1f7a63;
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.dashboard-filter-panel p {
+  color: #55635f;
+  font-size: 14px;
+  margin: 0;
+}
+
+.dashboard-filter-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard-filter-summary {
+  color: #2e4a43;
+  font-size: 14px;
+  font-weight: 700;
+  justify-self: end;
+  text-align: right;
 }
 
 .dashboard-content {
@@ -2339,6 +2453,7 @@ p {
   .landing-features,
   .dashboard-stats,
   .dashboard-content,
+  .dashboard-filter-panel,
   .planes-grid,
   .detalle-publicacion,
   .convivencia-grid,
@@ -2346,6 +2461,7 @@ p {
   .household-panels,
   .roomie-list,
   .hogar-meta-grid,
+  .hogares-secondary-grid,
   .mi-perfil-hero,
   .profile-password-card,
   .mi-grupo-grid,
@@ -2465,14 +2581,22 @@ p {
 
   .home-header-actions .btn,
   .dashboard-actions .btn,
-  .landing-header-actions .btn,
-  .notification-bell {
+  .landing-header-actions .btn {
     margin: 0 !important;
     width: 100%;
   }
 
   .notification-bell {
+    width: 44px;
+    min-width: 44px;
     height: 40px;
+    margin: 0 !important;
+  }
+
+  .notification-bell-wide {
+    width: 100%;
+    min-width: 100%;
+    margin-top: 8px !important;
   }
 
   .login-box,
@@ -2604,6 +2728,15 @@ p {
   .dashboard-actions,
   .landing-header-actions {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-filter-panel {
+    align-items: stretch;
+  }
+
+  .dashboard-filter-summary {
+    justify-self: start;
+    text-align: left;
   }
 
   .home-logo,

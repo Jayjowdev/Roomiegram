@@ -40,6 +40,7 @@ class NotificationEmailServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(notificationEmailService, "mailFrom", "no-reply@roomiegram.com");
+        ReflectionTestUtils.setField(notificationEmailService, "frontendUrl", "http://localhost:5173");
     }
 
     @Test

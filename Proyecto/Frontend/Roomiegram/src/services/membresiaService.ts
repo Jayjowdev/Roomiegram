@@ -39,21 +39,21 @@ const FALLBACK_PLANS: PlanInfo[] = [
     nombre: "Gratis",
     precio: 0,
     descripcion: "Para empezar a encontrar tu roomie ideal",
-    beneficios: ["1 publicacion activa", "Busqueda basica", "1 hogar compartido", "Gestion de tareas y gastos"],
+    beneficios: ["Crear publicaciones y perfiles roomie", "Busqueda por tipo y ubicacion", "Unirse o crear un hogar", "Gestion basica de tareas y gastos"],
   },
   {
     id: "PREMIUM_INDIVIDUAL",
     nombre: "Premium Individual",
     precio: 4990,
-    descripcion: "Para quienes buscan roomie con mas ventajas",
-    beneficios: ["Hasta 5 publicaciones activas", "Mayor visibilidad", "Filtros avanzados", "Notificaciones prioritarias"],
+    descripcion: "Plan demostrativo para quienes buscan roomie con mas organizacion",
+    beneficios: ["Suscripcion activa mensual", "Perfil y preferencias", "Solicitudes e invitaciones", "Avisos por correo"],
   },
   {
     id: "PREMIUM_HOGAR",
     nombre: "Premium Hogar",
     precio: 8990,
-    descripcion: "Para grupos que quieren convivir mejor",
-    beneficios: ["Hasta 10 integrantes", "Reportes de gastos", "Exportacion de comprobantes", "Recordatorios de pagos"],
+    descripcion: "Plan demostrativo para grupos que quieren convivir mejor",
+    beneficios: ["Panel de convivencia", "Tareas compartidas", "Gastos y comprobantes", "Solicitudes con correo"],
   },
 ]
 

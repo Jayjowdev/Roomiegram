@@ -81,35 +81,34 @@ public class MembresiaService {
                         "precio", 0,
                         "descripcion", "Para empezar a encontrar tu roomie ideal",
                         "beneficios", List.of(
-                                "1 publicacion activa",
-                                "Busqueda basica de roomies",
-                                "1 hogar compartido",
-                                "Gestion de tareas y gastos",
-                                "Notificaciones estandar")),
+                                "Crear publicaciones y perfiles roomie",
+                                "Busqueda por tipo y ubicacion",
+                                "Unirse o crear un hogar compartido",
+                                "Gestion basica de tareas y gastos",
+                                "Notificaciones internas y por correo disponibles")),
                 Map.of(
                         "id", "PREMIUM_INDIVIDUAL",
                         "nombre", "Premium Individual",
                         "precio", 4990,
-                        "descripcion", "Para quienes buscan roomie con mas ventajas",
+                        "descripcion", "Plan demostrativo para quienes buscan roomie con mas organizacion",
                         "beneficios", List.of(
-                                "Hasta 5 publicaciones activas",
-                                "Mayor visibilidad en resultados",
-                                "Filtros avanzados de compatibilidad",
-                                "Publicaciones destacadas",
-                                "Historial ampliado de comprobantes",
-                                "Notificaciones prioritarias")),
+                                "Suscripcion activa con vigencia mensual",
+                                "Gestion de perfil y preferencias",
+                                "Acceso a solicitudes e invitaciones del hogar",
+                                "Avisos por correo para solicitudes y tareas",
+                                "Historial de suscripciones")),
                 Map.of(
                         "id", "PREMIUM_HOGAR",
                         "nombre", "Premium Hogar",
                         "precio", 8990,
-                        "descripcion", "Para grupos que quieren convivir mejor",
+                        "descripcion", "Plan demostrativo para grupos que quieren convivir mejor",
                         "beneficios", List.of(
                                 "Todo lo de Premium Individual",
-                                "Hasta 10 integrantes por hogar",
-                                "Reportes de gastos compartidos",
-                                "Exportacion de comprobantes",
-                                "Recordatorios automaticos de pagos",
-                                "Metricas de convivencia del grupo")));
+                                "Panel de convivencia del hogar",
+                                "Organizacion de tareas compartidas",
+                                "Gestion de gastos y comprobantes",
+                                "Solicitudes de ingreso con aviso por correo",
+                                "Suscripcion de hogar con vigencia mensual")));
     }
 
     private void validarUsuario(Long usuarioId) {

@@ -5,6 +5,7 @@ import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
+import { usuarioService } from "../services/usuarioService";
 import type { Notificacion } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 
@@ -131,7 +132,21 @@ export default function Notificaciones() {
           administradorId: user.id,
         });
         setHogares((current) => current.map((item) => item.id === actualizado.id ? actualizado : item));
-        setMessage("Solicitud aceptada. La persona ya forma parte de tu grupo.");
+        let correoEnviado = true;
+        try {
+          const correo = await usuarioService.enviarCorreoSolicitudResuelta({
+            usuarioSolicitanteId: notificacion.usuarioEmisorId,
+            administradorId: user.id,
+            hogarNombre: hogar?.nombre || actualizado.nombre,
+            aceptada: true,
+          });
+          correoEnviado = correo.enviado;
+        } catch {
+          correoEnviado = false;
+        }
+        setMessage(correoEnviado
+          ? "Solicitud aceptada. La persona ya forma parte de tu grupo y fue avisada por correo."
+          : "Solicitud aceptada. La persona ya forma parte de tu grupo, pero no se pudo enviar el correo.");
       } else {
         const administradorId = hogar?.usuarioAdministradorId || notificacion.usuarioEmisorId;
 
@@ -174,10 +189,21 @@ export default function Notificaciones() {
     try {
       setProcessingId(notificacion.id);
       if (user?.id && esSolicitudRecibida(notificacion)) {
+        const hogar = getHogarNotificacion(notificacion);
         const actualizado = await hogarService.rechazarSolicitud(notificacion.hogarId, notificacion.usuarioEmisorId, {
           administradorId: user.id,
         });
         setHogares((current) => current.map((item) => item.id === actualizado.id ? actualizado : item));
+        try {
+          await usuarioService.enviarCorreoSolicitudResuelta({
+            usuarioSolicitanteId: notificacion.usuarioEmisorId,
+            administradorId: user.id,
+            hogarNombre: hogar?.nombre || actualizado.nombre,
+            aceptada: false,
+          });
+        } catch {
+          // La solicitud ya fue rechazada; el correo no debe romper el flujo.
+        }
       }
 
       await notificacionService.eliminar(notificacion.id);
@@ -197,7 +223,7 @@ export default function Notificaciones() {
       setProcessingId(notificacion.id);
       await notificacionService.eliminar(notificacion.id);
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
-      setMessage("Tarea marcada como revisada.");
+      setMessage("Notificacion marcada como leida.");
     } catch {
       setMessage("No se pudo actualizar la notificacion de tarea.");
     } finally {
@@ -224,7 +250,7 @@ export default function Notificaciones() {
       {message && <p className="api-message">{message}</p>}
 
       <section className="module-list mb-4">
-        <h3>Tareas asignadas pendientes</h3>
+        <h3>Tareas y avisos pendientes</h3>
         {tareasPendientes.length === 0 ? (
           <div className="sin-resultados"><p>No tienes tareas asignadas pendientes.</p></div>
         ) : (
@@ -242,7 +268,7 @@ export default function Notificaciones() {
                   disabled={processingId === notificacion.id}
                   onClick={() => cerrarTareaPendiente(notificacion)}
                 >
-                  {processingId === notificacion.id ? "Actualizando..." : "Marcar como revisada"}
+                  {processingId === notificacion.id ? "Actualizando..." : "Marcar como leida"}
                 </button>
               </div>
             </article>

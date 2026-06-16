@@ -120,17 +120,41 @@ export default function Perfil() {
       setIsSending(true);
       const actualizado = await hogarService.solicitarIngreso(hogarDelPerfil.id, { usuarioId: user.id });
       setHogares((current) => current.map((hogar) => hogar.id === actualizado.id ? actualizado : hogar));
-      await notificacionService.crear({
-        usuarioEmisorId: user.id,
-        usuarioReceptorId: hogarDelPerfil.usuarioAdministradorId || hogarDelPerfil.usuarioCreadorId,
-        hogarId: hogarDelPerfil.id,
-        referenciaId: user.id,
-        tipo: "INVITACION_HOGAR",
-        estado: "PENDIENTE",
-        titulo: "Solicitud de ingreso pendiente",
-        mensaje: `${user.nombre || user.usuario} quiere unirse al grupo ${hogarDelPerfil.nombre}.`,
-      });
-      setMessage("Solicitud enviada correctamente.");
+
+      const usuarioReceptorId = hogarDelPerfil.usuarioAdministradorId || hogarDelPerfil.usuarioCreadorId;
+      let avisosEnviados = true;
+
+      try {
+        await notificacionService.crear({
+          usuarioEmisorId: user.id,
+          usuarioReceptorId,
+          hogarId: hogarDelPerfil.id,
+          referenciaId: user.id,
+          tipo: "INVITACION_HOGAR",
+          estado: "PENDIENTE",
+          titulo: "Solicitud de ingreso pendiente",
+          mensaje: `${user.nombre || user.usuario} quiere unirse al grupo ${hogarDelPerfil.nombre}.`,
+        });
+      } catch {
+        avisosEnviados = false;
+      }
+
+      try {
+        const correo = await usuarioService.enviarCorreoSolicitudRecibida({
+          usuarioReceptorId,
+          usuarioSolicitanteId: user.id,
+          solicitanteNombre: user.nombre || user.usuario,
+          hogarNombre: hogarDelPerfil.nombre,
+          publicacionTitulo: getPerfilTitle(perfil!, usuarioPerfil),
+        });
+        avisosEnviados = avisosEnviados && correo.enviado;
+      } catch {
+        avisosEnviados = false;
+      }
+
+      setMessage(avisosEnviados
+        ? "Solicitud enviada correctamente. Se aviso al administrador del hogar."
+        : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
     } finally {

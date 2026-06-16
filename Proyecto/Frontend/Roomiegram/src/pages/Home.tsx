@@ -144,7 +144,7 @@ export default function Home() {
   return (
     <div className="home-page">
       <header className="home-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/")} />
+        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/home")} />
         <div className="home-header-actions">
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/planes")}>Planes</button>

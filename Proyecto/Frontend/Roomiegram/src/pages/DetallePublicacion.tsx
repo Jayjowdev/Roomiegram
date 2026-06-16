@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
+import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
 import type { Hogar } from "../types/Hogar";
 import { getLocalPublicaciones } from "../utils/localPublicaciones";
@@ -20,10 +21,14 @@ function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
 }
 
+function buildGallery(images: Array<string | undefined>) {
+  return [...new Set(images.filter((image): image is string => Boolean(image?.trim())))];
+}
+
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
   const imagen = pub.imagen || imagenGuardada || home1;
-  const galeria = pub.galeria?.length ? pub.galeria : [imagen, home2, home3];
+  const galeria = pub.galeria?.length ? buildGallery(pub.galeria) : buildGallery([imagen]);
 
   return {
     id: pub.id,
@@ -115,20 +120,41 @@ export default function DetallePublicacion() {
       setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
 
       const usuarioReceptorId = hogarVinculado.usuarioAdministradorId || hogarVinculado.usuarioCreadorId;
+      let avisosEnviados = true;
+
       if (usuarioReceptorId) {
-        await notificacionService.crear({
-          usuarioEmisorId: user.id,
-          usuarioReceptorId,
-          hogarId: hogarVinculado.id,
-          referenciaId: user.id,
-          tipo: "INVITACION_HOGAR",
-          estado: "PENDIENTE",
-          titulo: "Solicitud de ingreso pendiente",
-          mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogarVinculado.nombre}.`,
-        });
+        try {
+          await notificacionService.crear({
+            usuarioEmisorId: user.id,
+            usuarioReceptorId,
+            hogarId: hogarVinculado.id,
+            referenciaId: user.id,
+            tipo: "INVITACION_HOGAR",
+            estado: "PENDIENTE",
+            titulo: "Solicitud de ingreso pendiente",
+            mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogarVinculado.nombre}.`,
+          });
+        } catch {
+          avisosEnviados = false;
+        }
+
+        try {
+          const correo = await usuarioService.enviarCorreoSolicitudRecibida({
+            usuarioReceptorId,
+            usuarioSolicitanteId: user.id,
+            solicitanteNombre: user.nombre || user.usuario,
+            hogarNombre: hogarVinculado.nombre,
+            publicacionTitulo: publicacion?.titulo,
+          });
+          avisosEnviados = avisosEnviados && correo.enviado;
+        } catch {
+          avisosEnviados = false;
+        }
       }
 
-      setContactMessage("Solicitud enviada correctamente.");
+      setContactMessage(avisosEnviados
+        ? "Solicitud enviada correctamente. Se aviso al administrador del hogar."
+        : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
     } finally {
@@ -149,7 +175,26 @@ export default function DetallePublicacion() {
         : await hogarService.rechazarSolicitud(hogarVinculado.id, usuarioId, { administradorId: user.id });
 
       setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
-      setContactMessage(accion === "aprobar" ? "Solicitud aprobada correctamente." : "Solicitud rechazada correctamente.");
+      let correoEnviado = true;
+      try {
+        const correo = await usuarioService.enviarCorreoSolicitudResuelta({
+          usuarioSolicitanteId: usuarioId,
+          administradorId: user.id,
+          hogarNombre: hogarVinculado.nombre,
+          aceptada: accion === "aprobar",
+        });
+        correoEnviado = correo.enviado;
+      } catch {
+        correoEnviado = false;
+      }
+
+      setContactMessage(correoEnviado
+        ? accion === "aprobar"
+          ? "Solicitud aprobada correctamente. Se aviso al solicitante por correo."
+          : "Solicitud rechazada correctamente. Se aviso al solicitante por correo."
+        : accion === "aprobar"
+          ? "Solicitud aprobada correctamente, pero no se pudo enviar el correo al solicitante."
+          : "Solicitud rechazada correctamente, pero no se pudo enviar el correo al solicitante.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo gestionar la solicitud.");
     } finally {
@@ -157,14 +202,18 @@ export default function DetallePublicacion() {
     }
   };
 
-  const galeria = publicacion?.galeria?.length ? publicacion.galeria : fallbackGallery;
+  const galeria = publicacion?.galeria?.length
+    ? buildGallery(publicacion.galeria)
+    : publicacion?.imagen
+      ? buildGallery([publicacion.imagen])
+      : fallbackGallery;
   const mainImage = selectedImage || publicacion?.imagen || galeria[0];
 
   return (
     <div className="perfil-page">
       <header className="perfil-header">
         <div className="perfil-header-left">
-          <img src={logo} alt="RoomieGram" className="perfil-logo" onClick={() => navigate("/")} />
+          <img src={logo} alt="RoomieGram" className="perfil-logo" onClick={() => navigate("/home")} />
         </div>
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Volver</button>
@@ -182,13 +231,15 @@ export default function DetallePublicacion() {
           <section className="detalle-main">
             <div className="detalle-gallery">
               <img src={mainImage} alt={publicacion.titulo || "Casa"} className="detalle-gallery-main" />
-              <div className="detalle-gallery-thumbs">
-                {galeria.map((imagen, index) => (
-                  <button type="button" className="detalle-thumb-button" onClick={() => setSelectedImage(imagen)} key={`${imagen}-${index}`}>
-                    <img src={imagen} alt={`Imagen ${index + 1} de ${publicacion.titulo}`} />
-                  </button>
-                ))}
-              </div>
+              {galeria.length > 1 && (
+                <div className="detalle-gallery-thumbs">
+                  {galeria.map((imagen, index) => (
+                    <button type="button" className="detalle-thumb-button" onClick={() => setSelectedImage(imagen)} key={`${imagen}-${index}`}>
+                      <img src={imagen} alt={`Imagen ${index + 1} de ${publicacion.titulo}`} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <p className="home-ubicacion">Ubicacion: {publicacion.ubicacion}</p>
             <h1>{publicacion.titulo}</h1>

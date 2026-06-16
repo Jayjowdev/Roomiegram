@@ -63,6 +63,20 @@ function isTaskCompleted(tarea: Tarea) {
   return tarea.completada === true;
 }
 
+function normalizeTaskText(value?: string) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isTaskAssignedToCurrentUser(tarea: Tarea, currentUser?: { nombre?: string; usuario?: string }) {
+  const encargado = normalizeTaskText(tarea.encargado);
+  if (!encargado) return false;
+
+  return [currentUser?.nombre, currentUser?.usuario]
+    .map(normalizeTaskText)
+    .filter(Boolean)
+    .includes(encargado);
+}
+
 export default function Tareas() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -117,8 +131,64 @@ export default function Tareas() {
     if (form.titulo.trim().length < 4) return "El título debe tener al menos 4 caracteres.";
     if (!form.encargadoId) return "Selecciona un integrante encargado.";
     if (form.descripcion.trim().length < 10) return "La descripción debe tener al menos 10 caracteres.";
-    if (!form.fecha) return "Selecciona una fecha para la tarea.";
+    if (!form.fecha) return "Selecciona una fecha limite para la tarea.";
     return "";
+  };
+
+  const sendTaskAssignmentEmail = async (
+    encargadoId: number,
+    task: { titulo: string; descripcion: string; fecha: string },
+  ) => {
+    return usuarioService.enviarCorreoTareaAsignada({
+      usuarioId: encargadoId,
+      titulo: task.titulo,
+      descripcion: task.descripcion,
+      fecha: task.fecha,
+      hogarNombre: hogarActual?.nombre,
+      asignadorNombre: user?.nombre || user?.usuario,
+    });
+  };
+
+  const notifyTaskCompleted = async (task: Tarea) => {
+    if (!hogarActual || !user?.id) return { attempted: false, ok: true };
+
+    const receptorId = hogarActual.usuarioAdministradorId || hogarActual.usuarioCreadorId;
+    if (!receptorId || receptorId === user.id) {
+      return { attempted: false, ok: true };
+    }
+
+    let notificacionEnviada = true;
+    try {
+      await notificacionService.crear({
+        usuarioEmisorId: user.id,
+        usuarioReceptorId: receptorId,
+        hogarId: hogarActual.id,
+        referenciaId: task.id,
+        tipo: "TAREA_HOGAR",
+        estado: "PENDIENTE",
+        titulo: "Tarea completada",
+        mensaje: `${user.nombre || user.usuario} completó la tarea "${task.titulo}" en ${hogarActual.nombre}.`,
+      });
+    } catch {
+      notificacionEnviada = false;
+    }
+
+    let correoEnviado = true;
+    try {
+      const resultadoCorreo = await usuarioService.enviarCorreoTareaCompletada({
+        usuarioReceptorId: receptorId,
+        usuarioCompletadorId: user.id,
+        titulo: task.titulo,
+        descripcion: task.descripcion,
+        fecha: task.fecha,
+        hogarNombre: hogarActual.nombre,
+      });
+      correoEnviado = resultadoCorreo.enviado;
+    } catch {
+      correoEnviado = false;
+    }
+
+    return { attempted: true, ok: notificacionEnviada && correoEnviado };
   };
 
   const cancelEdit = () => {
@@ -163,11 +233,28 @@ export default function Tareas() {
       };
 
       if (isEditing) {
+        const tareaAnterior = tareas.find((tarea) => tarea.id === editingTaskId);
+        const encargadoAnteriorId = tareaAnterior
+          ? findMemberIdByName(tareaAnterior.encargado, integrantes, usuariosById, user || undefined)
+          : "";
         const actualizada = await tareaService.actualizar(editingTaskId!, payload);
+        let correoEnviado = true;
+
+        if (encargadoAnteriorId && encargadoAnteriorId !== form.encargadoId) {
+          try {
+            const resultadoCorreo = await sendTaskAssignmentEmail(encargadoId, actualizada);
+            correoEnviado = resultadoCorreo.enviado;
+          } catch {
+            correoEnviado = false;
+          }
+        }
+
         setTareas((current) => current.map((tarea) => (tarea.id === actualizada.id ? actualizada : tarea)));
         setEditingTaskId(null);
         setForm(initialForm);
-        setMessage("Tarea actualizada correctamente.");
+        setMessage(correoEnviado
+          ? "Tarea actualizada correctamente."
+          : "Tarea actualizada, pero no se pudo enviar el correo al nuevo encargado.");
         return;
       }
 
@@ -196,12 +283,20 @@ export default function Tareas() {
         notificacionEnviada = false;
       }
 
+      let correoEnviado = true;
+      try {
+        const resultadoCorreo = await sendTaskAssignmentEmail(encargadoId, creada);
+        correoEnviado = resultadoCorreo.enviado;
+      } catch {
+        correoEnviado = false;
+      }
+
       setTareas((current) => [...current, creada]);
       setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
       setForm(initialForm);
-      setMessage(notificacionEnviada
+      setMessage(notificacionEnviada && correoEnviado
         ? "Tarea creada y asociada al hogar. Se aviso al encargado."
-        : "Tarea creada, pero no se pudo enviar la notificacion al encargado.");
+        : "Tarea creada. No se pudo enviar alguno de los avisos al encargado.");
     } catch {
       setMessage("No se pudo guardar la tarea. Revisa que los servicios estén disponibles.");
     } finally {
@@ -210,18 +305,31 @@ export default function Tareas() {
   };
 
   const toggleTaskStatus = async (tarea: Tarea) => {
-    if (!canManage) return;
+    const canUpdateStatus = canManage || isTaskAssignedToCurrentUser(tarea, user || undefined);
+    if (!canUpdateStatus) return;
 
     setMessage("");
     setUpdatingTaskId(tarea.id);
 
     try {
+      const wasCompleted = isTaskCompleted(tarea);
       const actualizada = isTaskCompleted(tarea)
         ? await tareaService.pendiente(tarea.id)
         : await tareaService.completar(tarea.id);
 
       setTareas((current) => current.map((item) => (item.id === actualizada.id ? actualizada : item)));
-      setMessage(isTaskCompleted(actualizada) ? "Tarea marcada como completada." : "Tarea marcada como pendiente.");
+      if (!wasCompleted && isTaskCompleted(actualizada)) {
+        const aviso = await notifyTaskCompleted(actualizada);
+        if (!aviso.attempted) {
+          setMessage("Tarea marcada como completada.");
+        } else {
+          setMessage(aviso.ok
+            ? "Tarea marcada como completada. Se aviso al administrador del hogar."
+            : "Tarea marcada como completada. No se pudo enviar alguno de los avisos al administrador.");
+        }
+      } else {
+        setMessage("Tarea marcada como pendiente.");
+      }
     } catch {
       setMessage("No se pudo actualizar el estado de la tarea. Revisa que los servicios estÃ©n disponibles.");
     } finally {
@@ -269,7 +377,10 @@ export default function Tareas() {
               ))}
             </select>
             <textarea className="form-control" placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required disabled={!canManage} />
-            <input className="form-control" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required disabled={!canManage} />
+            <label className="field-label">
+              Fecha limite
+              <input className="form-control" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required disabled={!canManage} />
+            </label>
             <button className="btn btn-success w-100" disabled={isSaving || !canManage}>{isSaving ? "Guardando..." : isEditing ? "Guardar cambios" : "Asignar tarea"}</button>
             {isEditing && (
               <button className="btn btn-outline-success w-100" type="button" onClick={cancelEdit} disabled={isSaving}>
@@ -291,12 +402,14 @@ export default function Tareas() {
                   </span>
                 </div>
                 <p>{tarea.descripcion}</p>
-                <span>{tarea.encargado} · {tarea.fecha}</span>
-                {canManage && (
+                <span>Encargado: {tarea.encargado} · Fecha limite: {tarea.fecha}</span>
+                {(canManage || isTaskAssignedToCurrentUser(tarea, user || undefined)) && (
                   <div className="item-actions">
-                    <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
-                      Editar
-                    </button>
+                    {canManage && (
+                      <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
+                        Editar
+                      </button>
+                    )}
                     <button
                       className={isTaskCompleted(tarea) ? "btn btn-outline-success btn-sm" : "btn btn-success btn-sm"}
                       type="button"

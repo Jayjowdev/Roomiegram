@@ -8,6 +8,7 @@ interface AuthContextType {
   user: UserSession | null;
   sessionId: string | null;
   isAuthenticated: boolean;
+  isAuthReady: boolean;
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<void>;
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserSession | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSessionId(savedSession.sessionId);
       setUser(savedSession.user);
     }
+    setIsAuthReady(true);
   }, []);
 
   const login = async (credentials: LoginRequest) => {
@@ -131,6 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         sessionId,
         isAuthenticated: !!sessionId,
+        isAuthReady,
         isLoading,
         error,
         login,

@@ -168,22 +168,42 @@ export default function Hogares() {
       setProcessingRequest(requestKey);
       const actualizado = await hogarService.solicitarIngreso(hogarId, { usuarioId: user.id });
       updateHogar(actualizado);
+      let avisosEnviados = true;
+
       if (usuarioReceptorId) {
-        await notificacionService.crear({
-          usuarioEmisorId: user.id,
-          usuarioReceptorId,
-          hogarId,
-          referenciaId: user.id,
-          tipo: "INVITACION_HOGAR",
-          estado: "PENDIENTE",
-          titulo: "Solicitud de ingreso pendiente",
-          mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogar?.nombre || "seleccionado"}.`,
-        });
+        try {
+          await notificacionService.crear({
+            usuarioEmisorId: user.id,
+            usuarioReceptorId,
+            hogarId,
+            referenciaId: user.id,
+            tipo: "INVITACION_HOGAR",
+            estado: "PENDIENTE",
+            titulo: "Solicitud de ingreso pendiente",
+            mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogar?.nombre || "seleccionado"}.`,
+          });
+        } catch {
+          avisosEnviados = false;
+        }
+
+        try {
+          const correo = await usuarioService.enviarCorreoSolicitudRecibida({
+            usuarioReceptorId,
+            usuarioSolicitanteId: user.id,
+            solicitanteNombre: user.nombre || user.usuario,
+            hogarNombre: hogar?.nombre,
+          });
+          avisosEnviados = avisosEnviados && correo.enviado;
+        } catch {
+          avisosEnviados = false;
+        }
       }
 
-      setMessage(usuarioReceptorId
-        ? "Solicitud enviada correctamente. Se notifico al administrador del hogar."
-        : "Solicitud enviada correctamente.");
+      setMessage(!usuarioReceptorId
+        ? "Solicitud enviada correctamente."
+        : avisosEnviados
+          ? "Solicitud enviada correctamente. Se notifico al administrador del hogar."
+          : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
     } catch {
       setMessage("No se pudo enviar la solicitud. Revisa que el servicio esté disponible.");
     } finally {
@@ -196,9 +216,24 @@ export default function Hogares() {
 
     try {
       setProcessingRequest(`aprobar-${hogarId}-${usuarioId}`);
+      const hogar = hogares.find((item) => item.id === hogarId);
       const actualizado = await hogarService.aprobarSolicitud(hogarId, usuarioId, { administradorId: user.id });
       updateHogar(actualizado);
-      setMessage("Solicitud aprobada.");
+      let correoEnviado = true;
+      try {
+        const correo = await usuarioService.enviarCorreoSolicitudResuelta({
+          usuarioSolicitanteId: usuarioId,
+          administradorId: user.id,
+          hogarNombre: hogar?.nombre || actualizado.nombre,
+          aceptada: true,
+        });
+        correoEnviado = correo.enviado;
+      } catch {
+        correoEnviado = false;
+      }
+      setMessage(correoEnviado
+        ? "Solicitud aprobada. Se aviso al solicitante por correo."
+        : "Solicitud aprobada, pero no se pudo enviar el correo al solicitante.");
     } catch {
       setMessage("No se pudo aprobar la solicitud.");
     } finally {
@@ -211,9 +246,24 @@ export default function Hogares() {
 
     try {
       setProcessingRequest(`rechazar-${hogarId}-${usuarioId}`);
+      const hogar = hogares.find((item) => item.id === hogarId);
       const actualizado = await hogarService.rechazarSolicitud(hogarId, usuarioId, { administradorId: user.id });
       updateHogar(actualizado);
-      setMessage("Solicitud rechazada.");
+      let correoEnviado = true;
+      try {
+        const correo = await usuarioService.enviarCorreoSolicitudResuelta({
+          usuarioSolicitanteId: usuarioId,
+          administradorId: user.id,
+          hogarNombre: hogar?.nombre || actualizado.nombre,
+          aceptada: false,
+        });
+        correoEnviado = correo.enviado;
+      } catch {
+        correoEnviado = false;
+      }
+      setMessage(correoEnviado
+        ? "Solicitud rechazada. Se aviso al solicitante por correo."
+        : "Solicitud rechazada, pero no se pudo enviar el correo al solicitante.");
     } catch {
       setMessage("No se pudo rechazar la solicitud.");
     } finally {

@@ -23,15 +23,26 @@ function cleanBaseUrl(value: string) {
   return value.replace(/\/+$/, "")
 }
 
+function readBooleanEnv(value?: string) {
+  return value?.trim().toLowerCase() === "true"
+}
+
+const gatewayUrl = readEnv(import.meta.env.VITE_API_GATEWAY_URL)?.replace(/\/+$/, "")
+const useDirectServiceUrls = readBooleanEnv(import.meta.env.VITE_USE_DIRECT_SERVICE_URLS)
+
 function buildServiceUrl(port: number) {
   const apiBaseUrl = readEnv(import.meta.env.VITE_API_BASE_URL) ?? "http://localhost"
   return `${cleanBaseUrl(apiBaseUrl)}:${port}`
 }
 
 function resolveServiceUrl(overrideUrl: string | undefined, port: number) {
+  if (!useDirectServiceUrls && gatewayUrl) {
+    return gatewayUrl
+  }
+
   return (
     readEnv(overrideUrl) ??
-    readEnv(import.meta.env.VITE_API_GATEWAY_URL)?.replace(/\/+$/, "") ??
+    gatewayUrl ??
     buildServiceUrl(port)
   )
 }

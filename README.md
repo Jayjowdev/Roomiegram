@@ -81,6 +81,10 @@ docker compose logs -f hogar
 
 - Aplicacion web: `http://localhost:5173`
 
+### API Gateway
+
+- Gateway principal del frontend: `http://localhost:8080`
+
 ### Base de datos
 
 - MySQL: `localhost:3306`
@@ -97,6 +101,8 @@ docker compose logs -f hogar
 - publicacion: `http://localhost:8086`
 - tarea: `http://localhost:8087`
 - usuario: `http://localhost:8088`
+
+Nota: el frontend queda configurado para consumir el gateway por defecto. Los puertos directos de microservicio se mantienen para Swagger, debugging o pruebas puntuales.
 
 ### Swagger / OpenAPI
 
@@ -150,8 +156,9 @@ docker compose up --build -d mysql usuario frontend
 1. Abrir una terminal en la raiz del repositorio.
 2. Ejecutar `docker compose up --build -d`.
 3. Confirmar que MySQL y los microservicios esten arriba con `docker compose ps`.
-4. Abrir `http://localhost:5173` en el navegador.
-5. Validar endpoints en Swagger si necesita pruebas tecnicas.
+4. Confirmar que el gateway responda en `http://localhost:8080`.
+5. Abrir `http://localhost:5173` en el navegador.
+6. Validar endpoints en Swagger si necesita pruebas tecnicas.
 
 ## Solucion de problemas
 

@@ -1,4 +1,4 @@
-import { usuarioApi, getApiErrorMessage } from "../config/api"
+import { getApiErrorMessage, usuarioApi } from "../config/api"
 
 export type PlanId = "GRATIS" | "PREMIUM_INDIVIDUAL" | "PREMIUM_HOGAR"
 export type EstadoSuscripcion = "ACTIVA" | "VENCIDA" | "CANCELADA"
@@ -33,36 +33,63 @@ export const PLAN_BADGE_CLASS: Record<PlanId, string> = {
   PREMIUM_HOGAR: "plan-badge-hogar",
 }
 
+const FALLBACK_PLANS: PlanInfo[] = [
+  {
+    id: "GRATIS",
+    nombre: "Gratis",
+    precio: 0,
+    descripcion: "Para empezar a encontrar tu roomie ideal",
+    beneficios: ["Crear publicaciones y perfiles roomie", "Busqueda por tipo y ubicacion", "Unirse o crear un hogar", "Gestion basica de tareas y gastos"],
+  },
+  {
+    id: "PREMIUM_INDIVIDUAL",
+    nombre: "Premium Individual",
+    precio: 4990,
+    descripcion: "Plan demostrativo para quienes buscan roomie con mas organizacion",
+    beneficios: ["Suscripcion activa mensual", "Perfil y preferencias", "Solicitudes e invitaciones", "Avisos por correo"],
+  },
+  {
+    id: "PREMIUM_HOGAR",
+    nombre: "Premium Hogar",
+    precio: 8990,
+    descripcion: "Plan demostrativo para grupos que quieren convivir mejor",
+    beneficios: ["Panel de convivencia", "Tareas compartidas", "Gastos y comprobantes", "Solicitudes con correo"],
+  },
+]
+
+function freeSubscription(usuarioId: number): Suscripcion {
+  return {
+    usuarioId,
+    plan: "GRATIS",
+    estado: "ACTIVA",
+    fechaInicio: new Date().toISOString().slice(0, 10),
+    fechaFin: null,
+    renovacionAutomatica: false,
+  }
+}
+
 export const membresiaService = {
   async listarPlanes(): Promise<PlanInfo[]> {
     try {
-      const { data } = await usuarioApi.get<PlanInfo[]>("/membresias/planes")
+      const { data } = await usuarioApi.get<PlanInfo[]>("/auth/membresias/planes")
       return data
-    } catch (error) {
-      throw new Error(getApiErrorMessage(error))
+    } catch {
+      return FALLBACK_PLANS
     }
   },
 
   async obtenerActiva(usuarioId: number): Promise<Suscripcion> {
     try {
-      const { data } = await usuarioApi.get<Suscripcion>(`/membresias/usuario/${usuarioId}`)
+      const { data } = await usuarioApi.get<Suscripcion>(`/auth/membresias/usuario/${usuarioId}`)
       return data
-    } catch (error) {
-      // Fallback: si el servicio no responde, devolver plan gratis virtual
-      return {
-        usuarioId,
-        plan: "GRATIS",
-        estado: "ACTIVA",
-        fechaInicio: new Date().toISOString().slice(0, 10),
-        fechaFin: null,
-        renovacionAutomatica: false,
-      }
+    } catch {
+      return freeSubscription(usuarioId)
     }
   },
 
   async historial(usuarioId: number): Promise<Suscripcion[]> {
     try {
-      const { data } = await usuarioApi.get<Suscripcion[]>(`/membresias/usuario/${usuarioId}/historial`)
+      const { data } = await usuarioApi.get<Suscripcion[]>(`/auth/membresias/usuario/${usuarioId}/historial`)
       return data
     } catch (error) {
       throw new Error(getApiErrorMessage(error))
@@ -71,7 +98,7 @@ export const membresiaService = {
 
   async suscribir(usuarioId: number, plan: PlanId, renovacionAutomatica = true): Promise<Suscripcion> {
     try {
-      const { data } = await usuarioApi.post<Suscripcion>("/membresias/suscribir", {
+      const { data } = await usuarioApi.post<Suscripcion>("/auth/membresias/suscribir", {
         usuarioId,
         plan,
         renovacionAutomatica,
@@ -84,7 +111,7 @@ export const membresiaService = {
 
   async cancelar(usuarioId: number): Promise<void> {
     try {
-      await usuarioApi.delete(`/membresias/usuario/${usuarioId}`)
+      await usuarioApi.delete(`/auth/membresias/usuario/${usuarioId}`)
     } catch (error) {
       throw new Error(getApiErrorMessage(error))
     }

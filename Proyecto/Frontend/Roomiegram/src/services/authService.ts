@@ -31,6 +31,18 @@ export async function recoverPassword(correo: string) {
   }
 }
 
+export async function changePassword(
+  userId: number,
+  payload: { contrasenaActual: string; nuevaContrasena: string; confirmarContrasena: string },
+) {
+  try {
+    const { data } = await usuarioApi.put<{ mensaje: string }>(`/auth/change-password/${userId}`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 function normalizePreferences(value: unknown): UserSession["preferenciasCompatibilidad"] {
   if (!value) {
     return undefined
@@ -102,6 +114,13 @@ export const authService = {
 
   async recoverPassword(correo: string) {
     return recoverPassword(correo)
+  },
+
+  async changePassword(
+    userId: number,
+    payload: { contrasenaActual: string; nuevaContrasena: string; confirmarContrasena: string },
+  ) {
+    return changePassword(userId, payload)
   },
 
   async updateProfilePhoto(userId: number, fotoPerfil: string) {

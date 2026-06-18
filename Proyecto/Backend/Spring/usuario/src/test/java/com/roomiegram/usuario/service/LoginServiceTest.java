@@ -45,6 +45,7 @@ class LoginServiceTest {
     @BeforeEach
     void initMailFrom() {
         ReflectionTestUtils.setField(loginService, "mailFrom", "no-reply@roomiegram.com");
+        ReflectionTestUtils.setField(loginService, "frontendUrl", "http://localhost:5173");
     }
 
     @Test
@@ -134,6 +135,67 @@ class LoginServiceTest {
         when(loginRepository.existsByUsuario("noExiste")).thenReturn(false);
 
         assertFalse(loginService.existeUsuario("noExiste"));
+    }
+
+    @Test
+    void cambiarContrasenaDebeActualizarRegisterYLogin() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String passwordVieja = encoder.encode("Temporal123");
+
+        Register register = new Register();
+        register.setId(1L);
+        register.setUsuario("juan123");
+        register.setContrasena(passwordVieja);
+
+        Login login = crearLogin("juan123", passwordVieja, Role.CLIENTE);
+
+        when(registerRepository.findById(1L)).thenReturn(Optional.of(register));
+        when(loginRepository.findByUsuario("juan123")).thenReturn(Optional.of(login));
+
+        loginService.cambiarContrasena(1L, "Temporal123", "Nueva1234", "Nueva1234");
+
+        ArgumentCaptor<Register> registerCaptor = ArgumentCaptor.forClass(Register.class);
+        ArgumentCaptor<Login> loginCaptor = ArgumentCaptor.forClass(Login.class);
+
+        verify(registerRepository).save(registerCaptor.capture());
+        verify(loginRepository).save(loginCaptor.capture());
+
+        String nuevaEnRegister = registerCaptor.getValue().getContrasena();
+        String nuevaEnLogin = loginCaptor.getValue().getContrasena();
+
+        assertTrue(encoder.matches("Nueva1234", nuevaEnRegister));
+        assertTrue(encoder.matches("Nueva1234", nuevaEnLogin));
+        assertFalse(encoder.matches("Temporal123", nuevaEnLogin));
+        assertEquals(nuevaEnRegister, nuevaEnLogin);
+    }
+
+    @Test
+    void cambiarContrasenaDebeFallarConContrasenaActualIncorrecta() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String passwordVieja = encoder.encode("Temporal123");
+
+        Register register = new Register();
+        register.setId(1L);
+        register.setUsuario("juan123");
+        register.setContrasena(passwordVieja);
+
+        Login login = crearLogin("juan123", passwordVieja, Role.CLIENTE);
+
+        when(registerRepository.findById(1L)).thenReturn(Optional.of(register));
+        when(loginRepository.findByUsuario("juan123")).thenReturn(Optional.of(login));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> loginService.cambiarContrasena(1L, "Incorrecta123", "Nueva1234", "Nueva1234"));
+
+        assertEquals("La contrasena actual es incorrecta", exception.getMessage());
+    }
+
+    @Test
+    void cambiarContrasenaDebeFallarCuandoConfirmacionNoCoincide() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> loginService.cambiarContrasena(1L, "Temporal123", "Nueva1234", "Otra1234"));
+
+        assertEquals("La nueva contrasena y la confirmacion no coinciden", exception.getMessage());
     }
 
     @Test

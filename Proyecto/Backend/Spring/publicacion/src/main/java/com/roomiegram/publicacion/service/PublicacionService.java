@@ -77,16 +77,19 @@ public class PublicacionService {
         Publicacion publicacion = publicacionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("La publicación no existe"));
 
-        if (!puedeEliminar(publicacion, usuarioSolicitante)) {
+        if (!puedeEliminar(publicacion, usuarioSolicitante, rolSolicitante)) {
             throw new SecurityException("No tienes permisos para eliminar esta publicación");
         }
 
         publicacionRepository.delete(publicacion);
     }
 
-    private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante) {
-        return publicacion.getUsuarioCreador() != null
+    private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante, String rolSolicitante) {
+        boolean esCreador = publicacion.getUsuarioCreador() != null
                 && publicacion.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
+        boolean esAdmin = "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
+
+        return esCreador || esAdmin;
     }
 
     @SuppressWarnings("unchecked")

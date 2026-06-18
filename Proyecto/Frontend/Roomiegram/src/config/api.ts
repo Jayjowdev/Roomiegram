@@ -5,18 +5,45 @@ const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
 }
 
-function apiUrl(port: number) {
-  return `http://${window.location.hostname}:${port}`
+const SERVICE_PORTS = {
+  usuario: 8088,
+  hogar: 8083,
+  hogarCuenta: 8084,
+  comprobante: 8082,
+  publicacion: 8086,
+  tarea: 8087,
+  notificacion: 8085,
+} as const
+
+function readEnv(value?: string) {
+  return value?.trim() || undefined
+}
+
+function cleanBaseUrl(value: string) {
+  return value.replace(/\/+$/, "")
+}
+
+function buildServiceUrl(port: number) {
+  const apiBaseUrl = readEnv(import.meta.env.VITE_API_BASE_URL) ?? "http://localhost"
+  return `${cleanBaseUrl(apiBaseUrl)}:${port}`
+}
+
+function resolveServiceUrl(overrideUrl: string | undefined, port: number) {
+  return (
+    readEnv(overrideUrl) ??
+    readEnv(import.meta.env.VITE_API_GATEWAY_URL)?.replace(/\/+$/, "") ??
+    buildServiceUrl(port)
+  )
 }
 
 const API_URLS = {
-  usuario: apiUrl(8088),
-  hogar: apiUrl(8083),
-  hogarCuenta: apiUrl(8084),
-  comprobante: apiUrl(8082),
-  publicacion: apiUrl(8086),
-  tarea: apiUrl(8087),
-  notificacion: apiUrl(8085),
+  usuario: resolveServiceUrl(import.meta.env.VITE_USUARIO_API_URL, SERVICE_PORTS.usuario),
+  hogar: resolveServiceUrl(import.meta.env.VITE_HOGAR_API_URL, SERVICE_PORTS.hogar),
+  hogarCuenta: resolveServiceUrl(import.meta.env.VITE_HOGAR_CUENTA_API_URL, SERVICE_PORTS.hogarCuenta),
+  comprobante: resolveServiceUrl(import.meta.env.VITE_COMPROBANTE_API_URL, SERVICE_PORTS.comprobante),
+  publicacion: resolveServiceUrl(import.meta.env.VITE_PUBLICACION_API_URL, SERVICE_PORTS.publicacion),
+  tarea: resolveServiceUrl(import.meta.env.VITE_TAREA_API_URL, SERVICE_PORTS.tarea),
+  notificacion: resolveServiceUrl(import.meta.env.VITE_NOTIFICACION_API_URL, SERVICE_PORTS.notificacion),
 }
 
 function createApi(baseURL: string) {

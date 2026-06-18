@@ -99,6 +99,16 @@ class PublicacionControllerTest {
     }
 
     @Test
+    void eliminarDebeRetornar200CuandoSolicitanteEsAdmin() throws Exception {
+        doNothing().when(publicacionService).eliminarPublicacion(eq(1L), eq("admin"), eq("ADMIN"));
+
+        mockMvc.perform(delete("/publicaciones/1")
+                        .param("usuarioSolicitante", "admin")
+                        .param("rolSolicitante", "ADMIN"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void eliminarDebeRetornar403CuandoNoTienePermisos() throws Exception {
         doThrow(new SecurityException("No tienes permisos para eliminar esta publicación"))
                 .when(publicacionService).eliminarPublicacion(eq(1L), eq("pedro"), eq("CLIENTE"));

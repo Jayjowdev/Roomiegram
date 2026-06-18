@@ -18,7 +18,7 @@ import com.roomiegram.usuario.model.Suscripcion;
 import com.roomiegram.usuario.service.MembresiaService;
 
 @RestController
-@RequestMapping("/membresias")
+@RequestMapping("/auth/membresias")
 public class MembresiaController {
 
     private final MembresiaService membresiaService;
@@ -27,34 +27,29 @@ public class MembresiaController {
         this.membresiaService = membresiaService;
     }
 
-    /** GET /membresias/planes — listado publico de planes disponibles */
     @GetMapping("/planes")
     public ResponseEntity<List<Map<String, Object>>> listarPlanes() {
         return ResponseEntity.ok(membresiaService.obtenerPlanes());
     }
 
-    /** GET /membresias/usuario/{usuarioId} — suscripcion activa del usuario */
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<?> obtenerActiva(@PathVariable Long usuarioId) {
         try {
-            Suscripcion suscripcion = membresiaService.obtenerActiva(usuarioId);
-            return ResponseEntity.ok(suscripcion);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("mensaje", "Error al obtener la suscripcion"));
+            return ResponseEntity.ok(membresiaService.obtenerActiva(usuarioId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", e.getMessage()));
         }
     }
 
-    /** GET /membresias/usuario/{usuarioId}/historial — historial completo del usuario */
     @GetMapping("/usuario/{usuarioId}/historial")
-    public ResponseEntity<List<Suscripcion>> historial(@PathVariable Long usuarioId) {
-        return ResponseEntity.ok(membresiaService.historial(usuarioId));
+    public ResponseEntity<?> historial(@PathVariable Long usuarioId) {
+        try {
+            return ResponseEntity.ok(membresiaService.historial(usuarioId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", e.getMessage()));
+        }
     }
 
-    /**
-     * POST /membresias/suscribir — suscribe al usuario a un plan.
-     * Body: { "usuarioId": 1, "plan": "PREMIUM_INDIVIDUAL", "renovacionAutomatica": true }
-     */
     @PostMapping("/suscribir")
     public ResponseEntity<?> suscribir(@RequestBody Map<String, Object> body) {
         try {
@@ -65,17 +60,17 @@ public class MembresiaController {
             Suscripcion suscripcion = membresiaService.suscribir(usuarioId, plan, renovacion);
             return ResponseEntity.status(HttpStatus.CREATED).body(suscripcion);
         } catch (IllegalArgumentException | NullPointerException e) {
-            String msg = e instanceof NullPointerException
-                    ? "Campos obligatorios ausentes en el cuerpo de la peticion"
-                    : e.getMessage();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", msg));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", "No se pudo procesar la suscripcion"));
         }
     }
 
-    /** DELETE /membresias/usuario/{usuarioId} — cancela la suscripcion activa */
     @DeleteMapping("/usuario/{usuarioId}")
     public ResponseEntity<?> cancelar(@PathVariable Long usuarioId) {
-        membresiaService.cancelar(usuarioId);
-        return ResponseEntity.ok(Map.of("mensaje", "Suscripcion cancelada correctamente"));
+        try {
+            membresiaService.cancelar(usuarioId);
+            return ResponseEntity.ok(Map.of("mensaje", "Suscripcion cancelada correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", e.getMessage()));
+        }
     }
 }

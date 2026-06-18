@@ -35,4 +35,7 @@ public class Tarea {
     @Column(nullable = false)
     private LocalDate fecha;
 
+    @Column
+    private Boolean completada = false;
+
 }

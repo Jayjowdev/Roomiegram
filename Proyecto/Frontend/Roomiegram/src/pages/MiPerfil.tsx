@@ -8,7 +8,7 @@ import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
-import { membresiaService, PLAN_LABELS, PLAN_BADGE_CLASS, type PlanId, type Suscripcion } from "../services/membresiaService";
+import { membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -165,7 +165,6 @@ export default function MiPerfil() {
             <h1>{user?.nombre || "Martina"}</h1>
             {suscripcion && (
               <span className={`plan-badge ${PLAN_BADGE_CLASS[suscripcion.plan as PlanId]}`}>
-                {suscripcion.plan === "PREMIUM_INDIVIDUAL" ? "⭐" : suscripcion.plan === "PREMIUM_HOGAR" ? "🏆" : "🏠"}{" "}
                 {PLAN_LABELS[suscripcion.plan as PlanId]}
               </span>
             )}
@@ -200,6 +199,7 @@ export default function MiPerfil() {
             {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>
           <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />
+
         </aside>
       </section>
 

@@ -1,0 +1,269 @@
+package com.roomiegram.usuario.service;
+
+import com.roomiegram.usuario.DTO.TaskAssignmentEmailRequest;
+import com.roomiegram.usuario.DTO.TaskCompletedEmailRequest;
+import com.roomiegram.usuario.DTO.RequestReceivedEmailRequest;
+import com.roomiegram.usuario.DTO.RequestResolvedEmailRequest;
+import com.roomiegram.usuario.model.Register;
+import com.roomiegram.usuario.repository.RegisterRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+@Service
+public class NotificationEmailService {
+
+    private static final Logger logger = LoggerFactory.getLogger(NotificationEmailService.class);
+
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
+
+    @Autowired
+    private RegisterRepository registerRepository;
+
+    @Value("${app.mail.from:no-reply@roomiegram.com}")
+    private String mailFrom;
+
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
+    public boolean enviarCorreoTareaAsignada(TaskAssignmentEmailRequest request) {
+        validarSolicitudTarea(request);
+
+        Register encargado = registerRepository.findById(request.usuarioId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario encargado no encontrado"));
+
+        String correoDestino = encargado.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario encargado no tiene correo registrado");
+        }
+
+        String nombreEncargado = valueOrDefault(encargado.getNombre(), encargado.getUsuario());
+        String hogarNombre = valueOrDefault(request.hogarNombre(), "tu hogar");
+        String asignadorNombre = valueOrDefault(request.asignadorNombre(), "Un integrante");
+
+        return enviarCorreo(
+                correoDestino,
+                "Nueva tarea asignada en Roomiegram",
+                "Hola " + nombreEncargado + ",\n\n"
+                        + asignadorNombre + " te asigno una nueva tarea en " + hogarNombre + ".\n\n"
+                        + "Tarea: " + request.titulo().trim() + "\n"
+                        + "Descripcion: " + request.descripcion().trim() + "\n"
+                        + "Fecha limite: " + request.fecha().trim() + "\n\n"
+                        + "Entra a Roomiegram para revisar los detalles y marcarla cuando este lista.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "tarea asignada",
+                request.usuarioId());
+    }
+
+    public boolean enviarCorreoSolicitudRecibida(RequestReceivedEmailRequest request) {
+        validarSolicitudRecibida(request);
+
+        Register receptor = registerRepository.findById(request.usuarioReceptorId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario receptor no encontrado"));
+
+        String correoDestino = receptor.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario receptor no tiene correo registrado");
+        }
+
+        String nombreReceptor = valueOrDefault(receptor.getNombre(), receptor.getUsuario());
+        String solicitanteNombre = valueOrDefault(request.solicitanteNombre(), "Un usuario");
+        String hogarNombre = valueOrDefault(request.hogarNombre(), "tu hogar");
+        String publicacionTitulo = valueOrDefault(request.publicacionTitulo(), "");
+        String referencia = publicacionTitulo.isBlank()
+                ? "Hogar relacionado: " + hogarNombre + "\n"
+                : "Publicacion relacionada: " + publicacionTitulo + "\nHogar relacionado: " + hogarNombre + "\n";
+
+        return enviarCorreo(
+                correoDestino,
+                "Nueva solicitud en Roomiegram",
+                "Hola " + nombreReceptor + ",\n\n"
+                        + solicitanteNombre + " envio una solicitud para unirse a tu grupo en Roomiegram.\n\n"
+                        + referencia
+                        + "\nEntra a Roomiegram para revisar, aprobar o rechazar la solicitud.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "solicitud recibida",
+                request.usuarioReceptorId());
+    }
+
+    public boolean enviarCorreoSolicitudResuelta(RequestResolvedEmailRequest request) {
+        validarSolicitudResuelta(request);
+
+        Register solicitante = registerRepository.findById(request.usuarioSolicitanteId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario solicitante no encontrado"));
+
+        String correoDestino = solicitante.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario solicitante no tiene correo registrado");
+        }
+
+        String nombreSolicitante = valueOrDefault(solicitante.getNombre(), solicitante.getUsuario());
+        String hogarNombre = valueOrDefault(request.hogarNombre(), "el hogar solicitado");
+        String administradorNombre = registerRepository.findById(request.administradorId())
+                .map(admin -> valueOrDefault(admin.getNombre(), admin.getUsuario()))
+                .orElse("El administrador");
+        String estado = request.aceptada() ? "aceptada" : "rechazada";
+        String accion = request.aceptada()
+                ? "Ya puedes entrar a Roomiegram para revisar tu nuevo grupo."
+                : "Puedes seguir buscando otros hogares disponibles en Roomiegram.";
+
+        return enviarCorreo(
+                correoDestino,
+                "Tu solicitud fue " + estado + " en Roomiegram",
+                "Hola " + nombreSolicitante + ",\n\n"
+                        + administradorNombre + " ha " + estado + " tu solicitud para unirte a " + hogarNombre + ".\n\n"
+                        + accion + "\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "solicitud " + estado,
+                request.usuarioSolicitanteId());
+    }
+
+    public boolean enviarCorreoTareaCompletada(TaskCompletedEmailRequest request) {
+        validarSolicitudTareaCompletada(request);
+
+        Register receptor = registerRepository.findById(request.usuarioReceptorId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario receptor no encontrado"));
+
+        String correoDestino = receptor.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario receptor no tiene correo registrado");
+        }
+
+        String nombreReceptor = valueOrDefault(receptor.getNombre(), receptor.getUsuario());
+        String hogarNombre = valueOrDefault(request.hogarNombre(), "tu hogar");
+        String completadorNombre = registerRepository.findById(request.usuarioCompletadorId())
+                .map(usuario -> valueOrDefault(usuario.getNombre(), usuario.getUsuario()))
+                .orElse("Un integrante");
+
+        return enviarCorreo(
+                correoDestino,
+                "Tarea completada en Roomiegram",
+                "Hola " + nombreReceptor + ",\n\n"
+                        + completadorNombre + " completó la tarea \"" + request.titulo().trim()
+                        + "\" en el hogar " + hogarNombre + ".\n\n"
+                        + "Descripción: " + valueOrDefault(request.descripcion(), "Sin descripción") + "\n"
+                        + "Fecha límite: " + request.fecha().trim() + "\n\n"
+                        + "Entra a Roomiegram para revisar el estado de las tareas del hogar.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "tarea completada",
+                request.usuarioReceptorId());
+    }
+
+    public boolean enviarCorreoBienvenida(Register usuario) {
+        if (usuario == null || usuario.getCorreo() == null || usuario.getCorreo().isBlank()) {
+            return false;
+        }
+
+        String nombre = valueOrDefault(usuario.getNombre(), usuario.getUsuario());
+
+        return enviarCorreo(
+                usuario.getCorreo(),
+                "Bienvenido a Roomiegram",
+                "Hola " + nombre + ",\n\n"
+                        + "Tu cuenta en Roomiegram fue creada correctamente.\n"
+                        + "Ya puedes iniciar sesion, crear publicaciones, unirte a un hogar y organizar tareas con tus roomies.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "bienvenida",
+                usuario.getId());
+    }
+
+    private boolean enviarCorreo(String destino, String asunto, String cuerpo, String contexto, Long usuarioId) {
+        if (mailSender == null) {
+            logger.warn("No se envio correo de {} al usuario {} porque SMTP no esta configurado.", contexto, usuarioId);
+            return false;
+        }
+
+        try {
+            SimpleMailMessage mailMessage = new SimpleMailMessage();
+            mailMessage.setFrom(mailFrom);
+            mailMessage.setTo(destino);
+            mailMessage.setSubject(asunto);
+            mailMessage.setText(cuerpo);
+
+            mailSender.send(mailMessage);
+            logger.info("Correo de {} enviado al usuario {}.", contexto, usuarioId);
+            return true;
+        } catch (RuntimeException e) {
+            logger.warn("No se pudo enviar correo de {} al usuario {}: {}", contexto, usuarioId, e.getMessage());
+            return false;
+        }
+    }
+
+    private void validarSolicitudTarea(TaskAssignmentEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioId() == null) {
+            throw new IllegalArgumentException("El usuario encargado es obligatorio");
+        }
+        if (request.titulo() == null || request.titulo().isBlank()) {
+            throw new IllegalArgumentException("El titulo de la tarea es obligatorio");
+        }
+        if (request.descripcion() == null || request.descripcion().isBlank()) {
+            throw new IllegalArgumentException("La descripcion de la tarea es obligatoria");
+        }
+        if (request.fecha() == null || request.fecha().isBlank()) {
+            throw new IllegalArgumentException("La fecha limite de la tarea es obligatoria");
+        }
+    }
+
+    private void validarSolicitudRecibida(RequestReceivedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioReceptorId() == null) {
+            throw new IllegalArgumentException("El usuario receptor es obligatorio");
+        }
+        if (request.usuarioSolicitanteId() == null) {
+            throw new IllegalArgumentException("El usuario solicitante es obligatorio");
+        }
+    }
+
+    private void validarSolicitudResuelta(RequestResolvedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioSolicitanteId() == null) {
+            throw new IllegalArgumentException("El usuario solicitante es obligatorio");
+        }
+        if (request.administradorId() == null) {
+            throw new IllegalArgumentException("El administrador es obligatorio");
+        }
+    }
+
+    private void validarSolicitudTareaCompletada(TaskCompletedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioReceptorId() == null) {
+            throw new IllegalArgumentException("El usuario receptor es obligatorio");
+        }
+        if (request.usuarioCompletadorId() == null) {
+            throw new IllegalArgumentException("El usuario que completo la tarea es obligatorio");
+        }
+        if (request.titulo() == null || request.titulo().isBlank()) {
+            throw new IllegalArgumentException("El titulo de la tarea es obligatorio");
+        }
+        if (request.fecha() == null || request.fecha().isBlank()) {
+            throw new IllegalArgumentException("La fecha limite de la tarea es obligatoria");
+        }
+    }
+
+    private String valueOrDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private String frontendLinkLine() {
+        return "Entrar a Roomiegram: " + valueOrDefault(frontendUrl, "http://localhost:5173");
+    }
+}

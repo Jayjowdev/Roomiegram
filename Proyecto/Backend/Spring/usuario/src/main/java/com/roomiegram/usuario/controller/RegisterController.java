@@ -26,6 +26,7 @@ import com.roomiegram.usuario.service.RegisterService;
 
 @RestController
 @RequestMapping("/auth")
+
 public class RegisterController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

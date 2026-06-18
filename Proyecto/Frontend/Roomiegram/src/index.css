@@ -14,11 +14,19 @@ body {
   color: #242424;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
 }
 
 h1,
@@ -44,6 +52,8 @@ p {
 
 .btn {
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .btn:hover {
@@ -192,26 +202,6 @@ p {
   border-radius: 12px;
   font-size: 17px;
   font-weight: 600;
-}
-
-.preview-panel {
-  margin-top: 22px;
-  background: white;
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
-}
-
-.preview-panel h3 {
-  font-size: 18px;
-  color: #222;
-  margin-bottom: 12px;
-}
-
-.preview-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 
 .landing-demo-card {
@@ -555,14 +545,22 @@ p {
 
 .notification-bell {
   position: relative;
-  width: 42px;
+  width: 44px;
+  min-width: 44px;
   height: 38px;
+  min-height: 38px;
   border: 1px solid #1f7a63;
   border-radius: 8px;
   background: #ffffff;
   color: #1f7a63;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-weight: 600;
+  font-size: 0;
+  line-height: 0;
+  box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
@@ -598,8 +596,8 @@ p {
 }
 
 .notification-bell svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -627,6 +625,8 @@ p {
 
 .notification-bell-wide {
   width: 100%;
+  min-width: 100%;
+  height: 38px;
   margin-top: 8px;
 }
 
@@ -768,6 +768,13 @@ p {
   justify-content: center;
 }
 
+.home-filter-panel {
+  width: min(920px, calc(100% - 32px));
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
 .filtros-container {
   display: flex;
   gap: 12px;
@@ -776,6 +783,28 @@ p {
   border-radius: 50px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   animation: softReveal 0.4s ease both;
+}
+
+.home-location-filter {
+  width: min(620px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.home-location-filter .form-control {
+  min-height: 44px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  color: #2f3a36;
+}
+
+.home-results-count {
+  margin: 0;
+  color: #52615c;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .filtro-btn {
@@ -944,6 +973,7 @@ p {
 
 .mi-perfil-card,
 .mi-perfil-summary,
+.profile-password-card,
 .mi-grupo {
   background: white;
   border-radius: 16px;
@@ -1015,6 +1045,51 @@ p {
   font-size: 48px;
   line-height: 1;
   margin-bottom: 10px;
+}
+
+.profile-password-section {
+  margin-bottom: 28px;
+}
+
+.profile-password-inline {
+  border-top: 1px solid #edf1ef;
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.profile-password-inline h3 {
+  color: #222;
+  margin-bottom: 6px;
+}
+
+.profile-password-inline p {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+.profile-password-card {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.profile-password-card h2 {
+  color: #222;
+  margin-bottom: 8px;
+}
+
+.profile-password-card p {
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.profile-password-form {
+  display: grid;
+  gap: 12px;
 }
 
 .mi-grupo-header {
@@ -1282,6 +1357,53 @@ p {
   align-items: start;
 }
 
+.hogares-product-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.hogares-loading-panel {
+  max-width: none;
+}
+
+.hogares-primary-panel {
+  border: 1px solid #d3ebe5;
+}
+
+.hogares-primary-heading {
+  margin-bottom: 18px;
+}
+
+.hogares-primary-heading h2 {
+  color: #222;
+  margin-top: 4px;
+}
+
+.hogares-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.hogares-secondary-panel {
+  align-self: start;
+}
+
+.hogares-secondary-panel .module-item {
+  border-bottom-color: #edf1ef;
+}
+
+.hogares-section-secondary {
+  color: #4f5d59;
+}
+
+.hogar-card-mine {
+  background: #f8fbfa;
+  border: 1px solid #d3ebe5;
+  border-radius: 14px;
+  padding: 18px;
+}
+
 .hogares-section {
   margin-bottom: 26px;
 }
@@ -1426,7 +1548,7 @@ p {
 .detalle-gallery-main {
   width: 100%;
   height: 320px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 14px;
   display: block;
   background: #f5f7f6;
@@ -1891,7 +2013,8 @@ p {
 }
 
 .api-message,
-.form-error {
+.form-error,
+.form-success {
   background: #e6f4f1;
   color: #1f7a63;
   border-radius: 10px;
@@ -2014,6 +2137,141 @@ p {
   padding: 0;
 }
 
+/* ---------- PLANES ---------- */
+
+.planes-page {
+  min-height: 100vh;
+  background-color: #f5f7f6;
+  padding: 24px 32px 40px;
+  animation: pageFadeIn 0.45s ease both;
+}
+
+.planes-hero {
+  background: #ffffff;
+  border: 1px solid #e5e8e6;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+  padding: 28px;
+}
+
+.planes-kicker {
+  color: #1f7a63;
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.planes-hero h1 {
+  color: #222;
+  font-size: 40px;
+  line-height: 1.12;
+  margin-bottom: 10px;
+}
+
+.planes-hero p {
+  color: #5f5f5f;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.plan-activo-badge {
+  background: #e6f4f1;
+  border-radius: 999px;
+  color: #1f7a63;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 8px 12px;
+}
+
+.planes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.plan-card {
+  background: #ffffff;
+  border: 1px solid #e5e8e6;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24px;
+  position: relative;
+}
+
+.plan-card-activo {
+  border-color: #1f7a63;
+}
+
+.plan-popular-badge {
+  align-self: flex-start;
+  background: #1f7a63;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+}
+
+.plan-card-nombre {
+  color: #222;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.plan-card-desc {
+  color: #5f5f5f;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.plan-card-precio {
+  color: #1f7a63;
+  margin-bottom: 16px;
+}
+
+.plan-precio-gratis,
+.plan-precio-valor {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.plan-precio-periodo {
+  color: #66706d;
+  margin-left: 4px;
+}
+
+.plan-beneficios {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+.plan-beneficio-item {
+  color: #444;
+  line-height: 1.45;
+}
+
+.plan-check {
+  background: #e6f4f1;
+  border-radius: 999px;
+  color: #1f7a63;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  margin-right: 6px;
+  padding: 3px 6px;
+}
+
 /* ---------- DASHBOARD ---------- */
 
 .dashboard-page {
@@ -2048,7 +2306,7 @@ p {
 
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
 }
@@ -2076,6 +2334,45 @@ p {
 .dashboard-card h2 {
   font-size: 32px;
   color: #1f7a63;
+}
+
+.dashboard-filter-panel {
+  align-items: end;
+  background: #ffffff;
+  border: 1px solid #dcebe7;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr) auto;
+  margin-bottom: 28px;
+  padding: 22px;
+}
+
+.dashboard-filter-panel label {
+  color: #1f7a63;
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.dashboard-filter-panel p {
+  color: #55635f;
+  font-size: 14px;
+  margin: 0;
+}
+
+.dashboard-filter-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard-filter-summary {
+  color: #2e4a43;
+  font-size: 14px;
+  font-weight: 700;
+  justify-self: end;
+  text-align: right;
 }
 
 .dashboard-content {
@@ -2136,6 +2433,7 @@ p {
   .login-page,
   .register-page,
   .home-page,
+  .planes-page,
   .perfil-page,
   .dashboard-page,
   .module-page {
@@ -2164,13 +2462,17 @@ p {
   .landing-features,
   .dashboard-stats,
   .dashboard-content,
+  .dashboard-filter-panel,
+  .planes-grid,
   .detalle-publicacion,
   .convivencia-grid,
   .household-summary,
   .household-panels,
   .roomie-list,
   .hogar-meta-grid,
+  .hogares-secondary-grid,
   .mi-perfil-hero,
+  .profile-password-card,
   .mi-grupo-grid,
   .module-layout,
   .module-grid,
@@ -2252,6 +2554,243 @@ p {
 
   .register-box {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-page,
+  .login-page,
+  .register-page,
+  .home-page,
+  .planes-page,
+  .perfil-page,
+  .dashboard-page,
+  .module-page {
+    padding: 14px;
+  }
+
+  .landing-header,
+  .login-header,
+  .register-header,
+  .home-header,
+  .perfil-header,
+  .dashboard-header,
+  .module-header {
+    margin-bottom: 22px;
+  }
+
+  .home-header-actions,
+  .dashboard-actions,
+  .landing-header-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .home-header-actions .btn,
+  .dashboard-actions .btn,
+  .landing-header-actions .btn {
+    margin: 0 !important;
+    width: 100%;
+  }
+
+  .notification-bell {
+    width: 44px;
+    min-width: 44px;
+    height: 40px;
+    margin: 0 !important;
+  }
+
+  .notification-bell-wide {
+    width: 100%;
+    min-width: 100%;
+    margin-top: 8px !important;
+  }
+
+  .login-box,
+  .register-box,
+  .home-hero,
+  .planes-hero,
+  .detalle-main,
+  .detalle-side,
+  .module-form,
+  .module-list,
+  .create-section,
+  .dashboard-activity,
+  .dashboard-profile,
+  .dashboard-card,
+  .mi-perfil-card,
+  .mi-perfil-summary,
+  .profile-password-card,
+  .household-panel,
+  .convivencia-main,
+  .convivencia-side {
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .login-form {
+    padding: 24px;
+  }
+
+  .login-image {
+    display: none;
+  }
+
+  .register-box {
+    padding: 24px 18px;
+  }
+
+  .home-hero h1,
+  .planes-hero h1,
+  .module-title h1,
+  .dashboard-welcome h1,
+  .mi-perfil-card h1,
+  .detalle-main h1 {
+    font-size: 30px;
+    line-height: 1.12;
+  }
+
+  .home-hero p,
+  .planes-hero p,
+  .module-title p {
+    font-size: 16px;
+  }
+
+  .home-filter-panel {
+    width: 100%;
+  }
+
+  .filtros-container,
+  .home-location-filter,
+  .create-actions,
+  .item-actions,
+  .request-row,
+  .match-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .filtros-container {
+    border-radius: 14px;
+  }
+
+  .filtro-btn,
+  .item-actions .btn,
+  .request-row .btn,
+  .create-actions .btn,
+  .match-actions .btn {
+    width: 100%;
+  }
+
+  .home-card-img {
+    height: 190px;
+  }
+
+  .detalle-gallery-main {
+    height: 240px;
+  }
+
+  .detalle-gallery-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .section-heading-row,
+  .compatibility-results-title,
+  .mi-grupo-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-pill {
+    align-self: flex-start;
+    white-space: normal;
+  }
+
+  .module-item span,
+  .empty-state,
+  .home-desc,
+  .home-desc-oferta {
+    overflow-wrap: anywhere;
+  }
+
+  .plan-card {
+    padding: 20px;
+  }
+
+  .plan-precio-gratis,
+  .plan-precio-valor {
+    font-size: 26px;
+  }
+
+  .profile-password-form .btn,
+  .module-form .btn,
+  .create-publication-form .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .home-header-actions,
+  .dashboard-actions,
+  .landing-header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-filter-panel {
+    align-items: stretch;
+  }
+
+  .dashboard-filter-summary {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .home-logo,
+  .login-logo,
+  .register-logo,
+  .perfil-logo {
+    height: 40px;
+  }
+
+  .dashboard-logo {
+    height: 36px;
+  }
+
+  .home-hero h1,
+  .planes-hero h1,
+  .module-title h1,
+  .dashboard-welcome h1,
+  .mi-perfil-card h1,
+  .detalle-main h1 {
+    font-size: 26px;
+  }
+
+  .home-card-body,
+  .module-form,
+  .module-list,
+  .create-section,
+  .detalle-main,
+  .detalle-side,
+  .planes-hero,
+  .plan-card {
+    padding: 16px;
+  }
+
+  .login-form,
+  .register-box {
+    padding: 20px 16px;
+  }
+
+  .home-card-img,
+  .detalle-gallery-main {
+    height: 210px;
+  }
+
+  .dashboard-card h2 {
+    font-size: 26px;
   }
 }
 

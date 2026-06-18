@@ -19,6 +19,9 @@ public class RegisterService {
     @Autowired
     private LoginRepository loginRepository;
 
+    @Autowired(required = false)
+    private NotificationEmailService notificationEmailService;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Metodo para registrar un nuevo usuario
@@ -64,6 +67,10 @@ public class RegisterService {
         login.setContrasena(contrasenaEncriptada);
         login.setRole(Role.CLIENTE);
         loginRepository.save(login);
+
+        if (notificationEmailService != null) {
+            notificationEmailService.enviarCorreoBienvenida(registroGuardado);
+        }
 
         return registroGuardado;
     }

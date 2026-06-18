@@ -9,5 +9,6 @@ import com.roomiegram.usuario.model.Suscripcion;
 
 public interface SuscripcionRepository extends JpaRepository<Suscripcion, Long> {
     Optional<Suscripcion> findTopByUsuarioIdOrderByFechaInicioDesc(Long usuarioId);
+
     List<Suscripcion> findAllByUsuarioId(Long usuarioId);
 }

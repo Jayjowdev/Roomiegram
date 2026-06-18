@@ -1,27 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import roomies from "../assets/COMPARTIR.jpg";
-import { useAuth } from "../context/AuthContext";
-
-const previewLinks = [
-  { label: "Home", path: "/home" },
-  { label: "Compatibilidad", path: "/compatibilidad" },
-  { label: "Convivencia", path: "/convivencia" },
-  { label: "Hogares", path: "/hogares" },
-  { label: "Tareas", path: "/tareas" },
-  { label: "Gastos", path: "/gastos" },
-  { label: "Comprobantes", path: "/comprobantes" },
-  { label: "Notificaciones", path: "/notificaciones" },
-];
 
 export default function Landing() {
   const navigate = useNavigate();
-  const { loginDemo } = useAuth();
-
-  const openPreview = (path: string) => {
-    loginDemo();
-    navigate(path);
-  };
 
   return (
     <div className="landing-page">
@@ -42,17 +24,6 @@ export default function Landing() {
             <button className="btn btn-outline-dark" onClick={() => navigate("/login")}>
               Iniciar sesion
             </button>
-          </div>
-
-          <div className="preview-panel">
-            <h3>Vista rapida del frontend</h3>
-            <div className="preview-buttons">
-              {previewLinks.map((link) => (
-                <button className="btn btn-outline-success btn-sm" key={link.path} onClick={() => openPreview(link.path)}>
-                  {link.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 

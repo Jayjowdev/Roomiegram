@@ -4,6 +4,7 @@ export type Tarea = {
   encargado: string
   descripcion: string
   fecha: string
+  completada?: boolean | null
 }
 
 export type CreateTareaPayload = {

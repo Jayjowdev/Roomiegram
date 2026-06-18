@@ -25,12 +25,12 @@ export default function Login() {
     clearError();
 
     if (usuario.trim().length < 3) {
-      setLocalError("Ingresa un usuario válido.");
+      setLocalError("Ingresa un usuario valido.");
       return;
     }
 
     if (contrasena.trim().length < 6) {
-      setLocalError("La contraseña debe tener al menos 6 caracteres.");
+      setLocalError("La contrasena debe tener al menos 6 caracteres.");
       return;
     }
 
@@ -55,10 +55,10 @@ export default function Login() {
     try {
       setRecuperandoContrasena(true);
       const response = await authService.recoverPassword(correoRecuperacion.trim());
-      setRecuperacionMensaje(response.mensaje || "Te enviamos una contraseña temporal por correo.");
+      setRecuperacionMensaje(response.mensaje || "Te enviamos una contrasena temporal por correo.");
       setCorreoRecuperacion("");
     } catch (err) {
-      setRecuperacionError(err instanceof Error ? err.message : "No se pudo recuperar la contraseña");
+      setRecuperacionError(err instanceof Error ? err.message : "No se pudo recuperar la contrasena.");
     } finally {
       setRecuperandoContrasena(false);
     }
@@ -76,12 +76,12 @@ export default function Login() {
       <div className="login-box">
         <div className="login-image"><img src={roomies} alt="Roomies" /></div>
         <div className="login-form">
-          <h2>Iniciar sesión</h2>
+          <h2>Iniciar sesion</h2>
           {(error || localError) && <div className="form-error">{error || localError}</div>}
           {!mostrarRecuperacion ? (
             <form onSubmit={handleSubmit}>
               <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-              <input className="form-control mb-3" type="password" placeholder="Contraseña" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+              <input className="form-control mb-3" type="password" placeholder="Contrasena" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
               <button
                 type="button"
                 className="login-forgot-link"
@@ -92,13 +92,13 @@ export default function Login() {
                 }}
                 disabled={isLoading || recuperandoContrasena}
               >
-                ¿Olvidaste tu contraseña?
+                Olvidaste tu contrasena?
               </button>
               <button className="btn btn-success w-100 mb-3" type="submit" disabled={isLoading}>{isLoading ? "Cargando..." : "Ingresar"}</button>
             </form>
           ) : (
             <form onSubmit={handleRecuperarContrasena} className="login-recover-form">
-              <h3 className="login-recover-title">Recuperar contraseña</h3>
+              <h3 className="login-recover-title">Recuperar contrasena</h3>
               <input
                 className="form-control mb-2"
                 type="email"
@@ -110,7 +110,7 @@ export default function Login() {
               {recuperacionError && <div className="form-error">{recuperacionError}</div>}
               {recuperacionMensaje && <div className="form-success">{recuperacionMensaje}</div>}
               <button className="btn btn-outline-success w-100" type="submit" disabled={recuperandoContrasena || isLoading}>
-                {recuperandoContrasena ? "Enviando..." : "Enviar contraseña temporal"}
+                {recuperandoContrasena ? "Enviando..." : "Enviar contrasena temporal"}
               </button>
               <button
                 type="button"
@@ -122,11 +122,11 @@ export default function Login() {
                 }}
                 disabled={recuperandoContrasena || isLoading}
               >
-                Volver al inicio de sesión
+                Volver al inicio de sesion
               </button>
             </form>
           )}
-          <p className="login-legal">Al continuar aceptas nuestros términos y condiciones.</p>
+          <p className="login-legal">Al continuar aceptas nuestros terminos y condiciones.</p>
         </div>
       </div>
     </div>

@@ -13,7 +13,11 @@ import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } fro
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 function normalizarTexto(valor?: string) {
-  return valor?.trim().toLowerCase() || "";
+  return valor
+    ?.trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") || "";
 }
 
 function getRoomieTitle(pub: Publicacion) {
@@ -58,6 +62,7 @@ export default function Home() {
   const { user } = useAuth();
   const [filtro, setFiltro] = useState<"busco_roomie" | "ofrezco_casa" | "todos">("todos");
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [ubicacionFiltro, setUbicacionFiltro] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [apiMessage, setApiMessage] = useState("");
   const usuarioActual = normalizarTexto(user?.usuario);
@@ -120,13 +125,26 @@ export default function Home() {
   };
 
   const publicacionesFiltradas = useMemo(() => {
-    return filtro === "todos" ? publicaciones : publicaciones.filter((pub) => pub.tipo === filtro);
-  }, [filtro, publicaciones]);
+    const ubicacionNormalizada = normalizarTexto(ubicacionFiltro);
+
+    return publicaciones.filter((pub) => {
+      const coincideTipo = filtro === "todos" || pub.tipo === filtro;
+      const coincideUbicacion = !ubicacionNormalizada || normalizarTexto(pub.ubicacion).includes(ubicacionNormalizada);
+      return coincideTipo && coincideUbicacion;
+    });
+  }, [filtro, publicaciones, ubicacionFiltro]);
+
+  const tieneFiltrosActivos = filtro !== "todos" || ubicacionFiltro.trim().length > 0;
+
+  const limpiarFiltros = () => {
+    setFiltro("todos");
+    setUbicacionFiltro("");
+  };
 
   return (
     <div className="home-page">
       <header className="home-header">
-        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/")} />
+        <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/home")} />
         <div className="home-header-actions">
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/planes")}>Planes</button>
@@ -147,10 +165,26 @@ export default function Home() {
       </section>
 
       <section className="home-filtros">
-        <div className="filtros-container">
-          <button className={`btn filtro-btn ${filtro === "todos" ? "filtro-activo" : ""}`} onClick={() => setFiltro("todos")}>Ver todos</button>
-          <button className={`btn filtro-btn ${filtro === "busco_roomie" ? "filtro-activo" : ""}`} onClick={() => setFiltro("busco_roomie")}>Buscar roomie</button>
-          <button className={`btn filtro-btn ${filtro === "ofrezco_casa" ? "filtro-activo" : ""}`} onClick={() => setFiltro("ofrezco_casa")}>Ofertar casa</button>
+        <div className="home-filter-panel">
+          <div className="filtros-container">
+            <button className={`btn filtro-btn ${filtro === "todos" ? "filtro-activo" : ""}`} onClick={() => setFiltro("todos")}>Ver todos</button>
+            <button className={`btn filtro-btn ${filtro === "busco_roomie" ? "filtro-activo" : ""}`} onClick={() => setFiltro("busco_roomie")}>Buscar roomie</button>
+            <button className={`btn filtro-btn ${filtro === "ofrezco_casa" ? "filtro-activo" : ""}`} onClick={() => setFiltro("ofrezco_casa")}>Ofertar casa</button>
+          </div>
+          <div className="home-location-filter">
+            <input
+              className="form-control"
+              placeholder="Filtrar por ubicacion"
+              value={ubicacionFiltro}
+              onChange={(event) => setUbicacionFiltro(event.target.value)}
+            />
+            <button className="btn btn-outline-success" type="button" onClick={limpiarFiltros} disabled={!tieneFiltrosActivos}>
+              Limpiar
+            </button>
+          </div>
+          <p className="home-results-count">
+            {isLoading ? "Cargando publicaciones..." : `${publicacionesFiltradas.length} de ${publicaciones.length} publicaciones`}
+          </p>
         </div>
       </section>
 
@@ -160,7 +194,7 @@ export default function Home() {
         {isLoading ? (
           <div className="sin-resultados"><p>Cargando publicaciones...</p></div>
         ) : publicacionesFiltradas.length === 0 ? (
-          <div className="sin-resultados"><p>No hay publicaciones disponibles</p></div>
+          <div className="sin-resultados"><p>{tieneFiltrosActivos ? "No hay publicaciones para esos filtros." : "No hay publicaciones disponibles"}</p></div>
         ) : (
           publicacionesFiltradas.map((pub) => (
             <article className="home-card" key={`${pub.origen || "publicacion"}-${pub.tipo || "publicacion"}-${pub.id}`}>

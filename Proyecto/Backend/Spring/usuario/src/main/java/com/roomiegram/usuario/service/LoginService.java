@@ -1,7 +1,7 @@
 package com.roomiegram.usuario.service;
 
-import java.util.Optional;
 import java.security.SecureRandom;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +22,8 @@ public class LoginService {
 
     private static final String PASSWORD_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
     private static final int TEMP_PASSWORD_LENGTH = 10;
+    private static final String MAIL_SEND_ERROR_MESSAGE =
+            "No se pudo enviar el correo de recuperacion. Verifica la configuracion de correo.";
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -31,11 +33,14 @@ public class LoginService {
     @Autowired
     private RegisterRepository registerRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender mailSender;
 
     @Value("${app.mail.from:no-reply@roomiegram.com}")
     private String mailFrom;
+
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -80,9 +85,44 @@ public class LoginService {
     }
 
     @Transactional
+    public void cambiarContrasena(Long usuarioId, String contrasenaActual, String nuevaContrasena, String confirmarContrasena) {
+        if (usuarioId == null) {
+            throw new IllegalArgumentException("Usuario no valido");
+        }
+        if (contrasenaActual == null || contrasenaActual.isBlank()) {
+            throw new IllegalArgumentException("Ingresa tu contrasena actual");
+        }
+        if (nuevaContrasena == null || nuevaContrasena.isBlank()) {
+            throw new IllegalArgumentException("Ingresa una nueva contrasena");
+        }
+        if (confirmarContrasena == null || !nuevaContrasena.equals(confirmarContrasena)) {
+            throw new IllegalArgumentException("La nueva contrasena y la confirmacion no coinciden");
+        }
+        if (nuevaContrasena.length() < 8) {
+            throw new IllegalArgumentException("La nueva contrasena debe tener al menos 8 caracteres");
+        }
+
+        Register register = registerRepository.findById(usuarioId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Login login = loginRepository.findByUsuario(register.getUsuario())
+                .orElseThrow(() -> new IllegalStateException("No se encontro la cuenta de acceso asociada al usuario"));
+
+        if (!passwordEncoder.matches(contrasenaActual, login.getContrasena())) {
+            throw new IllegalArgumentException("La contrasena actual es incorrecta");
+        }
+
+        String contrasenaEncriptada = passwordEncoder.encode(nuevaContrasena);
+        register.setContrasena(contrasenaEncriptada);
+        login.setContrasena(contrasenaEncriptada);
+
+        registerRepository.save(register);
+        loginRepository.save(login);
+    }
+
+    @Transactional
     public void recuperarContrasena(String correo) {
         if (correo == null || correo.trim().isEmpty()) {
-            throw new IllegalArgumentException("El correo no puede estar vacío");
+            throw new IllegalArgumentException("El correo no puede estar vacio");
         }
 
         String correoNormalizado = correo.trim();
@@ -105,6 +145,10 @@ public class LoginService {
     }
 
     private void enviarCorreoRecuperacion(String correoDestino, String nombre, String contrasenaTemporal) {
+        if (mailSender == null) {
+            throw new IllegalStateException(MAIL_SEND_ERROR_MESSAGE);
+        }
+
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom(mailFrom);
@@ -114,12 +158,13 @@ public class LoginService {
                     "Hola " + (nombre == null || nombre.isBlank() ? "Roomie" : nombre) + ",\n\n"
                             + "Recibimos una solicitud para recuperar tu contrasena.\n"
                             + "Tu nueva contrasena temporal es: " + contrasenaTemporal + "\n\n"
-                            + "Te recomendamos iniciar sesion y cambiarla de inmediato.\n\n"
+                            + "Te recomendamos iniciar sesion y cambiarla de inmediato.\n"
+                            + "Entrar a Roomiegram: " + frontendUrl + "\n\n"
                             + "Equipo Roomiegram");
 
             mailSender.send(mailMessage);
         } catch (MailException e) {
-            throw new IllegalStateException("No fue posible enviar el correo de recuperacion", e);
+            throw new IllegalStateException(MAIL_SEND_ERROR_MESSAGE, e);
         }
     }
 

@@ -15,9 +15,11 @@ import com.roomiegram.hogar.repository.HogarRepository;
 public class HogarService {
 
     private final HogarRepository hogarRepository;
+    private final NotificationPublisher notificationPublisher;
 
-    public HogarService(HogarRepository hogarRepository) {
+    public HogarService(HogarRepository hogarRepository, NotificationPublisher notificationPublisher) {
         this.hogarRepository = hogarRepository;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public Hogar crearHogar(CreateHogarRequest request) {
@@ -56,7 +58,16 @@ public class HogarService {
             throw new IllegalArgumentException("La solicitud no se pudo registrar");
         }
 
-        return hogarRepository.save(hogar);
+        Hogar hogarActualizado = hogarRepository.save(hogar);
+
+        try {
+            notificationPublisher.publicarSolicitudIngreso(hogarActualizado, request.usuarioId());
+            return hogarActualizado;
+        } catch (RuntimeException exception) {
+            hogar.rechazarSolicitud(request.usuarioId());
+            hogarRepository.save(hogar);
+            throw new IllegalStateException("No se pudo notificar al administrador del hogar", exception);
+        }
     }
 
     public Hogar aprobarSolicitud(Long hogarId, Long usuarioId, AdminActionRequest request) {

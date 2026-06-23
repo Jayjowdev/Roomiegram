@@ -363,6 +363,33 @@ p {
   background-color: #f8f8f8;
 }
 
+.password-input-group {
+  position: relative;
+}
+
+.password-input-group .form-control {
+  margin-bottom: 0;
+  padding-right: 84px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #1f7a63;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+.password-toggle:disabled {
+  color: #8da59d;
+  cursor: not-allowed;
+}
+
 .login-form .btn-success {
   background-color: #1f7a63;
   border: none;
@@ -1978,6 +2005,7 @@ p {
   background: #f5f7f6;
   margin-bottom: 16px;
   cursor: crosshair;
+  -webkit-user-select: none;
   user-select: none;
   touch-action: none;
 }

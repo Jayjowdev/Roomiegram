@@ -7,7 +7,6 @@ import home3 from "../assets/home3.svg";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
-import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
@@ -120,24 +119,9 @@ export default function DetallePublicacion() {
       setHogares((current) => current.map((hogar) => (hogar.id === actualizado.id ? actualizado : hogar)));
 
       const usuarioReceptorId = hogarVinculado.usuarioAdministradorId || hogarVinculado.usuarioCreadorId;
-      let avisosEnviados = true;
+      let correoEnviado = true;
 
       if (usuarioReceptorId) {
-        try {
-          await notificacionService.crear({
-            usuarioEmisorId: user.id,
-            usuarioReceptorId,
-            hogarId: hogarVinculado.id,
-            referenciaId: user.id,
-            tipo: "INVITACION_HOGAR",
-            estado: "PENDIENTE",
-            titulo: "Solicitud de ingreso pendiente",
-            mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogarVinculado.nombre}.`,
-          });
-        } catch {
-          avisosEnviados = false;
-        }
-
         try {
           const correo = await usuarioService.enviarCorreoSolicitudRecibida({
             usuarioReceptorId,
@@ -146,15 +130,15 @@ export default function DetallePublicacion() {
             hogarNombre: hogarVinculado.nombre,
             publicacionTitulo: publicacion?.titulo,
           });
-          avisosEnviados = avisosEnviados && correo.enviado;
+          correoEnviado = correo.enviado;
         } catch {
-          avisosEnviados = false;
+          correoEnviado = false;
         }
       }
 
-      setContactMessage(avisosEnviados
-        ? "Solicitud enviada correctamente. Se aviso al administrador del hogar."
-        : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
+      setContactMessage(correoEnviado
+        ? "Solicitud enviada correctamente. Se notifico al administrador del hogar y se envio el correo."
+        : "Solicitud enviada correctamente. Se notifico al administrador del hogar, pero no se pudo enviar el correo.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
     } finally {

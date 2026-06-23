@@ -29,6 +29,9 @@ class HogarServiceTest {
     @Mock
     private HogarRepository hogarRepository;
 
+    @Mock
+    private NotificationPublisher notificationPublisher;
+
     @InjectMocks
     private HogarService hogarService;
 
@@ -67,6 +70,24 @@ class HogarServiceTest {
 
         assertTrue(actualizado.getSolicitudesPendientesIds().contains(2L));
         verify(hogarRepository).save(hogar);
+        verify(notificationPublisher).publicarSolicitudIngreso(hogar, 2L);
+    }
+
+    @Test
+    void solicitarIngresoDebeRevertirCuandoNoSePuedeNotificarAlAdministrador() {
+        Hogar hogar = crearHogarPersistido();
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+        when(hogarRepository.save(any(Hogar.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.doThrow(new IllegalStateException("fallo notificacion"))
+                .when(notificationPublisher)
+                .publicarSolicitudIngreso(hogar, 2L);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> hogarService.solicitarIngreso(1L, new UsuarioRequest(2L)));
+
+        assertEquals("No se pudo notificar al administrador del hogar", exception.getMessage());
+        assertTrue(!hogar.getSolicitudesPendientesIds().contains(2L));
+        verify(hogarRepository, org.mockito.Mockito.times(2)).save(hogar);
     }
 
     @Test

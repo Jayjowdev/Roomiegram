@@ -12,6 +12,7 @@ export default function Login() {
 
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [localError, setLocalError] = useState("");
   const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false);
   const [correoRecuperacion, setCorreoRecuperacion] = useState("");
@@ -81,7 +82,25 @@ export default function Login() {
           {!mostrarRecuperacion ? (
             <form onSubmit={handleSubmit}>
               <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-              <input className="form-control mb-3" type="password" placeholder="Contrasena" value={contrasena} onChange={(e) => setContrasena(e.target.value)} disabled={isLoading} />
+              <div className="password-input-group mb-3">
+                <input
+                  className="form-control"
+                  type={mostrarContrasena ? "text" : "password"}
+                  placeholder="Contrasena"
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
+                  disabled={isLoading}
+                  aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+                >
+                  {mostrarContrasena ? "Ocultar" : "Ver"}
+                </button>
+              </div>
               <button
                 type="button"
                 className="login-forgot-link"

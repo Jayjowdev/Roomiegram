@@ -26,6 +26,41 @@ const initialPublicacionForm: PublicacionRequest = {
   numeroBanos: 1,
 };
 
+const COMUNAS_SANTIAGO = [
+  "Cerrillos",
+  "Cerro Navia",
+  "Conchali",
+  "El Bosque",
+  "Estacion Central",
+  "Huechuraba",
+  "Independencia",
+  "La Cisterna",
+  "La Florida",
+  "La Granja",
+  "La Pintana",
+  "La Reina",
+  "Las Condes",
+  "Lo Barnechea",
+  "Lo Espejo",
+  "Lo Prado",
+  "Macul",
+  "Maipu",
+  "Nunoa",
+  "Pedro Aguirre Cerda",
+  "Penalolen",
+  "Providencia",
+  "Pudahuel",
+  "Quilicura",
+  "Quinta Normal",
+  "Recoleta",
+  "Renca",
+  "San Joaquin",
+  "San Miguel",
+  "San Ramon",
+  "Santiago",
+  "Vitacura",
+];
+
 function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
 }
@@ -151,7 +186,8 @@ export default function CrearPublicacion() {
 
   const validatePublicacion = () => {
     if (form.titulo.trim().length < 5) return "El titulo debe tener al menos 5 caracteres.";
-    if (form.ubicacion.trim().length < 3) return "Ingresa una ubicacion valida.";
+    const ubicacionSeleccionada = form.ubicacion.trim();
+    if (!COMUNAS_SANTIAGO.includes(ubicacionSeleccionada)) return "Selecciona una comuna valida de Santiago.";
     if (form.descripcion.trim().length < 20) return "La descripcion debe tener al menos 20 caracteres.";
     if (Number(form.precio) <= 0) return "El precio debe ser mayor a cero.";
     if (tipoPublicacion === "busco_roomie") return "";
@@ -397,7 +433,12 @@ export default function CrearPublicacion() {
           <div className="create-section">
             <h3>Informacion principal</h3>
             <input className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
-            <input className="form-control" placeholder="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required />
+            <select className="form-control" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required>
+              <option value="" disabled>Selecciona una comuna de Santiago</option>
+              {COMUNAS_SANTIAGO.map((comuna) => (
+                <option key={comuna} value={comuna}>{comuna}</option>
+              ))}
+            </select>
             <textarea className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
           </div>
 

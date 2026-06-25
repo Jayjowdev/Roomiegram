@@ -5,6 +5,7 @@ import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
+import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
@@ -25,12 +26,17 @@ function getPerfilLocation(perfil: Publicacion) {
   return ubicacion && ubicacion !== "Ubicacion no informada" ? ubicacion : "No informada por el usuario";
 }
 
+function normalizeText(value?: string) {
+  return value?.trim().toLowerCase() || "";
+}
+
 export default function Perfil() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [perfilBackend, setPerfilBackend] = useState<Publicacion | null>(null);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const perfilLocal = getLocalPublicaciones()
@@ -47,13 +53,56 @@ export default function Perfil() {
       });
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    publicacionService
+      .listar()
+      .then((publicaciones) => {
+        if (!isMounted) return;
+
+        const encontrada = publicaciones.find(
+          (publicacion) => publicacion.tipo === "busco_roomie" && String(publicacion.id) === id,
+        );
+
+        setPerfilBackend(
+          encontrada
+            ? {
+                ...encontrada,
+                tipo: "busco_roomie",
+                nombre: encontrada.nombre || encontrada.usuarioCreador,
+                presupuestoMaximo: encontrada.presupuestoMaximo ?? encontrada.precio,
+              }
+            : null,
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
   const usuarioPerfil = useMemo(() => {
-    const usuarioId = perfilLocal?.usuarioId || Number(id);
-    return usuarios.find((item) => item.id === usuarioId);
-  }, [id, perfilLocal?.usuarioId, usuarios]);
+    const usuarioId = perfilLocal?.usuarioId || perfilBackend?.usuarioId;
+    if (usuarioId) {
+      return usuarios.find((item) => item.id === usuarioId);
+    }
+
+    const usuarioCreador = normalizeText(perfilBackend?.usuarioCreador || perfilLocal?.usuarioCreador);
+    if (usuarioCreador) {
+      return usuarios.find((item) => normalizeText(item.usuario) === usuarioCreador);
+    }
+
+    const idNumerico = Number(id);
+    return Number.isFinite(idNumerico)
+      ? usuarios.find((item) => item.id === idNumerico)
+      : undefined;
+  }, [id, perfilBackend?.usuarioCreador, perfilBackend?.usuarioId, perfilLocal?.usuarioCreador, perfilLocal?.usuarioId, usuarios]);
 
   const perfil = useMemo<Publicacion | null>(() => {
     if (perfilLocal) return perfilLocal;
+    if (perfilBackend) return perfilBackend;
     if (!usuarioPerfil) return null;
 
     return {
@@ -80,9 +129,9 @@ export default function Perfil() {
           ]
         : [],
     };
-  }, [perfilLocal, usuarioPerfil]);
+  }, [perfilBackend, perfilLocal, usuarioPerfil]);
 
-  const perfilUsuarioId = perfil?.usuarioId || Number(id);
+  const perfilUsuarioId = perfil?.usuarioId || usuarioPerfil?.id;
 
   const hogarDelPerfil = useMemo(() => {
     if (!perfilUsuarioId) return null;

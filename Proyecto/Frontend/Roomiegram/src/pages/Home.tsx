@@ -35,23 +35,27 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
   const imagen = pub.imagen || imagenGuardada || home1;
   const galeria = pub.galeria?.length ? pub.galeria : [imagen, home2, home3];
+  const tipo = pub.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa";
 
   return {
     id: pub.id,
-    tipo: "ofrezco_casa",
+    tipo,
     origen: "backend",
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
-    titulo: pub.titulo || "Habitacion disponible",
-    precioMensual: pub.precio || pub.precioMensual || 0,
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    precioMensual: tipo === "ofrezco_casa" ? (pub.precio || pub.precioMensual || 0) : undefined,
+    presupuestoMaximo: tipo === "busco_roomie" ? (pub.precio || pub.presupuestoMaximo || 0) : undefined,
     precio: pub.precio || pub.precioMensual || 0,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
-    amenidades: [
-      `${pub.numeroHabitaciones || 1} habitacion(es)`,
-      `${pub.numeroPersonas || 1} cupo(s)`,
-      `${pub.numeroBanos || 1} bano(s)`,
-    ],
+    amenidades: tipo === "ofrezco_casa"
+      ? [
+          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroPersonas || 1} cupo(s)`,
+          `${pub.numeroBanos || 1} bano(s)`,
+        ]
+      : undefined,
     imagen,
     galeria,
   };

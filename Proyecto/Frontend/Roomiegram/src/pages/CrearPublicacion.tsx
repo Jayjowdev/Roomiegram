@@ -66,12 +66,15 @@ function normalizarTexto(valor?: string) {
 }
 
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
+  const tipo = pub.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa";
+
   return {
     ...pub,
-    tipo: "ofrezco_casa",
+    tipo,
     origen: "backend",
     nombre: pub.nombre || pub.usuarioCreador || "RoomieGram",
-    precioMensual: pub.precioMensual ?? pub.precio ?? 0,
+    precioMensual: tipo === "ofrezco_casa" ? pub.precioMensual ?? pub.precio ?? 0 : undefined,
+    presupuestoMaximo: tipo === "busco_roomie" ? pub.presupuestoMaximo ?? pub.precio ?? 0 : undefined,
     precio: pub.precio ?? pub.precioMensual ?? 0,
   };
 }
@@ -326,7 +329,19 @@ export default function CrearPublicacion() {
 
     try {
       if (tipoPublicacion === "busco_roomie") {
-        guardarPublicacionLocal(creador);
+        await publicacionService.crear({
+          tipo: "busco_roomie",
+          usuarioCreador: creador,
+          titulo: tituloPublicacion,
+          ubicacion: ubicacionPublicacion,
+          descripcion: descripcionPublicacion,
+          precio: Number(form.precio),
+          numeroHabitaciones: 0,
+          numeroPersonas: 0,
+          numeroBanos: 0,
+          imagen: imagenesPreview[0] || undefined,
+          galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
+        });
         navigate("/home");
         return;
       }
@@ -426,14 +441,14 @@ export default function CrearPublicacion() {
             <p className="create-section-help">
               {tipoPublicacion === "ofrezco_casa"
                 ? "Esta publicacion se enviara al servicio de publicaciones de hogares."
-                : "Las publicaciones de usuarios que buscan hogar se guardan localmente en esta app por ahora."}
+                : "Esta publicacion se guardara en el servicio de publicaciones para mantenerla persistente."}
             </p>
           </div>
 
           <div className="create-section">
             <h3>Informacion principal</h3>
             <input className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
-            <select className="form-control" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required>
+            <select className="form-control" aria-label="Comuna de Santiago" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required>
               <option value="" disabled>Selecciona una comuna de Santiago</option>
               {COMUNAS_SANTIAGO.map((comuna) => (
                 <option key={comuna} value={comuna}>{comuna}</option>

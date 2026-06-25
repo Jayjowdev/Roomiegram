@@ -27,6 +27,7 @@ export type Publicacion = {
 }
 
 export type CreatePublicacionPayload = {
+  tipo?: TipoPublicacion
   usuarioCreador: string
   titulo: string
   precio: number

@@ -26,6 +26,42 @@ const initialPublicacionForm: PublicacionRequest = {
   numeroBanos: 1,
 };
 
+const COMUNAS_SANTIAGO = [
+  "Santiago",
+  "Santiago Centro",
+  "Cerrillos",
+  "Cerro Navia",
+  "Conchali",
+  "El Bosque",
+  "Estacion Central",
+  "Huechuraba",
+  "Independencia",
+  "La Cisterna",
+  "La Florida",
+  "La Granja",
+  "La Pintana",
+  "La Reina",
+  "Las Condes",
+  "Lo Barnechea",
+  "Lo Espejo",
+  "Lo Prado",
+  "Macul",
+  "Maipu",
+  "Nunoa",
+  "Pedro Aguirre Cerda",
+  "Penalolen",
+  "Providencia",
+  "Pudahuel",
+  "Quilicura",
+  "Quinta Normal",
+  "Recoleta",
+  "Renca",
+  "San Joaquin",
+  "San Miguel",
+  "San Ramon",
+  "Vitacura",
+];
+
 function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
 }
@@ -414,7 +450,19 @@ export default function CrearPublicacion() {
           <div className="create-section">
             <h3>Informacion principal</h3>
             <input className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
-            <input className="form-control" placeholder="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} required />
+            <input
+              className="form-control"
+              placeholder="Comuna o ubicacion"
+              list="comunas-santiago"
+              value={form.ubicacion}
+              onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+              required
+            />
+            <datalist id="comunas-santiago">
+              {COMUNAS_SANTIAGO.map((comuna) => (
+                <option key={comuna} value={comuna} />
+              ))}
+            </datalist>
             <textarea className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
           </div>
 

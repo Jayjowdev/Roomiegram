@@ -303,9 +303,6 @@ export default function MiPerfil() {
         {misPublicaciones.length === 0 ? (
           <div className="sin-resultados">
             <p>Aun no tienes publicaciones creadas.</p>
-            <button className="btn btn-outline-success" onClick={() => navigate("/crear-publicacion")}>
-              Crear mi primera publicacion
-            </button>
           </div>
         ) : (
           <div className="module-list">

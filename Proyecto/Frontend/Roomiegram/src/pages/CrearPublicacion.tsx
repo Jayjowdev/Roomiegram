@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
@@ -144,6 +144,13 @@ export default function CrearPublicacion() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const tituloRef = useRef<HTMLInputElement>(null);
+  const ubicacionRef = useRef<HTMLInputElement>(null);
+  const descripcionRef = useRef<HTMLTextAreaElement>(null);
+  const precioRef = useRef<HTMLInputElement>(null);
+  const habitacionesRef = useRef<HTMLInputElement>(null);
+  const personasRef = useRef<HTMLInputElement>(null);
+  const banosRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -189,13 +196,29 @@ export default function CrearPublicacion() {
   }, [publicaciones, user]);
 
   const validatePublicacion = () => {
-    if (form.titulo.trim().length < 5) return "El titulo debe tener al menos 5 caracteres.";
-    if (form.ubicacion.trim().length < 3) return "Ingresa una ubicacion valida.";
-    if (form.descripcion.trim().length < 20) return "La descripcion debe tener al menos 20 caracteres.";
-    if (Number(form.precio) <= 0) return "El precio debe ser mayor a cero.";
-    if (tipoPublicacion === "busco_roomie") return "";
-    if (Number(form.numeroHabitaciones) < 1 || Number(form.numeroPersonas) < 1 || Number(form.numeroBanos) < 1) return "Los detalles de la casa deben ser mayores a cero.";
-    return "";
+    if (form.titulo.trim().length < 5) {
+      return { message: "El titulo debe tener al menos 5 caracteres.", ref: tituloRef };
+    }
+    if (form.ubicacion.trim().length < 3) {
+      return { message: "Ingresa una ubicacion valida.", ref: ubicacionRef };
+    }
+    if (form.descripcion.trim().length < 20) {
+      return { message: "La descripcion debe tener al menos 20 caracteres.", ref: descripcionRef };
+    }
+    if (Number(form.precio) <= 0) {
+      return { message: "El precio debe ser mayor a cero.", ref: precioRef };
+    }
+    if (tipoPublicacion === "busco_roomie") return null;
+    if (Number(form.numeroHabitaciones) < 1) {
+      return { message: "Ingresa al menos una habitacion.", ref: habitacionesRef };
+    }
+    if (Number(form.numeroPersonas) < 1) {
+      return { message: "Ingresa al menos un cupo disponible.", ref: personasRef };
+    }
+    if (Number(form.numeroBanos) < 1) {
+      return { message: "Ingresa al menos un bano disponible.", ref: banosRef };
+    }
+    return null;
   };
 
   const guardarPublicacionLocal = (creador: string) => {
@@ -317,7 +340,8 @@ export default function CrearPublicacion() {
 
     const validationError = validatePublicacion();
     if (validationError) {
-      setMessage(validationError);
+      setMessage(validationError.message);
+      validationError.ref.current?.focus();
       return;
     }
 
@@ -413,7 +437,7 @@ export default function CrearPublicacion() {
       )}
 
       <section className="create-publication-shell">
-        <form className="create-publication-form" onSubmit={handleSubmit}>
+        <form className="create-publication-form" onSubmit={handleSubmit} noValidate>
           <div className="create-section">
             <h3>Tipo de publicacion</h3>
             <div className="d-grid gap-2 gap-md-3">
@@ -449,8 +473,9 @@ export default function CrearPublicacion() {
 
           <div className="create-section">
             <h3>Informacion principal</h3>
-            <input className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
+            <input ref={tituloRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
             <input
+              ref={ubicacionRef}
               className="form-control"
               placeholder="Comuna o ubicacion"
               list="comunas-santiago"
@@ -463,7 +488,7 @@ export default function CrearPublicacion() {
                 <option key={comuna} value={comuna} />
               ))}
             </datalist>
-            <textarea className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
+            <textarea ref={descripcionRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
           </div>
 
           <div className="create-section">
@@ -476,21 +501,21 @@ export default function CrearPublicacion() {
             <div className="create-details-grid">
               <label className="field-label">
                 <span>{tipoPublicacion === "ofrezco_casa" ? "Precio mensual" : "Presupuesto maximo"}</span>
-                <input className="form-control" placeholder="Ej: 280000" type="number" min="1" value={form.precio || ""} onChange={(e) => setForm({ ...form, precio: Number(e.target.value) })} required />
+                <input ref={precioRef} className="form-control" placeholder="Ej: 280000" type="number" min="1" value={form.precio || ""} onChange={(e) => setForm({ ...form, precio: Number(e.target.value) })} required />
               </label>
               {tipoPublicacion === "ofrezco_casa" && (
                 <>
                   <label className="field-label">
                     <span>Habitaciones del hogar</span>
-                    <input className="form-control" placeholder="Ej: 3" type="number" min="1" value={form.numeroHabitaciones} onChange={(e) => setForm({ ...form, numeroHabitaciones: Number(e.target.value) })} required />
+                    <input ref={habitacionesRef} className="form-control" placeholder="Ej: 3" type="number" min="1" value={form.numeroHabitaciones} onChange={(e) => setForm({ ...form, numeroHabitaciones: Number(e.target.value) })} required />
                   </label>
                   <label className="field-label">
                     <span>Cupos disponibles</span>
-                    <input className="form-control" placeholder="Ej: 1" type="number" min="1" value={form.numeroPersonas} onChange={(e) => setForm({ ...form, numeroPersonas: Number(e.target.value) })} required />
+                    <input ref={personasRef} className="form-control" placeholder="Ej: 1" type="number" min="1" value={form.numeroPersonas} onChange={(e) => setForm({ ...form, numeroPersonas: Number(e.target.value) })} required />
                   </label>
                   <label className="field-label">
                     <span>Banos disponibles</span>
-                    <input className="form-control" placeholder="Ej: 2" type="number" min="1" value={form.numeroBanos} onChange={(e) => setForm({ ...form, numeroBanos: Number(e.target.value) })} required />
+                    <input ref={banosRef} className="form-control" placeholder="Ej: 2" type="number" min="1" value={form.numeroBanos} onChange={(e) => setForm({ ...form, numeroBanos: Number(e.target.value) })} required />
                   </label>
                 </>
               )}

@@ -12,7 +12,7 @@ import { publicacionService } from "../services/publicacionService";
 import type { UserSession } from "../types/auth";
 import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
-import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
+import { getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
 import { savePublicacionImage } from "../utils/publicacionImages";
 import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
@@ -84,18 +84,6 @@ function getLocalPublicacionesDelUsuario(user: UserSession | null) {
     .filter((publicacion) => localPublicacionPerteneceAlUsuario(publicacion, user));
 }
 
-function getTipoLabel(tipo?: TipoPublicacion) {
-  return tipo === "busco_roomie" ? "Busca roomie" : "Ofrece casa";
-}
-
-function getPrecioLabel(publicacion: Publicacion) {
-  const monto = publicacion.tipo === "busco_roomie"
-    ? publicacion.presupuestoMaximo || publicacion.precio
-    : publicacion.precioMensual || publicacion.precio;
-
-  return `$${Number(monto || 0).toLocaleString("es-CL")}`;
-}
-
 export default function CrearPublicacion() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -109,7 +97,6 @@ export default function CrearPublicacion() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingPublicacion, setEditingPublicacion] = useState<Publicacion | null>(null);
   const tituloRef = useRef<HTMLInputElement>(null);
   const ubicacionRef = useRef<HTMLInputElement>(null);
@@ -274,36 +261,6 @@ export default function CrearPublicacion() {
         };
 
     saveLocalPublicacion(nuevaPublicacion);
-  };
-
-  const handleDelete = async (publicacion: Publicacion) => {
-    if (!user?.usuario) {
-      setMessage("No se pudo identificar el usuario autenticado.");
-      return;
-    }
-
-    try {
-      setDeletingId(publicacion.id);
-
-      if (publicacion.origen === "backend") {
-        await publicacionService.eliminar(publicacion.id, user.usuario, user.role || "CLIENTE");
-      }
-
-      deleteLocalPublicacion(publicacion.id);
-      setPublicaciones((current) => current.filter((item) =>
-        item.id !== publicacion.id || item.origen !== publicacion.origen
-      ));
-      setMessage("Publicacion eliminada correctamente.");
-    } catch (error) {
-      if (editingPublicacion) {
-        setMessage(error instanceof Error ? error.message : "No se pudo actualizar la publicacion.");
-        return;
-      }
-
-      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
-    } finally {
-      setDeletingId(null);
-    }
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -612,52 +569,6 @@ export default function CrearPublicacion() {
           </div>
         </form>
 
-        <section className="create-section mt-4">
-          <h3>Mis publicaciones</h3>
-          <p className="create-section-help">
-            Revisa rapidamente lo que publicaste y elimina lo que ya no quieras mostrar.
-          </p>
-
-          {isLoadingPublicaciones ? (
-            <div className="sin-resultados"><p>Cargando tus publicaciones...</p></div>
-          ) : misPublicaciones.length === 0 ? (
-            <div className="sin-resultados"><p>Aun no tienes publicaciones creadas.</p></div>
-          ) : (
-            misPublicaciones.map((publicacion) => (
-              <article className="module-item" key={`${publicacion.origen || "local"}-${publicacion.id}`}>
-                <h4>{publicacion.titulo || "Publicacion sin titulo"}</h4>
-                <p>{publicacion.descripcion}</p>
-                <span>
-                  {getTipoLabel(publicacion.tipo)} - {publicacion.ubicacion || "Ubicacion no informada"} - {getPrecioLabel(publicacion)}
-                </span>
-                <div className="item-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline-success btn-sm"
-                    onClick={() => navigate(publicacion.tipo === "busco_roomie" ? `/perfil/${publicacion.id}` : `/detalle-publicacion/${publicacion.id}`)}
-                  >
-                    Ver
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-success btn-sm"
-                    onClick={() => startEditing(publicacion)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    disabled={deletingId === publicacion.id}
-                    onClick={() => handleDelete(publicacion)}
-                  >
-                    {deletingId === publicacion.id ? "Eliminando..." : "Eliminar"}
-                  </button>
-                </div>
-              </article>
-            ))
-          )}
-        </section>
       </section>
     </div>
   );

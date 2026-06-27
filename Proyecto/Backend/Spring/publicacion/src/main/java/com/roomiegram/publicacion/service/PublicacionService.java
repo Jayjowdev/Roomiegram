@@ -74,6 +74,46 @@ public class PublicacionService {
     public List<Publicacion> listarPublicaciones() {
         return publicacionRepository.findAll();
     }
+
+    public Publicacion actualizarPublicacion(Long id, Publicacion datos, String usuarioSolicitante, String rolSolicitante) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la publicacion es obligatorio");
+        }
+        if (datos == null) {
+            throw new IllegalArgumentException("Los datos de la publicacion son obligatorios");
+        }
+        if (usuarioSolicitante == null || usuarioSolicitante.isBlank()) {
+            throw new IllegalArgumentException("El usuario solicitante no puede estar vacio");
+        }
+        if (rolSolicitante == null || rolSolicitante.isBlank()) {
+            throw new IllegalArgumentException("El rol solicitante no puede estar vacio");
+        }
+
+        Publicacion publicacion = publicacionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La publicacion no existe"));
+
+        if (!puedeGestionar(publicacion, usuarioSolicitante, rolSolicitante)) {
+            throw new SecurityException("No tienes permisos para editar esta publicacion");
+        }
+
+        publicacion.setTitulo(datos.getTitulo());
+        publicacion.setUbicacion(datos.getUbicacion());
+        publicacion.setDescripcion(datos.getDescripcion());
+        publicacion.setPrecio(datos.getPrecio());
+
+        boolean esBusquedaRoomie = "busco_roomie".equalsIgnoreCase(publicacion.getTipo());
+        if (esBusquedaRoomie) {
+            publicacion.setNumeroHabitaciones(0);
+            publicacion.setNumeroPersonas(0);
+            publicacion.setNumeroBanos(0);
+        } else {
+            publicacion.setNumeroHabitaciones(datos.getNumeroHabitaciones());
+            publicacion.setNumeroPersonas(datos.getNumeroPersonas());
+            publicacion.setNumeroBanos(datos.getNumeroBanos());
+        }
+
+        return guardarPublicacion(publicacion);
+    }
     
     // Método para eliminar una publicación con validación de permisos
     public void eliminarPublicacion(Long id, String usuarioSolicitante, String rolSolicitante) {
@@ -90,14 +130,14 @@ public class PublicacionService {
         Publicacion publicacion = publicacionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("La publicación no existe"));
 
-        if (!puedeEliminar(publicacion, usuarioSolicitante, rolSolicitante)) {
+        if (!puedeGestionar(publicacion, usuarioSolicitante, rolSolicitante)) {
             throw new SecurityException("No tienes permisos para eliminar esta publicación");
         }
 
         publicacionRepository.delete(publicacion);
     }
 
-    private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante, String rolSolicitante) {
+    private boolean puedeGestionar(Publicacion publicacion, String usuarioSolicitante, String rolSolicitante) {
         boolean esCreador = publicacion.getUsuarioCreador() != null
                 && publicacion.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
         boolean esAdmin = "ADMIN".equalsIgnoreCase(rolSolicitante.trim());

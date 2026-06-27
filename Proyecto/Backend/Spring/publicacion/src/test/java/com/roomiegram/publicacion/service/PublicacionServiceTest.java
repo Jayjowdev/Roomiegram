@@ -99,4 +99,53 @@ class PublicacionServiceTest {
 
         assertEquals("ofrezco_casa", guardada.getTipo());
     }
+
+    @Test
+    void actualizaPublicacionCuandoUsuarioEsPropietario() {
+        Publicacion publicacion = crearPublicacion();
+        Publicacion datos = crearPublicacion();
+        datos.setTitulo("Habitacion actualizada");
+        datos.setDescripcion("Descripcion actualizada con informacion suficiente");
+        datos.setUbicacion("Providencia");
+        datos.setPrecio(300000.0);
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion actualizada = publicacionService.actualizarPublicacion(1L, datos, "juan", "CLIENTE");
+
+        assertEquals("Habitacion actualizada", actualizada.getTitulo());
+        assertEquals("Providencia", actualizada.getUbicacion());
+        assertEquals(300000.0, actualizada.getPrecio());
+    }
+
+    @Test
+    void actualizaPublicacionBuscoRoomieSinDetallesDeCasa() {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setTipo("busco_roomie");
+        Publicacion datos = crearPublicacion();
+        datos.setTitulo("Busco hogar actualizado");
+        datos.setNumeroHabitaciones(5);
+        datos.setNumeroPersonas(5);
+        datos.setNumeroBanos(5);
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion actualizada = publicacionService.actualizarPublicacion(1L, datos, "juan", "CLIENTE");
+
+        assertEquals("busco_roomie", actualizada.getTipo());
+        assertEquals(0, actualizada.getNumeroHabitaciones());
+        assertEquals(0, actualizada.getNumeroPersonas());
+        assertEquals(0, actualizada.getNumeroBanos());
+    }
+
+    @Test
+    void rechazaActualizacionCuandoUsuarioNoEsPropietarioNiAdministrador() {
+        Publicacion publicacion = crearPublicacion();
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+
+        assertThrows(SecurityException.class,
+                () -> publicacionService.actualizarPublicacion(1L, crearPublicacion(), "pedro", "CLIENTE"));
+
+        verify(publicacionRepository, never()).save(any(Publicacion.class));
+    }
 }

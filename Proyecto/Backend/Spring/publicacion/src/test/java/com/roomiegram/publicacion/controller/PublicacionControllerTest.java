@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -128,6 +129,35 @@ class PublicacionControllerTest {
                 .param("usuarioSolicitante", "juan")
                 .param("rolSolicitante", "CLIENTE"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void actualizarDebeRetornar200() throws Exception {
+        Publicacion request = crearPublicacion();
+        request.setTitulo("Habitacion actualizada");
+        when(publicacionService.actualizarPublicacion(eq(1L), any(Publicacion.class), eq("juan"), eq("CLIENTE")))
+                .thenReturn(request);
+
+        mockMvc.perform(put("/publicaciones/1")
+                        .param("usuarioSolicitante", "juan")
+                        .param("rolSolicitante", "CLIENTE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titulo").value("Habitacion actualizada"));
+    }
+
+    @Test
+    void actualizarDebeRetornar403CuandoNoTienePermisos() throws Exception {
+        doThrow(new SecurityException("No tienes permisos para editar esta publicacion"))
+                .when(publicacionService).actualizarPublicacion(eq(1L), any(Publicacion.class), eq("pedro"), eq("CLIENTE"));
+
+        mockMvc.perform(put("/publicaciones/1")
+                        .param("usuarioSolicitante", "pedro")
+                        .param("rolSolicitante", "CLIENTE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(crearPublicacion())))
+                .andExpect(status().isForbidden());
     }
 
     private Publicacion crearPublicacion() {

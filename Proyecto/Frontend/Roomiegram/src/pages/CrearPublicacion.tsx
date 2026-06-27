@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
@@ -133,6 +133,7 @@ function getPrecioLabel(publicacion: Publicacion) {
 
 export default function CrearPublicacion() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [form, setForm] = useState<PublicacionRequest>(initialPublicacionForm);
   const [tipoPublicacion, setTipoPublicacion] = useState<TipoPublicacion>("ofrezco_casa");
@@ -144,6 +145,7 @@ export default function CrearPublicacion() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingPublicacion, setEditingPublicacion] = useState<Publicacion | null>(null);
   const tituloRef = useRef<HTMLInputElement>(null);
   const ubicacionRef = useRef<HTMLInputElement>(null);
   const descripcionRef = useRef<HTMLTextAreaElement>(null);
@@ -194,6 +196,50 @@ export default function CrearPublicacion() {
       return mismoId || mismoUsuario;
     });
   }, [publicaciones, user]);
+
+  useEffect(() => {
+    const editarId = searchParams.get("editar");
+    if (!editarId || editingPublicacion || isLoadingPublicaciones) return;
+
+    const origen = searchParams.get("origen");
+    const publicacion = misPublicaciones.find((item) =>
+      String(item.id) === editarId && (!origen || item.origen === origen),
+    );
+
+    if (publicacion) {
+      startEditing(publicacion);
+    }
+  }, [editingPublicacion, isLoadingPublicaciones, misPublicaciones, searchParams]);
+
+  function startEditing(publicacion: Publicacion) {
+    const tipo = publicacion.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa";
+    setEditingPublicacion(publicacion);
+    setTipoPublicacion(tipo);
+    setForm({
+      usuarioCreador: publicacion.usuarioCreador || user?.usuario || "",
+      titulo: publicacion.titulo || "",
+      ubicacion: publicacion.ubicacion || "",
+      descripcion: publicacion.descripcion || "",
+      precio: Number(
+        tipo === "busco_roomie"
+          ? publicacion.presupuestoMaximo || publicacion.precio || 0
+          : publicacion.precioMensual || publicacion.precio || 0,
+      ),
+      numeroHabitaciones: tipo === "ofrezco_casa" ? Number(publicacion.numeroHabitaciones || 1) : 0,
+      numeroPersonas: tipo === "ofrezco_casa" ? Number(publicacion.numeroPersonas || 1) : 0,
+      numeroBanos: tipo === "ofrezco_casa" ? Number(publicacion.numeroBanos || 1) : 0,
+    });
+    setMessage("Editando publicacion. Las fotos se mantienen como estaban.");
+    requestAnimationFrame(() => tituloRef.current?.focus());
+  }
+
+  function cancelEditing() {
+    setEditingPublicacion(null);
+    setTipoPublicacion("ofrezco_casa");
+    setForm(initialPublicacionForm);
+    setMessage("");
+    setSearchParams({});
+  }
 
   const validatePublicacion = () => {
     if (form.titulo.trim().length < 5) {
@@ -284,6 +330,11 @@ export default function CrearPublicacion() {
       ));
       setMessage("Publicacion eliminada correctamente.");
     } catch (error) {
+      if (editingPublicacion) {
+        setMessage(error instanceof Error ? error.message : "No se pudo actualizar la publicacion.");
+        return;
+      }
+
       setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
     } finally {
       setDeletingId(null);
@@ -350,19 +401,61 @@ export default function CrearPublicacion() {
     const tituloPublicacion = form.titulo.trim();
     const ubicacionPublicacion = form.ubicacion.trim();
     const descripcionPublicacion = form.descripcion.trim();
+    const payload = {
+      tipo: tipoPublicacion,
+      usuarioCreador: creador,
+      titulo: tituloPublicacion,
+      ubicacion: ubicacionPublicacion,
+      descripcion: descripcionPublicacion,
+      precio: Number(form.precio),
+      numeroHabitaciones: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroHabitaciones) : 0,
+      numeroPersonas: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroPersonas) : 0,
+      numeroBanos: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroBanos) : 0,
+    };
 
     try {
+      if (editingPublicacion) {
+        if (!user?.usuario) {
+          throw new Error("No se pudo identificar el usuario autenticado.");
+        }
+
+        if (editingPublicacion.origen === "backend") {
+          const actualizada = await publicacionService.actualizar(
+            editingPublicacion.id,
+            payload,
+            user.usuario,
+            user.role || "CLIENTE",
+          );
+          const mapped = mapBackendPublicacion(actualizada);
+          setPublicaciones((current) => current.map((item) =>
+            item.id === editingPublicacion.id && item.origen === "backend" ? mapped : item
+          ));
+        } else {
+          const actualizada: Publicacion = {
+            ...editingPublicacion,
+            ...payload,
+            origen: "local",
+            precioMensual: tipoPublicacion === "ofrezco_casa" ? Number(form.precio) : undefined,
+            presupuestoMaximo: tipoPublicacion === "busco_roomie" ? Number(form.precio) : undefined,
+            amenidades: tipoPublicacion === "ofrezco_casa"
+              ? [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`]
+              : undefined,
+          };
+          saveLocalPublicacion(actualizada);
+          setPublicaciones((current) => current.map((item) =>
+            item.id === editingPublicacion.id && item.origen === "local" ? actualizada : item
+          ));
+        }
+
+        setEditingPublicacion(null);
+        setSearchParams({});
+        setMessage("Publicacion actualizada correctamente.");
+        return;
+      }
+
       if (tipoPublicacion === "busco_roomie") {
         const resultado = await publicacionService.crear({
-          tipo: "busco_roomie",
-          usuarioCreador: creador,
-          titulo: tituloPublicacion,
-          ubicacion: ubicacionPublicacion,
-          descripcion: descripcionPublicacion,
-          precio: Number(form.precio),
-          numeroHabitaciones: 0,
-          numeroPersonas: 0,
-          numeroBanos: 0,
+          ...payload,
           imagen: imagenesPreview[0] || undefined,
           galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
         });
@@ -378,14 +471,7 @@ export default function CrearPublicacion() {
 
       const resultado = await publicacionService.crearConHogar({
         ...form,
-        usuarioCreador: creador,
-        titulo: tituloPublicacion,
-        ubicacion: ubicacionPublicacion,
-        descripcion: descripcionPublicacion,
-        precio: Number(form.precio),
-        numeroHabitaciones: Number(form.numeroHabitaciones),
-        numeroPersonas: Number(form.numeroPersonas),
-        numeroBanos: Number(form.numeroBanos),
+        ...payload,
         imagen: imagenesPreview[0] || undefined,
         galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
         usuarioId: user.id,
@@ -418,8 +504,12 @@ export default function CrearPublicacion() {
       </header>
 
       <section className="module-title">
-        <h1>Crear publicacion</h1>
-        <p>Elige si quieres publicar un hogar disponible o un perfil de usuario que busca hogar.</p>
+        <h1>{editingPublicacion ? "Editar publicacion" : "Crear publicacion"}</h1>
+        <p>
+          {editingPublicacion
+            ? "Corrige la informacion principal de tu publicacion. Las fotos actuales se mantienen."
+            : "Elige si quieres publicar un hogar disponible o un perfil de usuario que busca hogar."}
+        </p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -449,6 +539,7 @@ export default function CrearPublicacion() {
                   value="ofrezco_casa"
                   checked={tipoPublicacion === "ofrezco_casa"}
                   onChange={() => setTipoPublicacion("ofrezco_casa")}
+                  disabled={Boolean(editingPublicacion)}
                 />
                 <span className="ms-2 fw-semibold">Quiero publicar un hogar o habitacion disponible</span>
               </label>
@@ -460,6 +551,7 @@ export default function CrearPublicacion() {
                   value="busco_roomie"
                   checked={tipoPublicacion === "busco_roomie"}
                   onChange={() => setTipoPublicacion("busco_roomie")}
+                  disabled={Boolean(editingPublicacion)}
                 />
                 <span className="ms-2 fw-semibold">Quiero publicar un usuario que busca hogar</span>
               </label>
@@ -522,27 +614,36 @@ export default function CrearPublicacion() {
             </div>
           </div>
 
-          <div className="create-section">
-            <h3>Fotos</h3>
-            <label className="image-upload">
-              <span>Agrega hasta 6 fotos</span>
-              <input className="form-control" type="file" accept="image/*" multiple onChange={handleImageChange} />
-            </label>
-            {imagenesPreview.length > 0 && (
-              <div className="image-preview gallery-preview">
-                <div className="gallery-preview-grid">
-                  {imagenesPreview.map((imagen, index) => (
-                    <img src={imagen} alt={`Vista previa ${index + 1}`} key={`${imagen}-${index}`} />
-                  ))}
+          {!editingPublicacion && (
+            <div className="create-section">
+              <h3>Fotos</h3>
+              <label className="image-upload">
+                <span>Agrega hasta 6 fotos</span>
+                <input className="form-control" type="file" accept="image/*" multiple onChange={handleImageChange} />
+              </label>
+              {imagenesPreview.length > 0 && (
+                <div className="image-preview gallery-preview">
+                  <div className="gallery-preview-grid">
+                    {imagenesPreview.map((imagen, index) => (
+                      <img src={imagen} alt={`Vista previa ${index + 1}`} key={`${imagen}-${index}`} />
+                    ))}
+                  </div>
+                  <button type="button" className="btn btn-outline-success" onClick={() => setImagenesPreview([])}>Quitar fotos</button>
                 </div>
-                <button type="button" className="btn btn-outline-success" onClick={() => setImagenesPreview([])}>Quitar fotos</button>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           <div className="create-actions">
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mi-perfil")}>Volver a mi perfil</button>
-            <button className="btn btn-success" disabled={isSaving}>{isSaving ? "Publicando..." : "Publicar"}</button>
+            {editingPublicacion && (
+              <button className="btn btn-outline-success" type="button" onClick={cancelEditing}>
+                Cancelar edicion
+              </button>
+            )}
+            <button className="btn btn-success" disabled={isSaving}>
+              {isSaving ? (editingPublicacion ? "Guardando..." : "Publicando...") : editingPublicacion ? "Guardar cambios" : "Publicar"}
+            </button>
           </div>
         </form>
 
@@ -571,6 +672,13 @@ export default function CrearPublicacion() {
                     onClick={() => navigate(publicacion.tipo === "busco_roomie" ? `/perfil/${publicacion.id}` : `/detalle-publicacion/${publicacion.id}`)}
                   >
                     Ver
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-success btn-sm"
+                    onClick={() => startEditing(publicacion)}
+                  >
+                    Editar
                   </button>
                   <button
                     type="button"

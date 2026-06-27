@@ -45,10 +45,30 @@ export async function eliminarPublicacion(id: number, usuarioSolicitante: string
   }
 }
 
+export async function actualizarPublicacion(
+  id: number,
+  payload: CreatePublicacionPayload,
+  usuarioSolicitante: string,
+  rolSolicitante: string,
+) {
+  try {
+    const { data } = await publicacionApi.put<Publicacion>(`/publicaciones/${id}`, payload, {
+      params: {
+        usuarioSolicitante,
+        rolSolicitante,
+      },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const publicacionService = {
   listar: listarPublicaciones,
   crear: guardarPublicacion,
   crearConHogar: guardarPublicacionConHogar,
+  actualizar: actualizarPublicacion,
   eliminar: eliminarPublicacion,
 }
 

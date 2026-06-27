@@ -14,6 +14,7 @@ import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
 import { savePublicacionImage } from "../utils/publicacionImages";
+import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
 const initialPublicacionForm: PublicacionRequest = {
   usuarioCreador: "",
@@ -25,42 +26,6 @@ const initialPublicacionForm: PublicacionRequest = {
   numeroPersonas: 1,
   numeroBanos: 1,
 };
-
-const COMUNAS_SANTIAGO = [
-  "Santiago",
-  "Santiago Centro",
-  "Cerrillos",
-  "Cerro Navia",
-  "Conchali",
-  "El Bosque",
-  "Estacion Central",
-  "Huechuraba",
-  "Independencia",
-  "La Cisterna",
-  "La Florida",
-  "La Granja",
-  "La Pintana",
-  "La Reina",
-  "Las Condes",
-  "Lo Barnechea",
-  "Lo Espejo",
-  "Lo Prado",
-  "Macul",
-  "Maipu",
-  "Nunoa",
-  "Pedro Aguirre Cerda",
-  "Penalolen",
-  "Providencia",
-  "Pudahuel",
-  "Quilicura",
-  "Quinta Normal",
-  "Recoleta",
-  "Renca",
-  "San Joaquin",
-  "San Miguel",
-  "San Ramon",
-  "Vitacura",
-];
 
 function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";

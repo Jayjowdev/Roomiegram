@@ -11,6 +11,7 @@ import { publicacionService } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
+import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
 function normalizarTexto(valor?: string) {
   return valor
@@ -179,9 +180,15 @@ export default function Home() {
             <input
               className="form-control"
               placeholder="Filtrar por ubicacion"
+              list="home-comunas-santiago"
               value={ubicacionFiltro}
               onChange={(event) => setUbicacionFiltro(event.target.value)}
             />
+            <datalist id="home-comunas-santiago">
+              {COMUNAS_SANTIAGO.map((comuna) => (
+                <option key={comuna} value={comuna} />
+              ))}
+            </datalist>
             <button className="btn btn-outline-success" type="button" onClick={limpiarFiltros} disabled={!tieneFiltrosActivos}>
               Limpiar
             </button>

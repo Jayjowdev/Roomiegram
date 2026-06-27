@@ -281,9 +281,6 @@ export default function MiPerfil() {
           <button className="btn btn-success w-100" onClick={() => navigate("/compatibilidad")}>
             Buscar matches
           </button>
-          <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/crear-publicacion")}>
-            Crear publicacion
-          </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/planes")}>
             {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>

@@ -39,6 +39,9 @@ public class Publicacion {
     @Column(nullable = false, length = 5000)
     private String descripcion;
 
+    @Column(length = 30)
+    private String tipo;
+
     @Column(nullable = false)
     private Double precio;
 

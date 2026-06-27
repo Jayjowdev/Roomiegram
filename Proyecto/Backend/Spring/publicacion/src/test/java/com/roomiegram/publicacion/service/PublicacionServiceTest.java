@@ -3,9 +3,11 @@ package com.roomiegram.publicacion.service;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -69,5 +71,32 @@ class PublicacionServiceTest {
 
         org.junit.jupiter.api.Assertions.assertNotNull(exception);
         verify(publicacionRepository, never()).delete(publicacion);
+    }
+
+    @Test
+    void guardaPublicacionBuscoRoomieSinExigirDetallesDeCasa() {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setTipo("busco_roomie");
+        publicacion.setNumeroHabitaciones(0);
+        publicacion.setNumeroPersonas(0);
+        publicacion.setNumeroBanos(0);
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion guardada = publicacionService.guardarPublicacion(publicacion);
+
+        assertEquals("busco_roomie", guardada.getTipo());
+        assertEquals(0, guardada.getNumeroHabitaciones());
+        assertEquals(0, guardada.getNumeroPersonas());
+        assertEquals(0, guardada.getNumeroBanos());
+    }
+
+    @Test
+    void guardaPublicacionDeCasaConTipoPorDefecto() {
+        Publicacion publicacion = crearPublicacion();
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion guardada = publicacionService.guardarPublicacion(publicacion);
+
+        assertEquals("ofrezco_casa", guardada.getTipo());
     }
 }

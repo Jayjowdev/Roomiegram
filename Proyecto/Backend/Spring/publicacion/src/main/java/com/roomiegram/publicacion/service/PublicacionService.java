@@ -28,6 +28,12 @@ public class PublicacionService {
 
     // Metodos para guardar y obtener publicaciones
     public Publicacion guardarPublicacion(Publicacion publicacion) {
+        String tipo = publicacion.getTipo();
+        if (tipo == null || tipo.isBlank()) {
+            tipo = "ofrezco_casa";
+        }
+        publicacion.setTipo(tipo);
+
         if (publicacion.getUsuarioCreador() == null || publicacion.getUsuarioCreador().isBlank()) {
             throw new IllegalArgumentException("El usuario creador no puede estar vacío");
         }
@@ -44,14 +50,21 @@ public class PublicacionService {
         if (publicacion.getDescripcion() == null || publicacion.getDescripcion().isEmpty()) {
             throw new IllegalArgumentException("La descripción no puede estar vacía");
         }
-        if (publicacion.getNumeroHabitaciones() <= 0) {
-            throw new IllegalArgumentException("El número de habitaciones debe ser mayor que cero");
-        }
-        if (publicacion.getNumeroPersonas() <= 0) {
-            throw new IllegalArgumentException("El número de personas debe ser mayor que cero");
-        }
-        if (publicacion.getNumeroBanos() <= 0) {
-            throw new IllegalArgumentException("El número de baños debe ser mayor que cero");
+        boolean esBusquedaRoomie = "busco_roomie".equalsIgnoreCase(tipo);
+        if (!esBusquedaRoomie) {
+            if (publicacion.getNumeroHabitaciones() <= 0) {
+                throw new IllegalArgumentException("El número de habitaciones debe ser mayor que cero");
+            }
+            if (publicacion.getNumeroPersonas() <= 0) {
+                throw new IllegalArgumentException("El número de personas debe ser mayor que cero");
+            }
+            if (publicacion.getNumeroBanos() <= 0) {
+                throw new IllegalArgumentException("El número de baños debe ser mayor que cero");
+            }
+        } else {
+            publicacion.setNumeroHabitaciones(0);
+            publicacion.setNumeroPersonas(0);
+            publicacion.setNumeroBanos(0);
         }
 
         return publicacionRepository.save(publicacion);
@@ -100,6 +113,7 @@ public class PublicacionService {
         pub.setTitulo(req.getTitulo());
         pub.setUbicacion(req.getUbicacion());
         pub.setDescripcion(req.getDescripcion());
+        pub.setTipo("ofrezco_casa");
         pub.setPrecio(req.getPrecio());
         pub.setNumeroHabitaciones(req.getNumeroHabitaciones());
         pub.setNumeroPersonas(req.getNumeroPersonas());

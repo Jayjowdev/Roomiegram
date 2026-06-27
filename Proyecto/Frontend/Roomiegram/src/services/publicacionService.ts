@@ -53,18 +53,23 @@ export const publicacionService = {
 }
 
 export function mapBackendPublicacionToOferta(pub: Publicacion): Publicacion {
+  const tipo = pub.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa"
+
   return {
     ...pub,
-    tipo: "ofrezco_casa",
+    tipo,
     nombre: pub.usuarioCreador || pub.nombre || "RoomieGram",
-    titulo: pub.titulo || "Habitacion disponible",
-    precioMensual: pub.precioMensual ?? pub.precio ?? 0,
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    precioMensual: tipo === "ofrezco_casa" ? (pub.precioMensual ?? pub.precio ?? 0) : undefined,
+    presupuestoMaximo: tipo === "busco_roomie" ? (pub.presupuestoMaximo ?? pub.precio ?? 0) : undefined,
     precio: pub.precio ?? pub.precioMensual ?? 0,
-    amenidades: pub.amenidades ?? [
-      `${pub.numeroHabitaciones || 1} habitacion(es)`,
-      `${pub.numeroPersonas || 1} cupo(s)`,
-      `${pub.numeroBanos || 1} bano(s)`,
-    ],
+    amenidades: tipo === "ofrezco_casa"
+      ? (pub.amenidades ?? [
+          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroPersonas || 1} cupo(s)`,
+          `${pub.numeroBanos || 1} bano(s)`,
+        ])
+      : undefined,
     imagen: pub.imagen || home1,
     galeria: pub.galeria || [home1],
   }

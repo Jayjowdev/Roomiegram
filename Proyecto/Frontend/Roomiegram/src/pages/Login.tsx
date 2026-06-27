@@ -26,7 +26,7 @@ export default function Login() {
     clearError();
 
     if (usuario.trim().length < 3) {
-      setLocalError("Ingresa un usuario valido.");
+      setLocalError("Ingresa tu usuario o correo electronico.");
       return;
     }
 
@@ -81,7 +81,7 @@ export default function Login() {
           {(error || localError) && <div className="form-error">{error || localError}</div>}
           {!mostrarRecuperacion ? (
             <form onSubmit={handleSubmit}>
-              <input className="form-control mb-3" placeholder="Usuario" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
+              <input className="form-control mb-3" placeholder="Usuario o correo electronico" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
               <div className="password-input-group mb-3">
                 <input
                   className="form-control"

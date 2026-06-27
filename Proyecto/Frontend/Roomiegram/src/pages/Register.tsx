@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
@@ -32,6 +32,14 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
+
+  const nombreRef = useRef<HTMLInputElement>(null);
+  const correoRef = useRef<HTMLInputElement>(null);
+  const usuarioRef = useRef<HTMLInputElement>(null);
+  const telefonoRef = useRef<HTMLInputElement>(null);
+  const contrasenaRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
   const passwordRules = [
     { label: "Minimo 8 caracteres", ok: contrasena.length >= 8 },
@@ -47,31 +55,37 @@ export default function Register() {
 
     if (nombre.trim().length < 3) {
       setLocalError("Ingresa un nombre valido.");
+      nombreRef.current?.focus();
       return;
     }
 
     if (!isValidEmail(correo)) {
       setLocalError("Ingresa un correo valido con dominio, por ejemplo nombre@correo.com.");
+      correoRef.current?.focus();
       return;
     }
 
     if (!/^[a-zA-Z0-9._-]{3,20}$/.test(usuario.trim())) {
       setLocalError("El usuario debe tener 3 a 20 caracteres y solo usar letras, numeros, punto, guion o guion bajo.");
+      usuarioRef.current?.focus();
       return;
     }
 
     if (!isValidPhone(telefono)) {
       setLocalError("Ingresa un telefono valido de 8 a 12 digitos.");
+      telefonoRef.current?.focus();
       return;
     }
 
     if (!isStrongPassword(contrasena)) {
       setLocalError("La contrasena debe tener minimo 8 caracteres, una mayuscula, una minuscula y un numero.");
+      contrasenaRef.current?.focus();
       return;
     }
 
     if (contrasena !== confirmPassword) {
       setLocalError("Las contrasenas no coinciden.");
+      confirmPasswordRef.current?.focus();
       return;
     }
 
@@ -99,12 +113,33 @@ export default function Register() {
         <h2>Crear cuenta</h2>
         {(error || localError) && <div className="form-error">{error || localError}</div>}
 
-        <form onSubmit={handleSubmit} className="register-form">
-          <input type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
-          <input type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
-          <input type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-          <input type="tel" className="form-control" placeholder="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
-          <input type="password" className="form-control" placeholder="Contrasena segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} disabled={isLoading} />
+        <form onSubmit={handleSubmit} className="register-form" noValidate>
+          <input ref={nombreRef} type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
+          <input ref={correoRef} type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
+          <input ref={usuarioRef} type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
+          <input ref={telefonoRef} type="tel" className="form-control" placeholder="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
+          <div className="password-input-group">
+            <input
+              ref={contrasenaRef}
+              type={mostrarContrasena ? "text" : "password"}
+              className="form-control"
+              placeholder="Contrasena segura"
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
+              disabled={isLoading}
+              aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+            >
+              {mostrarContrasena ? "Ocultar" : "Ver"}
+            </button>
+          </div>
 
           {(passwordFocused || contrasena.length > 0) && (
             <ul className="password-hints">
@@ -115,7 +150,7 @@ export default function Register() {
               ))}
             </ul>
           )}
-          <input type="password" className="form-control" placeholder="Confirmar contrasena" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+          <input ref={confirmPasswordRef} type={mostrarContrasena ? "text" : "password"} className="form-control" placeholder="Confirmar contrasena" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
 
           <button className="btn btn-success w-100 mt-3" type="submit" disabled={isLoading}>
             {isLoading ? "Creando cuenta..." : "Crear cuenta"}

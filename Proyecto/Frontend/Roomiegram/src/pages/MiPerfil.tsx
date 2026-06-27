@@ -9,12 +9,9 @@ import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
-import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
-import type { Publicacion } from "../types/Publicacion";
 import type { UsuarioResumen } from "../types/Usuario";
-import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { getPreferenciasResumen } from "../utils/preferenciasCompatibilidad";
 
 function uniqueIds(ids: Array<number | undefined>) {
@@ -32,36 +29,6 @@ function getMemberName(
   return usuario?.nombre || usuario?.usuario || "Integrante del hogar";
 }
 
-function normalizarTexto(valor?: string) {
-  return valor?.trim().toLowerCase() || "";
-}
-
-function mapBackendPublicacion(pub: Publicacion): Publicacion {
-  const tipo = pub.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa";
-
-  return {
-    ...pub,
-    tipo,
-    origen: "backend",
-    nombre: pub.nombre || pub.usuarioCreador || "RoomieGram",
-    precioMensual: tipo === "ofrezco_casa" ? pub.precioMensual ?? pub.precio ?? 0 : undefined,
-    presupuestoMaximo: tipo === "busco_roomie" ? pub.presupuestoMaximo ?? pub.precio ?? 0 : undefined,
-    precio: pub.precio ?? pub.precioMensual ?? 0,
-  };
-}
-
-function getTipoPublicacionLabel(publicacion: Publicacion) {
-  return publicacion.tipo === "busco_roomie" ? "Busca roomie" : "Ofrece casa";
-}
-
-function getPrecioPublicacion(publicacion: Publicacion) {
-  const monto = publicacion.tipo === "busco_roomie"
-    ? publicacion.presupuestoMaximo || publicacion.precio
-    : publicacion.precioMensual || publicacion.precio;
-
-  return Number(monto || 0) > 0 ? `$${Number(monto).toLocaleString("es-CL")}` : "Sin precio";
-}
-
 export default function MiPerfil() {
   const navigate = useNavigate();
   const { user, updateProfilePhoto } = useAuth();
@@ -71,8 +38,6 @@ export default function MiPerfil() {
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [cropSource, setCropSource] = useState("");
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
-  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
-  const [deletingPublicationId, setDeletingPublicationId] = useState<number | null>(null);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
 
@@ -83,27 +48,19 @@ export default function MiPerfil() {
       hogarService.listar(),
       usuarioService.listar(),
       user?.id ? membresiaService.obtenerActiva(user.id) : Promise.resolve(null),
-      publicacionService.listar(),
     ])
-      .then(([hogaresResult, usuariosResult, suscripcionResult, publicacionesResult]) => {
+      .then(([hogaresResult, usuariosResult, suscripcionResult]) => {
         if (!isMounted) return;
 
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
-        const backendPublicaciones = publicacionesResult.status === "fulfilled"
-          ? publicacionesResult.value.map(mapBackendPublicacion)
-          : [];
-        const localPublicaciones = getLocalPublicaciones()
-          .filter((publicacion) => !isGeneratedProfile(publicacion))
-          .map((publicacion) => ({ ...publicacion, origen: "local" as const }));
-        setPublicaciones([...backendPublicaciones, ...localPublicaciones]);
 
         if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
           setSuscripcion(suscripcionResult.value as Suscripcion);
         }
         setIsLoadingGroup(false);
 
-        if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected" || publicacionesResult.status === "rejected") {
+        if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected") {
           setMessage("No se pudo cargar toda la informacion de tu grupo.");
         }
       });
@@ -136,23 +93,6 @@ export default function MiPerfil() {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
 
-  const misPublicaciones = useMemo(() => {
-    const usuarioActual = normalizarTexto(user?.usuario);
-    const correoActual = normalizarTexto(user?.correo);
-
-    return publicaciones.filter((publicacion) => {
-      const creador = normalizarTexto(publicacion.usuarioCreador);
-      if (!usuarioActual || creador !== usuarioActual) return false;
-
-      if (publicacion.origen === "local") {
-        const correoPublicacion = normalizarTexto(publicacion.correo);
-        return !correoActual || !correoPublicacion || correoActual === correoPublicacion;
-      }
-
-      return true;
-    });
-  }, [publicaciones, user?.correo, user?.usuario]);
-
   const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -181,34 +121,6 @@ export default function MiPerfil() {
     updateProfilePhoto(image).then(() => {
       setMessage("Foto de perfil actualizada.");
     });
-  };
-
-  const eliminarPublicacion = async (publicacion: Publicacion) => {
-    if (!user?.usuario) {
-      setMessage("No se pudo identificar tu sesion.");
-      return;
-    }
-
-    const confirmar = window.confirm(`Eliminar la publicacion "${publicacion.titulo || "sin titulo"}"?`);
-    if (!confirmar) return;
-
-    try {
-      setDeletingPublicationId(publicacion.id);
-      if (publicacion.origen === "backend") {
-        await publicacionService.eliminar(publicacion.id, user.usuario, user.role || "CLIENTE");
-      } else {
-        deleteLocalPublicacion(publicacion.id);
-      }
-
-      setPublicaciones((current) => current.filter((item) =>
-        !(item.id === publicacion.id && item.origen === publicacion.origen)
-      ));
-      setMessage("Publicacion eliminada correctamente.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
-    } finally {
-      setDeletingPublicationId(null);
-    }
   };
 
   return (
@@ -289,61 +201,20 @@ export default function MiPerfil() {
         </aside>
       </section>
 
-      <section className="mi-grupo">
-        <div className="mi-grupo-header">
-          <div>
-            <h2>Mis publicaciones</h2>
-            <p>Gestiona tus publicaciones activas de casa o busqueda de roomie.</p>
-          </div>
-          <button className="btn btn-success" onClick={() => navigate("/crear-publicacion")}>
+      <section className="mi-grupo profile-publications-entry">
+        <div>
+          <span className="demo-kicker">Publicaciones</span>
+          <h2>Mis publicaciones</h2>
+          <p>Administra las publicaciones que has creado, revisa sus datos o crea una nueva cuando lo necesites.</p>
+        </div>
+        <div className="profile-publications-actions">
+          <button className="btn btn-success" onClick={() => navigate("/mis-publicaciones")}>
+            Ver mis publicaciones
+          </button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/crear-publicacion")}>
             Crear publicacion
           </button>
         </div>
-
-        {misPublicaciones.length === 0 ? (
-          <div className="sin-resultados">
-            <p>Aun no tienes publicaciones creadas.</p>
-          </div>
-        ) : (
-          <div className="module-list">
-            {misPublicaciones.map((publicacion) => (
-              <article className="module-item" key={`${publicacion.origen || "backend"}-${publicacion.id}`}>
-                <div className="section-heading-row">
-                  <h4>{publicacion.titulo || "Publicacion sin titulo"}</h4>
-                  <span className="status-pill">{getTipoPublicacionLabel(publicacion)}</span>
-                </div>
-                <p>{publicacion.descripcion || "Sin descripcion"}</p>
-                <span>
-                  {publicacion.ubicacion || "Sin ubicacion"} - {getPrecioPublicacion(publicacion)}
-                </span>
-                <div className="item-actions">
-                  <button
-                    className="btn btn-outline-success btn-sm"
-                    type="button"
-                    onClick={() => navigate(publicacion.tipo === "busco_roomie" ? `/perfil/${publicacion.id}` : `/detalle-publicacion/${publicacion.id}`)}
-                  >
-                    Ver
-                  </button>
-                  <button
-                    className="btn btn-outline-success btn-sm"
-                    type="button"
-                    onClick={() => navigate(`/crear-publicacion?editar=${publicacion.id}&origen=${publicacion.origen || "backend"}`)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="btn btn-outline-danger btn-sm"
-                    type="button"
-                    disabled={deletingPublicationId === publicacion.id}
-                    onClick={() => eliminarPublicacion(publicacion)}
-                  >
-                    {deletingPublicationId === publicacion.id ? "Eliminando..." : "Eliminar"}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="mi-grupo">

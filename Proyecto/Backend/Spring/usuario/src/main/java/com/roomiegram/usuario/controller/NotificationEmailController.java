@@ -4,6 +4,7 @@ import com.roomiegram.usuario.DTO.TaskAssignmentEmailRequest;
 import com.roomiegram.usuario.DTO.TaskCompletedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestReceivedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestResolvedEmailRequest;
+import com.roomiegram.usuario.DTO.SupportContactRequest;
 import com.roomiegram.usuario.service.NotificationEmailService;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +89,25 @@ public class NotificationEmailController {
                     "mensaje", enviado
                             ? "Correo de tarea completada enviado"
                             : "Tarea completada, pero no se pudo enviar el correo al responsable"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "enviado", false,
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/support")
+    public ResponseEntity<?> enviarContactoSoporte(@RequestBody SupportContactRequest request) {
+        try {
+            boolean enviado = notificationEmailService.enviarContactoSoporte(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "enviado", enviado,
+                    "mensaje", enviado
+                            ? "Mensaje enviado al equipo de soporte"
+                            : "No se pudo enviar el mensaje de soporte. Intenta nuevamente mas tarde"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(

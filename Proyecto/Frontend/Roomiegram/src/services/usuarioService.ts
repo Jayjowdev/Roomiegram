@@ -71,10 +71,26 @@ export async function enviarCorreoSolicitudResuelta(payload: {
   }
 }
 
+export async function enviarContactoSoporte(payload: {
+  asunto: string
+  mensaje: string
+  correo: string
+  nombre?: string
+  usuario?: string
+}) {
+  try {
+    const { data } = await usuarioApi.post<{ enviado: boolean; mensaje: string }>("/auth/emails/support", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const usuarioService = {
   listar: listarUsuarios,
   enviarCorreoTareaAsignada,
   enviarCorreoTareaCompletada,
   enviarCorreoSolicitudRecibida,
   enviarCorreoSolicitudResuelta,
+  enviarContactoSoporte,
 }

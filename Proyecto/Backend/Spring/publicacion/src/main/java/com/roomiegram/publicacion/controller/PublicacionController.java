@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.roomiegram.publicacion.model.Historia;
+import com.roomiegram.publicacion.model.HistoriaRequest;
 import com.roomiegram.publicacion.model.Publicacion;
 import com.roomiegram.publicacion.model.PublicacionConHogarRequest;
 import com.roomiegram.publicacion.model.PublicacionConHogarResponse;
+import com.roomiegram.publicacion.service.HistoriaService;
 import com.roomiegram.publicacion.service.PublicacionService;
 
 @RestController
@@ -26,6 +29,9 @@ public class PublicacionController {
 
     @Autowired
     private PublicacionService publicacionService;
+
+    @Autowired
+    private HistoriaService historiaService;
 
     @PostMapping("/guardar")
     public ResponseEntity<?> guardarPublicacion(@RequestBody Publicacion publicacion) {
@@ -52,6 +58,21 @@ public class PublicacionController {
     @GetMapping("/listar")
     public ResponseEntity<List<Publicacion>> listarPublicaciones() {
         return ResponseEntity.ok(publicacionService.listarPublicaciones());
+    }
+
+    @GetMapping("/historias")
+    public ResponseEntity<List<Historia>> listarHistorias() {
+        return ResponseEntity.ok(historiaService.listarHistorias());
+    }
+
+    @PostMapping("/historias")
+    public ResponseEntity<?> crearHistoria(@RequestBody HistoriaRequest request) {
+        try {
+            Historia resultado = historiaService.crearHistoria(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")

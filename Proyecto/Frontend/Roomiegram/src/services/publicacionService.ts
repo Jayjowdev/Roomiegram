@@ -2,6 +2,22 @@ import { getApiErrorMessage, publicacionApi } from "../config/api"
 import home1 from "../assets/home1.svg"
 import type { CreatePublicacionPayload, Publicacion } from "../types/Publicacion"
 
+export type Historia = {
+  id: number
+  titulo: string
+  mensaje: string
+  nombreVisible: string
+  usuarioCreador?: string
+  fechaCreacion?: string
+}
+
+export type HistoriaPayload = {
+  titulo: string
+  mensaje: string
+  nombreVisible: string
+  usuarioCreador?: string
+}
+
 export async function listarPublicaciones() {
   try {
     const { data } = await publicacionApi.get<Publicacion[]>("/publicaciones/listar")
@@ -64,12 +80,32 @@ export async function actualizarPublicacion(
   }
 }
 
+export async function listarHistorias() {
+  try {
+    const { data } = await publicacionApi.get<Historia[]>("/publicaciones/historias")
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function crearHistoria(payload: HistoriaPayload) {
+  try {
+    const { data } = await publicacionApi.post<Historia>("/publicaciones/historias", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const publicacionService = {
   listar: listarPublicaciones,
   crear: guardarPublicacion,
   crearConHogar: guardarPublicacionConHogar,
   actualizar: actualizarPublicacion,
   eliminar: eliminarPublicacion,
+  listarHistorias,
+  crearHistoria,
 }
 
 export function mapBackendPublicacionToOferta(pub: Publicacion): Publicacion {

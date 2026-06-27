@@ -4,6 +4,7 @@ import com.roomiegram.usuario.DTO.TaskAssignmentEmailRequest;
 import com.roomiegram.usuario.DTO.TaskCompletedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestReceivedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestResolvedEmailRequest;
+import com.roomiegram.usuario.DTO.SupportContactRequest;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import org.slf4j.Logger;
@@ -177,6 +178,29 @@ public class NotificationEmailService {
                 usuario.getId());
     }
 
+    public boolean enviarContactoSoporte(SupportContactRequest request) {
+        validarContactoSoporte(request);
+
+        String nombre = valueOrDefault(request.nombre(), "Usuario Roomiegram");
+        String usuario = valueOrDefault(request.usuario(), "No informado");
+        String correo = request.correo().trim();
+        String asunto = request.asunto().trim();
+        String mensaje = request.mensaje().trim();
+
+        return enviarCorreo(
+                mailFrom,
+                "Soporte Roomiegram: " + asunto,
+                "Nuevo mensaje de soporte desde Roomiegram.\n\n"
+                        + "Nombre: " + nombre + "\n"
+                        + "Usuario: " + usuario + "\n"
+                        + "Correo: " + correo + "\n\n"
+                        + "Asunto: " + asunto + "\n\n"
+                        + "Mensaje:\n" + mensaje + "\n\n"
+                        + frontendLinkLine(),
+                "contacto soporte",
+                0L);
+    }
+
     private boolean enviarCorreo(String destino, String asunto, String cuerpo, String contexto, Long usuarioId) {
         if (mailSender == null) {
             logger.warn("No se envio correo de {} al usuario {} porque SMTP no esta configurado.", contexto, usuarioId);
@@ -256,6 +280,34 @@ public class NotificationEmailService {
         }
         if (request.fecha() == null || request.fecha().isBlank()) {
             throw new IllegalArgumentException("La fecha limite de la tarea es obligatoria");
+        }
+    }
+
+    private void validarContactoSoporte(SupportContactRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("El mensaje de soporte es obligatorio");
+        }
+        if (request.asunto() == null || request.asunto().trim().isBlank()) {
+            throw new IllegalArgumentException("El asunto es obligatorio");
+        }
+        if (request.asunto().trim().length() > 100) {
+            throw new IllegalArgumentException("El asunto no puede superar 100 caracteres");
+        }
+        if (request.mensaje() == null || request.mensaje().trim().isBlank()) {
+            throw new IllegalArgumentException("El mensaje es obligatorio");
+        }
+        int largoMensaje = request.mensaje().trim().length();
+        if (largoMensaje < 20) {
+            throw new IllegalArgumentException("El mensaje debe tener al menos 20 caracteres");
+        }
+        if (largoMensaje > 1000) {
+            throw new IllegalArgumentException("El mensaje no puede superar 1000 caracteres");
+        }
+        if (request.correo() == null || request.correo().trim().isBlank()) {
+            throw new IllegalArgumentException("El correo de contacto es obligatorio");
+        }
+        if (!request.correo().contains("@")) {
+            throw new IllegalArgumentException("Ingresa un correo de contacto valido");
         }
     }
 

@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
@@ -8,7 +8,6 @@ import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService, type Historia } from "../services/publicacionService";
-import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
@@ -113,19 +112,6 @@ export default function Home() {
   const [apiMessage, setApiMessage] = useState("");
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [isLoadingHistorias, setIsLoadingHistorias] = useState(true);
-  const [historiaForm, setHistoriaForm] = useState({
-    titulo: "",
-    mensaje: "",
-  });
-  const [historiaMessage, setHistoriaMessage] = useState("");
-  const [isSavingHistoria, setIsSavingHistoria] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    asunto: "",
-    mensaje: "",
-    correo: user?.correo || "",
-  });
-  const [contactMessage, setContactMessage] = useState("");
-  const [isSendingContact, setIsSendingContact] = useState(false);
   const usuarioActual = normalizarTexto(user?.usuario);
 
   const loadPublicaciones = () => {
@@ -182,12 +168,6 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    if (user?.correo) {
-      setContactForm((current) => ({ ...current, correo: current.correo || user.correo || "" }));
-    }
-  }, [user?.correo]);
-
   const puedeEliminarPublicacion = (pub: Publicacion) => {
     const creador = normalizarTexto(pub.usuarioCreador);
     return !!usuarioActual && !!creador && creador === usuarioActual;
@@ -234,90 +214,6 @@ export default function Home() {
   const buscarRoomie = () => {
     setFiltro("busco_roomie");
     document.getElementById("home-publicaciones")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const handleHistoriaSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const titulo = historiaForm.titulo.trim();
-    const mensaje = historiaForm.mensaje.trim();
-
-    if (!titulo) {
-      setHistoriaMessage("Ingresa un titulo breve para tu historia.");
-      return;
-    }
-    if (!mensaje) {
-      setHistoriaMessage("Escribe tu historia antes de publicarla.");
-      return;
-    }
-    if (mensaje.length < 20) {
-      setHistoriaMessage("La historia debe tener al menos 20 caracteres.");
-      return;
-    }
-    if (mensaje.length > 500) {
-      setHistoriaMessage("La historia no puede superar 500 caracteres.");
-      return;
-    }
-
-    try {
-      setIsSavingHistoria(true);
-      const historia = await publicacionService.crearHistoria({
-        titulo,
-        mensaje,
-        nombreVisible: user?.nombre || user?.usuario || "Usuario Roomiegram",
-        usuarioCreador: user?.usuario,
-      });
-      setHistorias((current) => [historia, ...current]);
-      setHistoriaForm({ titulo: "", mensaje: "" });
-      setHistoriaMessage("Historia publicada correctamente.");
-    } catch (error) {
-      setHistoriaMessage(error instanceof Error ? error.message : "No se pudo publicar la historia.");
-    } finally {
-      setIsSavingHistoria(false);
-    }
-  };
-
-  const handleContactSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const asunto = contactForm.asunto.trim();
-    const mensaje = contactForm.mensaje.trim();
-    const correo = contactForm.correo.trim();
-
-    if (!asunto) {
-      setContactMessage("Ingresa un asunto para el mensaje.");
-      return;
-    }
-    if (!mensaje) {
-      setContactMessage("Escribe tu mensaje para soporte.");
-      return;
-    }
-    if (mensaje.length < 20) {
-      setContactMessage("El mensaje debe tener al menos 20 caracteres.");
-      return;
-    }
-    if (!correo || !correo.includes("@")) {
-      setContactMessage("Ingresa un correo de contacto valido.");
-      return;
-    }
-
-    try {
-      setIsSendingContact(true);
-      const response = await usuarioService.enviarContactoSoporte({
-        asunto,
-        mensaje,
-        correo,
-        nombre: user?.nombre,
-        usuario: user?.usuario,
-      });
-
-      setContactMessage(response.mensaje || "Mensaje enviado al equipo de soporte.");
-      if (response.enviado) {
-        setContactForm({ asunto: "", mensaje: "", correo: user?.correo || correo });
-      }
-    } catch (error) {
-      setContactMessage(error instanceof Error ? error.message : "No se pudo enviar el mensaje de soporte.");
-    } finally {
-      setIsSendingContact(false);
-    }
   };
 
   return (
@@ -456,49 +352,28 @@ export default function Home() {
       <section className="home-section home-testimonials-section" aria-labelledby="home-testimonials-title">
         <div className="home-section-heading">
           <span>Historias de usuarios</span>
-          <h2 id="home-testimonials-title">Comparte y revisa experiencias de convivencia</h2>
+          <h2 id="home-testimonials-title">Experiencias recientes de convivencia</h2>
         </div>
-        <div className="home-stories-layout">
-          <div className="home-testimonials-grid">
-            {isLoadingHistorias ? (
-              <article className="home-testimonial-card">
-                <p>Cargando historias...</p>
-                <strong>Roomiegram</strong>
+        <div className="home-testimonials-grid">
+          {isLoadingHistorias ? (
+            <article className="home-testimonial-card">
+              <p>Cargando historias...</p>
+              <strong>Roomiegram</strong>
+            </article>
+          ) : (
+            historiasVisibles.slice(0, 3).map((historia) => (
+              <article className="home-testimonial-card" key={historia.id}>
+                <h3>{historia.titulo}</h3>
+                <p>"{historia.mensaje}"</p>
+                <strong>{historia.nombreVisible}</strong>
               </article>
-            ) : (
-              historiasVisibles.map((historia) => (
-                <article className="home-testimonial-card" key={historia.id}>
-                  <h3>{historia.titulo}</h3>
-                  <p>"{historia.mensaje}"</p>
-                  <strong>{historia.nombreVisible}</strong>
-                </article>
-              ))
-            )}
-          </div>
-
-          <form className="home-inline-form" onSubmit={handleHistoriaSubmit}>
-            <h3>Deja tu historia</h3>
-            <input
-              className="form-control"
-              placeholder="Titulo breve"
-              maxLength={80}
-              value={historiaForm.titulo}
-              onChange={(event) => setHistoriaForm((current) => ({ ...current, titulo: event.target.value }))}
-            />
-            <textarea
-              className="form-control"
-              placeholder="Cuenta brevemente como te ayudo Roomiegram"
-              maxLength={500}
-              rows={4}
-              value={historiaForm.mensaje}
-              onChange={(event) => setHistoriaForm((current) => ({ ...current, mensaje: event.target.value }))}
-            />
-            <small>{historiaForm.mensaje.length}/500 caracteres</small>
-            {historiaMessage && <p className="form-feedback">{historiaMessage}</p>}
-            <button className="btn btn-success" type="submit" disabled={isSavingHistoria}>
-              {isSavingHistoria ? "Publicando..." : "Publicar historia"}
-            </button>
-          </form>
+            ))
+          )}
+        </div>
+        <div className="home-section-action">
+          <button className="btn btn-outline-success" type="button" onClick={() => navigate("/historias")}>
+            Ver y compartir historias
+          </button>
         </div>
       </section>
 
@@ -506,36 +381,11 @@ export default function Home() {
         <div>
           <span>Soporte</span>
           <h2 id="home-contact-title">Tienes dudas o necesitas ayuda?</h2>
-          <p>Escribenos para recibir orientacion sobre tu cuenta, publicaciones o convivencia.</p>
+          <p>Envia un mensaje al equipo de Roomiegram desde una pantalla dedicada de soporte.</p>
         </div>
-        <form className="home-contact-form" onSubmit={handleContactSubmit}>
-          <input
-            className="form-control"
-            placeholder="Asunto"
-            maxLength={100}
-            value={contactForm.asunto}
-            onChange={(event) => setContactForm((current) => ({ ...current, asunto: event.target.value }))}
-          />
-          <input
-            className="form-control"
-            placeholder="Correo de contacto"
-            type="email"
-            value={contactForm.correo}
-            onChange={(event) => setContactForm((current) => ({ ...current, correo: event.target.value }))}
-          />
-          <textarea
-            className="form-control"
-            placeholder="Mensaje para soporte"
-            maxLength={1000}
-            rows={3}
-            value={contactForm.mensaje}
-            onChange={(event) => setContactForm((current) => ({ ...current, mensaje: event.target.value }))}
-          />
-          {contactMessage && <p className="form-feedback">{contactMessage}</p>}
-          <button className="btn btn-success" type="submit" disabled={isSendingContact}>
-            {isSendingContact ? "Enviando..." : "Enviar mensaje"}
-          </button>
-        </form>
+        <button className="btn btn-success" type="button" onClick={() => navigate("/soporte")}>
+          Contactar soporte
+        </button>
       </section>
     </div>
   );

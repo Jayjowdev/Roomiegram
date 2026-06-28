@@ -807,6 +807,12 @@ p {
   font-size: 14px;
 }
 
+.home-section-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
 .home-inline-form,
 .home-contact-form {
   display: grid;
@@ -864,6 +870,128 @@ p {
 
 .home-contact-form {
   width: min(420px, 100%);
+}
+
+/* ---------- HISTORIAS Y SOPORTE ---------- */
+
+.stories-page,
+.support-page {
+  background:
+    linear-gradient(180deg, rgba(230, 244, 241, 0.42), rgba(245, 247, 246, 0) 260px),
+    #f5f7f6;
+}
+
+.stories-hero,
+.support-layout,
+.story-form-card,
+.support-form-card {
+  background: #ffffff;
+  border: 1px solid #e4eee9;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+.stories-hero {
+  margin-bottom: 24px;
+  padding: 30px;
+}
+
+.stories-hero h1,
+.support-copy h1 {
+  margin: 0 0 12px;
+  color: #222;
+  font-size: 42px;
+  line-height: 1.08;
+}
+
+.stories-hero p,
+.support-copy p,
+.story-form-card p {
+  margin: 0;
+  color: #5f6d68;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.stories-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.story-form-card,
+.support-form-card {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.story-form-card h2,
+.support-form-card h2 {
+  margin: 0;
+  color: #24322e;
+  font-size: 24px;
+}
+
+.story-form-card .form-control,
+.support-form-card .form-control {
+  min-height: 44px;
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+}
+
+.story-form-card textarea.form-control,
+.support-form-card textarea.form-control {
+  resize: vertical;
+}
+
+.story-form-card small,
+.support-form-card small {
+  color: #71817b;
+  font-size: 12px;
+}
+
+.stories-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.story-card {
+  min-height: 190px;
+}
+
+.support-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1fr);
+  gap: 30px;
+  align-items: start;
+  padding: 30px;
+}
+
+.support-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.support-note {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  background: #e6f4f1;
+  border-radius: 12px;
+  color: #1f7a63;
+}
+
+.support-note strong {
+  font-size: 14px;
+}
+
+.support-note span {
+  color: #3f5f56;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .home-publicaciones {
@@ -2771,6 +2899,11 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .stories-layout,
+  .support-layout {
+    grid-template-columns: 1fr;
+  }
+
   .home-hero h1,
   .landing-text h1 {
     font-size: 42px;
@@ -2866,6 +2999,10 @@ p {
 
   .home-contact-form {
     width: 100%;
+  }
+
+  .stories-list {
+    grid-template-columns: 1fr;
   }
 
   .login-image,
@@ -3000,6 +3137,10 @@ p {
   .home-hero,
   .my-publications-hero,
   .my-publications-empty,
+  .stories-hero,
+  .story-form-card,
+  .support-layout,
+  .support-form-card,
   .planes-hero,
   .detalle-main,
   .detalle-side,
@@ -3033,6 +3174,8 @@ p {
 
   .home-hero h1,
   .my-publications-hero h1,
+  .stories-hero h1,
+  .support-copy h1,
   .planes-hero h1,
   .module-title h1,
   .dashboard-welcome h1,
@@ -3102,6 +3245,16 @@ p {
   }
 
   .home-contact-section .btn {
+    width: 100%;
+  }
+
+  .home-section-action {
+    justify-content: stretch;
+  }
+
+  .home-section-action .btn,
+  .story-form-card .btn,
+  .support-form-card .btn {
     width: 100%;
   }
 
@@ -3177,6 +3330,8 @@ p {
 
   .home-hero h1,
   .my-publications-hero h1,
+  .stories-hero h1,
+  .support-copy h1,
   .home-section-heading h2,
   .home-contact-section h2,
   .planes-hero h1,

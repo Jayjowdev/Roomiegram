@@ -32,6 +32,8 @@ export default function Historias() {
   });
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editingHistoria, setEditingHistoria] = useState<Historia | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,19 +83,81 @@ export default function Historias() {
 
     try {
       setIsSaving(true);
-      const historia = await publicacionService.crearHistoria({
+      const payload = {
         titulo,
         mensaje,
-        nombreVisible: user?.nombre || user?.usuario || "Usuario Roomiegram",
-        usuarioCreador: user?.usuario,
-      });
-      setHistorias((current) => [historia, ...current]);
+        nombreVisible: editingHistoria?.nombreVisible || user?.nombre || user?.usuario || "Usuario Roomiegram",
+        usuarioCreador: editingHistoria?.usuarioCreador || user?.usuario,
+      };
+
+      if (editingHistoria) {
+        const actualizada = await publicacionService.actualizarHistoria(
+          editingHistoria.id,
+          payload,
+          user?.usuario || "",
+          user?.role || "CLIENTE",
+        );
+        setHistorias((current) => current.map((historia) =>
+          historia.id === actualizada.id ? actualizada : historia
+        ));
+        setEditingHistoria(null);
+        setMessage("Historia actualizada correctamente.");
+      } else {
+        const historia = await publicacionService.crearHistoria(payload);
+        setHistorias((current) => [historia, ...current]);
+        setMessage("Historia publicada correctamente.");
+      }
+
       setForm({ titulo: "", mensaje: "" });
-      setMessage("Historia publicada correctamente.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo publicar la historia.");
+      setMessage(error instanceof Error ? error.message : "No se pudo guardar la historia.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const puedeGestionarHistoria = (historia: Historia) => {
+    if (historia.id < 0) return false;
+    if (user?.role === "ADMIN") return true;
+    return !!user?.usuario && historia.usuarioCreador?.toLowerCase() === user.usuario.toLowerCase();
+  };
+
+  const startEdit = (historia: Historia) => {
+    setEditingHistoria(historia);
+    setForm({
+      titulo: historia.titulo,
+      mensaje: historia.mensaje,
+    });
+    setMessage("Editando historia. Guarda los cambios o cancela la edicion.");
+  };
+
+  const cancelEdit = () => {
+    setEditingHistoria(null);
+    setForm({ titulo: "", mensaje: "" });
+    setMessage("");
+  };
+
+  const handleDelete = async (historia: Historia) => {
+    if (!user?.usuario) {
+      setMessage("No se pudo identificar tu sesion.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Eliminar la historia "${historia.titulo}"?`);
+    if (!confirmar) return;
+
+    try {
+      setDeletingId(historia.id);
+      await publicacionService.eliminarHistoria(historia.id, user.usuario, user.role || "CLIENTE");
+      setHistorias((current) => current.filter((item) => item.id !== historia.id));
+      if (editingHistoria?.id === historia.id) {
+        cancelEdit();
+      }
+      setMessage("Historia eliminada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la historia.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -126,7 +190,7 @@ export default function Historias() {
 
       <section className="stories-layout">
         <form className="story-form-card" onSubmit={handleSubmit}>
-          <h2>Comparte tu historia</h2>
+          <h2>{editingHistoria ? "Editar historia" : "Comparte tu historia"}</h2>
           <p>Escribe una reseña breve y clara. Tu nombre visible se tomara desde tu perfil.</p>
           <input
             className="form-control"
@@ -145,8 +209,13 @@ export default function Historias() {
           />
           <small>{form.mensaje.length}/500 caracteres</small>
           <button className="btn btn-success" type="submit" disabled={isSaving}>
-            {isSaving ? "Publicando..." : "Publicar historia"}
+            {isSaving ? "Guardando..." : editingHistoria ? "Guardar cambios" : "Publicar historia"}
           </button>
+          {editingHistoria && (
+            <button className="btn btn-outline-success" type="button" onClick={cancelEdit} disabled={isSaving}>
+              Cancelar edicion
+            </button>
+          )}
         </form>
 
         <div className="stories-list">
@@ -158,6 +227,21 @@ export default function Historias() {
                 <h3>{historia.titulo}</h3>
                 <p>"{historia.mensaje}"</p>
                 <strong>{historia.nombreVisible}</strong>
+                {puedeGestionarHistoria(historia) && (
+                  <div className="item-actions story-actions">
+                    <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(historia)}>
+                      Editar
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      type="button"
+                      disabled={deletingId === historia.id}
+                      onClick={() => handleDelete(historia)}
+                    >
+                      {deletingId === historia.id ? "Eliminando..." : "Eliminar"}
+                    </button>
+                  </div>
+                )}
               </article>
             ))
           )}

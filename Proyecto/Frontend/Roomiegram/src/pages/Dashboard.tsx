@@ -4,7 +4,7 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
-import { publicacionService } from "../services/publicacionService";
+import { publicacionService, type Historia } from "../services/publicacionService";
 import { tareaService } from "../services/tareaService";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
@@ -13,37 +13,48 @@ import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } fro
 
 type DashboardStats = {
   publicaciones: number;
+  historias: number;
   hogares: number;
   tareas: number;
   solicitudesPendientes: number;
 };
+
+type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     publicaciones: 0,
+    historias: 0,
     hogares: 0,
     tareas: 0,
     solicitudesPendientes: 0,
   });
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [historias, setHistorias] = useState<Historia[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [deletingPublicationId, setDeletingPublicationId] = useState<number | null>(null);
+  const [deletingHistoriaId, setDeletingHistoriaId] = useState<number | null>(null);
+  const [editingHistoria, setEditingHistoria] = useState<Historia | null>(null);
+  const [historiaForm, setHistoriaForm] = useState({ titulo: "", mensaje: "" });
+  const [savingHistoria, setSavingHistoria] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardFilter, setDashboardFilter] = useState("");
+  const [activeSection, setActiveSection] = useState<DashboardSection>("publicaciones");
 
   useEffect(() => {
     let isMounted = true;
 
     Promise.allSettled([
       publicacionService.listar(),
+      publicacionService.listarHistorias(),
       hogarService.listar(),
       tareaService.listar(),
     ])
-      .then(([publicacionesResult, hogaresResult, tareasResult]) => {
+      .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult]) => {
         if (!isMounted) return;
 
         const backendPublicaciones =
@@ -55,6 +66,7 @@ export default function Dashboard() {
           ...backendPublicaciones.map((publicacion) => ({ ...publicacion, origen: "backend" as const })),
           ...localPublicaciones,
         ];
+        const historiasData = historiasResult.status === "fulfilled" ? historiasResult.value : [];
         const hogaresData = hogaresResult.status === "fulfilled" ? hogaresResult.value : [];
         const tareasData = tareasResult.status === "fulfilled" ? tareasResult.value : [];
         const solicitudesPendientes = hogaresData.reduce(
@@ -64,15 +76,17 @@ export default function Dashboard() {
 
         setStats({
           publicaciones: publicacionesData.length,
+          historias: historiasData.length,
           hogares: hogaresData.length,
           tareas: tareasData.length,
           solicitudesPendientes,
         });
         setPublicaciones(publicacionesData);
+        setHistorias(historiasData);
         setHogares(hogaresData);
         setTareas(tareasData);
 
-        if ([publicacionesResult, hogaresResult, tareasResult].some((result) => result.status === "rejected")) {
+        if ([publicacionesResult, historiasResult, hogaresResult, tareasResult].some((result) => result.status === "rejected")) {
           setMessage("Algunos datos reales no se pudieron cargar. Intenta nuevamente.");
         }
       })
@@ -120,6 +134,98 @@ export default function Dashboard() {
     }
   };
 
+  const startEditarHistoria = (historia: Historia) => {
+    setEditingHistoria(historia);
+    setHistoriaForm({
+      titulo: historia.titulo,
+      mensaje: historia.mensaje,
+    });
+    setMessage("Editando historia desde administracion.");
+  };
+
+  const cancelarEdicionHistoria = () => {
+    setEditingHistoria(null);
+    setHistoriaForm({ titulo: "", mensaje: "" });
+    setMessage("");
+  };
+
+  const guardarHistoriaAdmin = async () => {
+    if (!editingHistoria) return;
+    if (!user?.usuario || user.role !== "ADMIN") {
+      setMessage("Solo un administrador puede editar historias.");
+      return;
+    }
+
+    const titulo = historiaForm.titulo.trim();
+    const mensajeHistoria = historiaForm.mensaje.trim();
+
+    if (!titulo) {
+      setMessage("El titulo de la historia es obligatorio.");
+      return;
+    }
+    if (mensajeHistoria.length < 20) {
+      setMessage("La historia debe tener al menos 20 caracteres.");
+      return;
+    }
+    if (mensajeHistoria.length > 500) {
+      setMessage("La historia no puede superar 500 caracteres.");
+      return;
+    }
+
+    try {
+      setSavingHistoria(true);
+      const actualizada = await publicacionService.actualizarHistoria(
+        editingHistoria.id,
+        {
+          titulo,
+          mensaje: mensajeHistoria,
+          nombreVisible: editingHistoria.nombreVisible,
+          usuarioCreador: editingHistoria.usuarioCreador,
+        },
+        user.usuario,
+        user.role,
+      );
+      setHistorias((current) =>
+        current.map((historia) => (historia.id === actualizada.id ? actualizada : historia))
+      );
+      setEditingHistoria(null);
+      setHistoriaForm({ titulo: "", mensaje: "" });
+      setMessage("Historia actualizada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo actualizar la historia.");
+    } finally {
+      setSavingHistoria(false);
+    }
+  };
+
+  const eliminarHistoriaAdmin = async (historia: Historia) => {
+    if (!user?.usuario || user.role !== "ADMIN") {
+      setMessage("Solo un administrador puede eliminar historias.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Eliminar la historia "${historia.titulo}"?`);
+    if (!confirmar) return;
+
+    try {
+      setDeletingHistoriaId(historia.id);
+      await publicacionService.eliminarHistoria(historia.id, user.usuario, user.role);
+      setHistorias((current) => current.filter((item) => item.id !== historia.id));
+      setStats((current) => ({
+        ...current,
+        historias: Math.max(0, current.historias - 1),
+      }));
+      if (editingHistoria?.id === historia.id) {
+        cancelarEdicionHistoria();
+      }
+      setMessage("Historia eliminada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la historia.");
+    } finally {
+      setDeletingHistoriaId(null);
+    }
+  };
+
   const formatDate = (value?: string) => {
     if (!value) return "Sin fecha";
     const date = new Date(value);
@@ -133,6 +239,11 @@ export default function Dashboard() {
   const getPublicationPrice = (publicacion: Publicacion) => {
     const price = publicacion.precio ?? publicacion.precioMensual;
     return typeof price === "number" && price > 0 ? `$${price.toLocaleString("es-CL")}` : "Sin precio";
+  };
+
+  const resumirTexto = (value?: string, max = 150) => {
+    const texto = value?.trim() || "Sin descripcion";
+    return texto.length > max ? `${texto.slice(0, max).trim()}...` : texto;
   };
 
   const normalizeSearch = (value: unknown) =>
@@ -164,6 +275,21 @@ export default function Dashboard() {
         ]),
       ),
     [dashboardFilter, publicaciones],
+  );
+
+  const historiasFiltradas = useMemo(
+    () =>
+      historias.filter((historia) =>
+        matchesFilter([
+          historia.titulo,
+          historia.mensaje,
+          historia.nombreVisible,
+          historia.usuarioCreador,
+          formatDate(historia.fechaCreacion),
+          "historia",
+        ]),
+      ),
+    [dashboardFilter, historias],
   );
 
   const hogaresFiltrados = useMemo(
@@ -199,7 +325,15 @@ export default function Dashboard() {
   );
 
   const hasActiveFilter = dashboardFilter.trim().length > 0;
-  const filteredTotal = publicacionesFiltradas.length + hogaresFiltrados.length + tareasFiltradas.length;
+  const filteredTotal =
+    publicacionesFiltradas.length + hogaresFiltrados.length + tareasFiltradas.length + historiasFiltradas.length;
+  const totalRegistros = stats.publicaciones + stats.historias + stats.hogares + stats.tareas;
+  const dashboardTabs = [
+    { id: "publicaciones" as const, label: "Publicaciones", count: publicacionesFiltradas.length },
+    { id: "historias" as const, label: "Historias", count: historiasFiltradas.length },
+    { id: "hogares" as const, label: "Hogares", count: hogaresFiltrados.length },
+    { id: "tareas" as const, label: "Tareas", count: tareasFiltradas.length },
+  ];
 
   return (
     <div className="dashboard-page">
@@ -222,7 +356,7 @@ export default function Dashboard() {
         <h1>Dashboard de administracion</h1>
         <p>
           Hola, {user?.nombre || user?.usuario || "usuario"}. Revisa datos reales de RoomieGram y
-          modera publicaciones registradas en la plataforma.
+          modera publicaciones e historias registradas en la plataforma.
         </p>
       </section>
 
@@ -232,6 +366,10 @@ export default function Dashboard() {
         <article className="dashboard-card">
           <h5>Total publicaciones</h5>
           <h2>{isLoading ? "..." : stats.publicaciones}</h2>
+        </article>
+        <article className="dashboard-card">
+          <h5>Historias de usuarios</h5>
+          <h2>{isLoading ? "..." : stats.historias}</h2>
         </article>
         <article className="dashboard-card">
           <h5>Total hogares</h5>
@@ -250,7 +388,10 @@ export default function Dashboard() {
       <section className="dashboard-filter-panel">
         <div>
           <label htmlFor="dashboard-filter">Buscar actividad</label>
-          <p>Filtra publicaciones, hogares y tareas por usuario, titulo, descripcion, tipo, hogar, encargado o estado.</p>
+          <p>
+            Filtra publicaciones, historias, hogares y tareas por usuario, titulo, descripcion, tipo, hogar,
+            encargado o estado.
+          </p>
         </div>
         <div className="dashboard-filter-controls">
           <input
@@ -273,11 +414,25 @@ export default function Dashboard() {
         <span className="dashboard-filter-summary">
           {hasActiveFilter
             ? `Mostrando ${filteredTotal} resultados para "${dashboardFilter.trim()}"`
-            : `Mostrando ${stats.publicaciones + stats.hogares + stats.tareas} registros reales`}
+            : `Mostrando ${totalRegistros} registros reales`}
         </span>
       </section>
 
-      <section className="dashboard-content">
+      <section className="dashboard-section-nav" aria-label="Secciones del dashboard">
+        {dashboardTabs.map((tab) => (
+          <button
+            className={`dashboard-section-tab ${activeSection === tab.id ? "active" : ""}`}
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSection(tab.id)}
+          >
+            <span>{tab.label}</span>
+            <strong>{tab.count}</strong>
+          </button>
+        ))}
+      </section>
+
+      <section className={`dashboard-content dashboard-content-primary ${activeSection === "publicaciones" ? "" : "dashboard-hidden-section"}`}>
         <div className="dashboard-activity">
           <div className="section-heading-row">
             <h4>Publicaciones registradas</h4>
@@ -320,18 +475,131 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-profile">
-          <h4>Sesion administrativa</h4>
-          <p><strong>Nombre:</strong> {user?.nombre || "No informado"}</p>
-          <p><strong>Usuario:</strong> {user?.usuario || "No informado"}</p>
-          <p><strong>Rol:</strong> {user?.role || "CLIENTE"}</p>
-          <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>
-            Ver publicaciones
-          </button>
+          <span className="demo-kicker">Sesion</span>
+          <h4>Administrador activo</h4>
+          <div className="admin-session-card">
+            <strong>{user?.nombre || user?.usuario || "Administrador"}</strong>
+            <span>{user?.usuario || "No informado"}</span>
+            <span className="status-pill success">{user?.role || "CLIENTE"}</span>
+          </div>
+          <div className="admin-quick-actions">
+            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>
+              Ver Home
+            </button>
+            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/historias")}>
+              Ver historias
+            </button>
+            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/convivencia")}>
+              Panel convivencia
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="dashboard-content">
+      <section className={`dashboard-content dashboard-content-wide ${activeSection === "historias" ? "" : "dashboard-hidden-section"}`}>
         <div className="dashboard-activity">
+          <div className="section-heading-row">
+            <div>
+              <h4>Historias de usuarios</h4>
+              <p className="dashboard-section-help">Gestiona testimonios reales publicados por usuarios.</p>
+            </div>
+            <span className="status-pill">{historiasFiltradas.length} resultados</span>
+          </div>
+
+          {editingHistoria && (
+            <div className="admin-inline-editor">
+              <div>
+                <label htmlFor="admin-historia-titulo">Titulo</label>
+                <input
+                  id="admin-historia-titulo"
+                  className="form-control"
+                  maxLength={80}
+                  value={historiaForm.titulo}
+                  onChange={(event) =>
+                    setHistoriaForm((current) => ({ ...current, titulo: event.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label htmlFor="admin-historia-mensaje">Mensaje</label>
+                <textarea
+                  id="admin-historia-mensaje"
+                  className="form-control"
+                  rows={4}
+                  maxLength={500}
+                  value={historiaForm.mensaje}
+                  onChange={(event) =>
+                    setHistoriaForm((current) => ({ ...current, mensaje: event.target.value }))
+                  }
+                />
+                <small>{historiaForm.mensaje.length}/500 caracteres</small>
+              </div>
+              <div className="item-actions">
+                <button
+                  className="btn btn-success btn-sm"
+                  type="button"
+                  onClick={guardarHistoriaAdmin}
+                  disabled={savingHistoria}
+                >
+                  {savingHistoria ? "Guardando..." : "Guardar cambios"}
+                </button>
+                <button
+                  className="btn btn-outline-success btn-sm"
+                  type="button"
+                  onClick={cancelarEdicionHistoria}
+                  disabled={savingHistoria}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="sin-resultados"><p>Cargando historias...</p></div>
+          ) : historias.length === 0 ? (
+            <div className="sin-resultados"><p>No hay historias registradas.</p></div>
+          ) : historiasFiltradas.length === 0 ? (
+            <div className="sin-resultados"><p>No hay resultados para este filtro.</p></div>
+          ) : (
+            <div className="module-list dashboard-history-list">
+              {historiasFiltradas.map((historia) => (
+                <article className="module-item dashboard-history-item" key={historia.id}>
+                  <div className="section-heading-row">
+                    <div>
+                      <h4>{historia.titulo}</h4>
+                      <span>{historia.nombreVisible || "Sin nombre visible"}</span>
+                    </div>
+                    <span className="status-pill">{historia.usuarioCreador || "Sin creador"}</span>
+                  </div>
+                  <p>{resumirTexto(historia.mensaje)}</p>
+                  <small>Fecha: {formatDate(historia.fechaCreacion)}</small>
+                  <div className="item-actions">
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      type="button"
+                      onClick={() => startEditarHistoria(historia)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      type="button"
+                      onClick={() => eliminarHistoriaAdmin(historia)}
+                      disabled={deletingHistoriaId === historia.id}
+                    >
+                      {deletingHistoriaId === historia.id ? "Eliminando..." : "Eliminar"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className={`dashboard-content dashboard-single-switch ${activeSection === "hogares" || activeSection === "tareas" ? "" : "dashboard-hidden-section"}`}>
+        <div className={`dashboard-activity ${activeSection === "hogares" ? "" : "dashboard-hidden-section"}`}>
           <div className="section-heading-row">
             <h4>Hogares registrados</h4>
             <span className="status-pill">{hogaresFiltrados.length} resultados</span>
@@ -366,7 +634,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="dashboard-activity">
+        <div className={`dashboard-activity ${activeSection === "tareas" ? "" : "dashboard-hidden-section"}`}>
           <div className="section-heading-row">
             <h4>Tareas registradas</h4>
             <span className="status-pill">{tareasFiltradas.length} resultados</span>

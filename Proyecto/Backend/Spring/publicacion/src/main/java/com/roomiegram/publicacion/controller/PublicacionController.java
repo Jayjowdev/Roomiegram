@@ -75,6 +75,37 @@ public class PublicacionController {
         }
     }
 
+    @PutMapping("/historias/{id}")
+    public ResponseEntity<?> actualizarHistoria(
+            @PathVariable Long id,
+            @RequestBody HistoriaRequest request,
+            @RequestParam String usuarioSolicitante,
+            @RequestParam String rolSolicitante) {
+        try {
+            Historia resultado = historiaService.actualizarHistoria(id, request, usuarioSolicitante, rolSolicitante);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/historias/{id}")
+    public ResponseEntity<?> eliminarHistoria(
+            @PathVariable Long id,
+            @RequestParam String usuarioSolicitante,
+            @RequestParam String rolSolicitante) {
+        try {
+            historiaService.eliminarHistoria(id, usuarioSolicitante, rolSolicitante);
+            return ResponseEntity.ok("Historia eliminada correctamente");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarPublicacion(
             @PathVariable Long id,

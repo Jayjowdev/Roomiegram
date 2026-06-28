@@ -98,6 +98,38 @@ export async function crearHistoria(payload: HistoriaPayload) {
   }
 }
 
+export async function actualizarHistoria(
+  id: number,
+  payload: HistoriaPayload,
+  usuarioSolicitante: string,
+  rolSolicitante: string,
+) {
+  try {
+    const { data } = await publicacionApi.put<Historia>(`/publicaciones/historias/${id}`, payload, {
+      params: {
+        usuarioSolicitante,
+        rolSolicitante,
+      },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function eliminarHistoria(id: number, usuarioSolicitante: string, rolSolicitante: string) {
+  try {
+    await publicacionApi.delete(`/publicaciones/historias/${id}`, {
+      params: {
+        usuarioSolicitante,
+        rolSolicitante,
+      },
+    })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const publicacionService = {
   listar: listarPublicaciones,
   crear: guardarPublicacion,
@@ -106,6 +138,8 @@ export const publicacionService = {
   eliminar: eliminarPublicacion,
   listarHistorias,
   crearHistoria,
+  actualizarHistoria,
+  eliminarHistoria,
 }
 
 export function mapBackendPublicacionToOferta(pub: Publicacion): Publicacion {

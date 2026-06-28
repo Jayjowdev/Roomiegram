@@ -31,6 +31,43 @@ public class HistoriaService {
         return historiaRepository.save(historia);
     }
 
+    public Historia actualizarHistoria(Long id, HistoriaRequest request, String usuarioSolicitante, String rolSolicitante) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la historia es obligatorio");
+        }
+        validarSolicitante(usuarioSolicitante, rolSolicitante);
+        validarHistoria(request);
+
+        Historia historia = historiaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La historia no existe"));
+
+        if (!puedeGestionar(historia, usuarioSolicitante, rolSolicitante)) {
+            throw new SecurityException("No tienes permisos para editar esta historia");
+        }
+
+        historia.setTitulo(request.titulo().trim());
+        historia.setMensaje(request.mensaje().trim());
+        historia.setNombreVisible(normalizarNombre(request.nombreVisible()));
+
+        return historiaRepository.save(historia);
+    }
+
+    public void eliminarHistoria(Long id, String usuarioSolicitante, String rolSolicitante) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la historia es obligatorio");
+        }
+        validarSolicitante(usuarioSolicitante, rolSolicitante);
+
+        Historia historia = historiaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La historia no existe"));
+
+        if (!puedeGestionar(historia, usuarioSolicitante, rolSolicitante)) {
+            throw new SecurityException("No tienes permisos para eliminar esta historia");
+        }
+
+        historiaRepository.delete(historia);
+    }
+
     private void validarHistoria(HistoriaRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("La historia es obligatoria");
@@ -67,5 +104,22 @@ public class HistoriaService {
             return null;
         }
         return valor.trim().length() > 120 ? valor.trim().substring(0, 120) : valor.trim();
+    }
+
+    private void validarSolicitante(String usuarioSolicitante, String rolSolicitante) {
+        if (usuarioSolicitante == null || usuarioSolicitante.trim().isBlank()) {
+            throw new IllegalArgumentException("El usuario solicitante no puede estar vacio");
+        }
+        if (rolSolicitante == null || rolSolicitante.trim().isBlank()) {
+            throw new IllegalArgumentException("El rol solicitante no puede estar vacio");
+        }
+    }
+
+    private boolean puedeGestionar(Historia historia, String usuarioSolicitante, String rolSolicitante) {
+        boolean esCreador = historia.getUsuarioCreador() != null
+                && historia.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
+        boolean esAdmin = "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
+
+        return esCreador || esAdmin;
     }
 }

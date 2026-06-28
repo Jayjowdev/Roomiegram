@@ -60,6 +60,27 @@ export async function eliminarHogar(id: number, administradorId: number) {
   }
 }
 
+export async function eliminarHogarComoAdmin(id: number, administradorId: number) {
+  try {
+    await hogarApi.delete(`/hogares/${id}`, {
+      params: { administradorId, rolSolicitante: "ADMIN" },
+    })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function removerIntegranteHogar(hogarId: number, usuarioId: number, solicitanteId: number) {
+  try {
+    const { data } = await hogarApi.delete<Hogar>(`/hogares/${hogarId}/integrantes/${usuarioId}`, {
+      params: { solicitanteId },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function agregarPublicacionHogar(hogarId: number, administradorId: number, recursoId: number) {
   try {
     const { data } = await hogarApi.post<Hogar>(`/hogares/${hogarId}/publicaciones`, {
@@ -95,4 +116,7 @@ export const hogarService = {
       .then(({ data }) => data),
   agregarPublicacion: agregarPublicacionHogar,
   eliminar: eliminarHogar,
+  eliminarComoAdmin: eliminarHogarComoAdmin,
+  salir: removerIntegranteHogar,
+  quitarIntegrante: removerIntegranteHogar,
 }

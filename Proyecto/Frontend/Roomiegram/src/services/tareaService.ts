@@ -46,10 +46,19 @@ export async function marcarTareaPendiente(id: number) {
   }
 }
 
+export async function eliminarTarea(id: number) {
+  try {
+    await tareaApi.delete(`/tareas/${id}`)
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const tareaService = {
   listar: listarTareas,
   crear: guardarTarea,
   actualizar: actualizarTarea,
   completar: completarTarea,
   pendiente: marcarTareaPendiente,
+  eliminar: eliminarTarea,
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -94,6 +95,24 @@ public class TareaController {
             @Parameter(description = "Id de la tarea a marcar como pendiente", required = true)
             @PathVariable Long id) {
         return cambiarEstado(id, false);
+    }
+
+    @Operation(summary = "Eliminar una tarea", description = "Permite eliminar una tarea existente")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Tarea eliminada exitosamente", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Tarea no encontrada", content = @Content)
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarTarea(
+            @Parameter(description = "Id de la tarea a eliminar", required = true)
+            @PathVariable Long id) {
+        try {
+            tareaService.eliminarTarea(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            HttpStatus status = "La tarea no existe".equals(e.getMessage()) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(Map.of("mensaje", e.getMessage()));
+        }
     }
 
     @Operation(summary = "Listar todas las tareas", 

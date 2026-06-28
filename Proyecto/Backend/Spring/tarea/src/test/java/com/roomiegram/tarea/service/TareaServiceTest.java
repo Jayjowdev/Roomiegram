@@ -189,6 +189,27 @@ class TareaServiceTest {
         assertEquals("La tarea no existe", exception.getMessage());
     }
 
+    @Test
+    void eliminarTareaDebeEliminarSiExiste() {
+        Tarea tarea = crearTarea();
+        when(tareaRepository.findById(1L)).thenReturn(Optional.of(tarea));
+
+        tareaService.eliminarTarea(1L);
+
+        verify(tareaRepository).findById(1L);
+        verify(tareaRepository).delete(tarea);
+    }
+
+    @Test
+    void eliminarTareaDebeFallarSiNoExiste() {
+        when(tareaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> tareaService.eliminarTarea(99L));
+
+        assertEquals("La tarea no existe", exception.getMessage());
+    }
+
     private Tarea crearTarea() {
         Tarea tarea = new Tarea();
         tarea.setId(1L);

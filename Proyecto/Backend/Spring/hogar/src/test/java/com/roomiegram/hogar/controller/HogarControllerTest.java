@@ -82,10 +82,31 @@ class HogarControllerTest {
 
     @Test
     void eliminarHogarDebeRetornar204() throws Exception {
-        doNothing().when(hogarService).eliminarHogar(1L, 1L);
+        doNothing().when(hogarService).eliminarHogar(1L, 1L, null);
 
         mockMvc.perform(delete("/hogares/1")
                         .param("administradorId", "1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void removerIntegranteDebeUsarSolicitanteId() throws Exception {
+        Hogar hogar = crearHogar();
+        when(hogarService.removerIntegrante(1L, 2L, 1L)).thenReturn(hogar);
+
+        mockMvc.perform(delete("/hogares/1/integrantes/2")
+                        .param("solicitanteId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void eliminarHogarDebePermitirRolAdminGlobal() throws Exception {
+        doNothing().when(hogarService).eliminarHogar(1L, 99L, "ADMIN");
+
+        mockMvc.perform(delete("/hogares/1")
+                        .param("administradorId", "99")
+                        .param("rolSolicitante", "ADMIN"))
                 .andExpect(status().isNoContent());
     }
 

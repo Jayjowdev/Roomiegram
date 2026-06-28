@@ -50,6 +50,17 @@ public class TareaService {
         return tareaRepository.save(existente);
     }
 
+    public void eliminarTarea(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la tarea es obligatorio");
+        }
+
+        Tarea existente = tareaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La tarea no existe"));
+
+        tareaRepository.delete(existente);
+    }
+
     public List<Tarea> listarTareas() {
         return tareaRepository.findAll().stream()
                 .peek(this::normalizarEstado)

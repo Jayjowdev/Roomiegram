@@ -13,7 +13,7 @@ import type { UserSession } from "../types/auth";
 import type { PublicacionRequest } from "../types/Backend";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
-import { savePublicacionImage } from "../utils/publicacionImages";
+import { removePublicacionImage, savePublicacionImage } from "../utils/publicacionImages";
 import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
 const initialPublicacionForm: PublicacionRequest = {
@@ -50,6 +50,13 @@ function mapLocalPublicacion(pub: Publicacion): Publicacion {
     ...pub,
     origen: "local",
   };
+}
+
+function buildEditableImages(publicacion: Publicacion) {
+  return [...new Set([
+    ...(publicacion.galeria || []),
+    publicacion.imagen,
+  ].filter((image): image is string => Boolean(image?.trim())))];
 }
 
 function localPublicacionPerteneceAlUsuario(publicacion: Publicacion, user: UserSession | null) {
@@ -181,7 +188,8 @@ export default function CrearPublicacion() {
       numeroPersonas: tipo === "ofrezco_casa" ? Number(publicacion.numeroPersonas || 1) : 0,
       numeroBanos: tipo === "ofrezco_casa" ? Number(publicacion.numeroBanos || 1) : 0,
     });
-    setMessage("Editando publicacion. Las fotos se mantienen como estaban.");
+    setImagenesPreview(buildEditableImages(publicacion));
+    setMessage("Editando publicacion. Puedes mantener, agregar o eliminar fotos.");
     requestAnimationFrame(() => tituloRef.current?.focus());
   }
 
@@ -189,6 +197,9 @@ export default function CrearPublicacion() {
     setEditingPublicacion(null);
     setTipoPublicacion("ofrezco_casa");
     setForm(initialPublicacionForm);
+    setImagenesPreview([]);
+    setCropQueue([]);
+    setCropSource("");
     setMessage("");
     setSearchParams({});
   }
@@ -291,7 +302,12 @@ export default function CrearPublicacion() {
       setCropQueue(validImages.slice(1));
       setCropSource(validImages[0] || "");
       setMessage("");
+      event.currentTarget.value = "";
     });
+  };
+
+  const removePreviewImage = (indexToRemove: number) => {
+    setImagenesPreview((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
   const saveCroppedPublicationImage = (image: string) => {
@@ -323,6 +339,7 @@ export default function CrearPublicacion() {
     const tituloPublicacion = form.titulo.trim();
     const ubicacionPublicacion = form.ubicacion.trim();
     const descripcionPublicacion = form.descripcion.trim();
+    const imagenesPublicacion = imagenesPreview.filter(Boolean);
     const payload = {
       tipo: tipoPublicacion,
       usuarioCreador: creador,
@@ -333,6 +350,8 @@ export default function CrearPublicacion() {
       numeroHabitaciones: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroHabitaciones) : 0,
       numeroPersonas: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroPersonas) : 0,
       numeroBanos: tipoPublicacion === "ofrezco_casa" ? Number(form.numeroBanos) : 0,
+      imagen: imagenesPublicacion[0] || undefined,
+      galeria: imagenesPublicacion,
     };
 
     try {
@@ -349,6 +368,11 @@ export default function CrearPublicacion() {
             user.role || "CLIENTE",
           );
           const mapped = mapBackendPublicacion(actualizada);
+          if (imagenesPublicacion[0]) {
+            savePublicacionImage(actualizada.id, imagenesPublicacion[0]);
+          } else {
+            removePublicacionImage(actualizada.id);
+          }
           setPublicaciones((current) => current.map((item) =>
             item.id === editingPublicacion.id && item.origen === "backend" ? mapped : item
           ));
@@ -359,6 +383,8 @@ export default function CrearPublicacion() {
             origen: "local",
             precioMensual: tipoPublicacion === "ofrezco_casa" ? Number(form.precio) : undefined,
             presupuestoMaximo: tipoPublicacion === "busco_roomie" ? Number(form.precio) : undefined,
+            imagen: imagenesPublicacion[0] || undefined,
+            galeria: imagenesPublicacion,
             amenidades: tipoPublicacion === "ofrezco_casa"
               ? [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`]
               : undefined,
@@ -370,6 +396,7 @@ export default function CrearPublicacion() {
         }
 
         setEditingPublicacion(null);
+        setImagenesPreview([]);
         setSearchParams({});
         setMessage("Publicacion actualizada correctamente.");
         return;
@@ -378,11 +405,11 @@ export default function CrearPublicacion() {
       if (tipoPublicacion === "busco_roomie") {
         const resultado = await publicacionService.crear({
           ...payload,
-          imagen: imagenesPreview[0] || undefined,
-          galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
+          imagen: imagenesPublicacion[0] || undefined,
+          galeria: imagenesPublicacion.length > 0 ? imagenesPublicacion : undefined,
         });
 
-        if (imagenesPreview[0]) savePublicacionImage(resultado.id, imagenesPreview[0]);
+        if (imagenesPublicacion[0]) savePublicacionImage(resultado.id, imagenesPublicacion[0]);
         navigate("/home");
         return;
       }
@@ -394,12 +421,12 @@ export default function CrearPublicacion() {
       const resultado = await publicacionService.crearConHogar({
         ...form,
         ...payload,
-        imagen: imagenesPreview[0] || undefined,
-        galeria: imagenesPreview.length > 0 ? imagenesPreview : undefined,
+        imagen: imagenesPublicacion[0] || undefined,
+        galeria: imagenesPublicacion.length > 0 ? imagenesPublicacion : undefined,
         usuarioId: user.id,
       });
 
-      if (imagenesPreview[0]) savePublicacionImage(resultado.publicacion.id, imagenesPreview[0]);
+      if (imagenesPublicacion[0]) savePublicacionImage(resultado.publicacion.id, imagenesPublicacion[0]);
       navigate("/home");
     } catch (error) {
       if (tipoPublicacion === "ofrezco_casa") {
@@ -536,25 +563,34 @@ export default function CrearPublicacion() {
             </div>
           </div>
 
-          {!editingPublicacion && (
-            <div className="create-section">
-              <h3>Fotos</h3>
+          <div className="create-section">
+              <h3>Fotos de la publicacion</h3>
               <label className="image-upload">
-                <span>Agrega hasta 6 fotos</span>
+                <span>{editingPublicacion ? "Agregar fotos" : "Agrega hasta 6 fotos"}</span>
                 <input className="form-control" type="file" accept="image/*" multiple onChange={handleImageChange} />
               </label>
-              {imagenesPreview.length > 0 && (
+              {imagenesPreview.length === 0 ? (
+                <p className="form-helper">Esta publicacion no tiene fotos agregadas.</p>
+              ) : (
                 <div className="image-preview gallery-preview">
                   <div className="gallery-preview-grid">
                     {imagenesPreview.map((imagen, index) => (
-                      <img src={imagen} alt={`Vista previa ${index + 1}`} key={`${imagen}-${index}`} />
+                      <div className="gallery-preview-item" key={`${imagen}-${index}`}>
+                        <img src={imagen} alt={`Vista previa ${index + 1}`} />
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => removePreviewImage(index)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     ))}
                   </div>
                   <button type="button" className="btn btn-outline-success" onClick={() => setImagenesPreview([])}>Quitar fotos</button>
                 </div>
               )}
             </div>
-          )}
 
           <div className="create-actions">
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mi-perfil")}>Volver a mi perfil</button>

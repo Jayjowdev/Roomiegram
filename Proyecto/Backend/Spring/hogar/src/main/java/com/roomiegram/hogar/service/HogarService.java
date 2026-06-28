@@ -86,10 +86,28 @@ public class HogarService {
     }
 
     public Hogar removerIntegrante(Long hogarId, Long usuarioId, Long administradorId) {
-        validarId(administradorId, "El administrador es obligatorio");
+        validarId(administradorId, "El solicitante es obligatorio");
+        validarId(usuarioId, "El usuario es obligatorio");
 
         Hogar hogar = buscarHogar(hogarId);
-        validarAdministradorDelHogar(hogar, administradorId);
+        boolean esSalidaPropia = usuarioId.equals(administradorId);
+        boolean solicitanteAdmin = esAdministradorOCreador(hogar, administradorId);
+
+        if (esSalidaPropia && solicitanteAdmin) {
+            throw new IllegalArgumentException("El administrador debe transferir o eliminar el hogar para salir");
+        }
+
+        if (!esSalidaPropia && !solicitanteAdmin) {
+            throw new IllegalArgumentException("Solo el administrador del hogar puede realizar esta accion");
+        }
+
+        if (!hogar.getIntegrantesIds().contains(usuarioId)) {
+            throw new IllegalArgumentException("El usuario no pertenece al hogar");
+        }
+
+        if (!esSalidaPropia && esAdministradorOCreador(hogar, usuarioId)) {
+            throw new IllegalArgumentException("No se puede quitar al administrador o creador desde esta accion");
+        }
 
         if (!hogar.removerIntegrante(usuarioId)) {
             throw new IllegalArgumentException("No fue posible remover al integrante indicado");
@@ -115,10 +133,17 @@ public class HogarService {
     }
 
     public void eliminarHogar(Long hogarId, Long administradorId) {
-        validarId(administradorId, "El administrador es obligatorio");
+        eliminarHogar(hogarId, administradorId, null);
+    }
 
+    public void eliminarHogar(Long hogarId, Long administradorId, String rolSolicitante) {
         Hogar hogar = buscarHogar(hogarId);
-        validarAdministradorDelHogar(hogar, administradorId);
+
+        if (!esAdminGlobal(rolSolicitante)) {
+            validarId(administradorId, "El administrador es obligatorio");
+            validarAdministradorDelHogar(hogar, administradorId);
+        }
+
         hogarRepository.delete(hogar);
     }
 
@@ -185,6 +210,15 @@ public class HogarService {
         if (!hogar.esAdministrador(administradorId)) {
             throw new IllegalArgumentException("Solo el administrador del hogar puede realizar esta accion");
         }
+    }
+
+    private boolean esAdministradorOCreador(Hogar hogar, Long usuarioId) {
+        return usuarioId != null
+                && (hogar.esAdministrador(usuarioId) || usuarioId.equals(hogar.getUsuarioCreadorId()));
+    }
+
+    private boolean esAdminGlobal(String rolSolicitante) {
+        return rolSolicitante != null && "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
     }
 
     private void validarId(Long value, String message) {

@@ -33,6 +33,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   return {
     id: pub.id,
     tipo: "ofrezco_casa",
+    usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
     titulo: pub.titulo || "Habitacion disponible",
@@ -98,7 +99,11 @@ export default function DetallePublicacion() {
   }, [hogares, publicacion?.id]);
 
   const esCreadorPublicacion = !!publicacion?.usuarioCreador
-    && normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.usuario);
+    && (
+      publicacion.usuarioId === user?.id
+      || normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.usuario)
+      || normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.nombre)
+    );
 
   const puedeAdministrarSolicitudes = !!user?.id && !!hogarVinculado && (
     hogarVinculado.usuarioAdministradorId === user.id
@@ -107,6 +112,16 @@ export default function DetallePublicacion() {
   );
 
   const solicitudYaEnviada = !!user?.id && !!hogarVinculado?.solicitudesPendientesIds?.includes(user.id);
+
+  const irACrearHogarParaPublicacion = () => {
+    if (!publicacion?.id) return;
+    const params = new URLSearchParams({
+      publicacionId: String(publicacion.id),
+      titulo: publicacion.titulo || "Publicacion sin titulo",
+      tipo: publicacion.tipo || "ofrezco_casa",
+    });
+    navigate(`/hogares?${params.toString()}`);
+  };
 
   const solicitarIngreso = async () => {
     if (!user?.id || !hogarVinculado?.id) {
@@ -298,7 +313,17 @@ export default function DetallePublicacion() {
                 </button>
               )
             ) : (
+              <div className="mt-3">
               <p className="mt-3">Esta publicación no tiene un hogar vinculado para gestionar solicitudes.</p>
+                {esCreadorPublicacion && (
+                  <>
+                    <p className="form-helper">Puedes crear un hogar y vincularlo a esta publicacion al guardarlo.</p>
+                    <button className="btn btn-success w-100 mt-3" type="button" onClick={irACrearHogarParaPublicacion}>
+                      Crear hogar para esta publicacion
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </aside>
         </div>

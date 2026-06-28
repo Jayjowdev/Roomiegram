@@ -1764,6 +1764,11 @@ p {
   color: #1f7a63;
 }
 
+.status-pill.warning {
+  background: #fff4df;
+  color: #9a5b10;
+}
+
 .roomie-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1933,6 +1938,37 @@ p {
 .request-list h5 {
   color: #222;
   margin-bottom: 10px;
+}
+
+.hogar-integrantes-admin-list {
+  background: #ffffff;
+  border: 1px solid #e2e8e5;
+  border-radius: 12px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.hogar-integrantes-admin-list h5 {
+  color: #1f7a63;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.hogar-integrante-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.hogar-integrante-row + .hogar-integrante-row {
+  border-top: 1px solid #edf1ef;
+}
+
+.hogar-integrante-row span {
+  color: #33423f;
+  font-weight: 700;
 }
 
 .request-row {
@@ -2494,6 +2530,15 @@ p {
   gap: 10px;
 }
 
+.gallery-preview-item {
+  display: grid;
+  gap: 8px;
+}
+
+.gallery-preview-item .btn {
+  width: 100%;
+}
+
 .api-message,
 .form-error,
 .form-success {
@@ -2808,10 +2853,24 @@ p {
   background: white;
   border: 1px solid #dcebe7;
   border-radius: 12px;
+  color: inherit;
   padding: 16px;
   text-align: left;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-card-action {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dashboard-card-action span {
+  color: #1f7a63;
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 6px;
 }
 
 .dashboard-card:hover {
@@ -3000,6 +3059,328 @@ p {
   margin: -12px 0 0;
 }
 
+.admin-hogar-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.admin-hogar-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+  border: 1px solid #dcebe7;
+  border-radius: 16px;
+  box-shadow: 0 10px 22px rgba(28, 89, 72, 0.08);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.admin-hogar-card.has-requests {
+  border-color: #f2c46b;
+  box-shadow: 0 12px 26px rgba(154, 91, 16, 0.12);
+}
+
+.admin-hogar-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.admin-hogar-kicker {
+  color: #70807c;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.admin-hogar-card h4 {
+  color: #1f7a63;
+  font-size: 20px;
+  margin: 0;
+}
+
+.admin-hogar-badges,
+.admin-hogar-request-note {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-hogar-description {
+  color: #52625e;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.admin-hogar-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.admin-hogar-metric {
+  background: #ffffff;
+  border: 1px solid #e4efec;
+  border-radius: 12px;
+  min-width: 0;
+  padding: 12px 10px;
+}
+
+.admin-hogar-metric.highlight {
+  background: #fff8ea;
+  border-color: #f2c46b;
+}
+
+.admin-hogar-metric strong {
+  color: #1f7a63;
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.admin-hogar-metric span {
+  color: #60716d;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.admin-hogar-id-list,
+.admin-hogar-request-note,
+.admin-hogar-admin {
+  background: #ffffff;
+  border: 1px solid #e5efec;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.admin-hogar-id-list span,
+.admin-hogar-admin span,
+.admin-hogar-request-note span {
+  color: #60716d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-hogar-id-list p {
+  color: #33423f;
+  font-size: 13px;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-hogar-request-note {
+  align-items: flex-start;
+}
+
+.admin-hogar-request-note.pending {
+  background: #fff8ea;
+  border-color: #f2c46b;
+}
+
+.admin-hogar-request-note strong {
+  color: #1f7a63;
+}
+
+.admin-hogar-request-note.pending strong {
+  color: #9a5b10;
+}
+
+.admin-hogar-admin {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-hogar-admin div {
+  min-width: 0;
+}
+
+.admin-hogar-admin strong {
+  color: #263633;
+  display: block;
+  font-size: 13px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.admin-hogar-list {
+  border: 1px solid #dcebe7;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.admin-hogar-row {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e7f0ed;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, 0.8fr) minmax(260px, 1.35fr) minmax(230px, 1.15fr) minmax(92px, auto);
+  padding: 14px 16px;
+}
+
+.admin-hogar-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-hogar-row:hover {
+  background: #f8fbfa;
+}
+
+.admin-hogar-main {
+  min-width: 0;
+}
+
+.admin-hogar-id {
+  color: #6c7d78;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+
+.admin-hogar-main h4 {
+  color: #1f7a63;
+  font-size: 16px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-hogar-main p {
+  color: #60716d;
+  font-size: 13px;
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-hogar-state,
+.admin-hogar-actions {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-hogar-counts {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-hogar-counts span {
+  background: #f7fbfa;
+  border: 1px solid #e4efec;
+  border-radius: 10px;
+  color: #60716d;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 9px;
+}
+
+.admin-hogar-counts strong {
+  color: #1f7a63;
+  margin-right: 4px;
+}
+
+.admin-hogar-row .admin-hogar-admin {
+  background: transparent;
+  border: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0;
+}
+
+.admin-hogar-row .admin-hogar-admin span {
+  color: #6c7d78;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-hogar-row .admin-hogar-admin strong {
+  color: #2f413d;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.admin-hogar-integrantes {
+  grid-column: 1 / -1;
+  margin-top: -6px;
+}
+
+.admin-hogar-integrantes span {
+  color: #60716d;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .admin-hogar-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-hogar-row {
+    align-items: stretch;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-hogar-main,
+  .admin-hogar-counts,
+  .admin-hogar-row .admin-hogar-admin,
+  .admin-hogar-integrantes {
+    grid-column: 1 / -1;
+  }
+
+  .admin-hogar-state,
+  .admin-hogar-actions {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-hogar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-hogar-header,
+  .admin-hogar-badges {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-hogar-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-hogar-admin {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-hogar-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-hogar-state,
+  .admin-hogar-actions {
+    flex-direction: column;
+  }
+
+  .admin-hogar-counts {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-inline-editor {
   background: #f7fbfa;
   border: 1px solid #dcebe7;
@@ -3061,16 +3442,18 @@ p {
 
 .admin-session-card strong {
   color: #1f7a63;
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .admin-session-card span {
   color: #53635f;
 }
 
-.admin-quick-actions {
-  display: grid;
-  gap: 10px;
+.admin-session-note {
+  color: #53635f;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 /* ---------- RESPONSIVE ---------- */
@@ -3498,6 +3881,15 @@ p {
   .profile-password-form .btn,
   .module-form .btn,
   .create-publication-form .btn {
+    width: 100%;
+  }
+
+  .hogar-integrante-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hogar-integrante-row .btn {
     width: 100%;
   }
 }

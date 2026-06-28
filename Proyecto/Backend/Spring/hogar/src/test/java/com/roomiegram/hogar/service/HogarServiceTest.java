@@ -96,6 +96,44 @@ class HogarServiceTest {
     }
 
     @Test
+    void removerIntegranteDebePermitirSalidaPropiaSiNoEsAdmin() {
+        Hogar hogar = crearHogarPersistido();
+        hogar.getIntegrantesIds().add(2L);
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+        when(hogarRepository.save(any(Hogar.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Hogar actualizado = hogarService.removerIntegrante(1L, 2L, 2L);
+
+        assertTrue(!actualizado.getIntegrantesIds().contains(2L));
+        verify(hogarRepository).save(hogar);
+    }
+
+    @Test
+    void removerIntegranteDebeBloquearSalidaDelAdministrador() {
+        Hogar hogar = crearHogarPersistido();
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> hogarService.removerIntegrante(1L, 1L, 1L));
+
+        assertEquals("El administrador debe transferir o eliminar el hogar para salir", exception.getMessage());
+        verify(hogarRepository, never()).save(any(Hogar.class));
+    }
+
+    @Test
+    void removerIntegranteDebePermitirQueAdminQuiteIntegrante() {
+        Hogar hogar = crearHogarPersistido();
+        hogar.getIntegrantesIds().add(2L);
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+        when(hogarRepository.save(any(Hogar.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Hogar actualizado = hogarService.removerIntegrante(1L, 2L, 1L);
+
+        assertTrue(!actualizado.getIntegrantesIds().contains(2L));
+        verify(hogarRepository).save(hogar);
+    }
+
+    @Test
     void eliminarHogarDebeBorrarCuandoAdminEsValido() {
         Hogar hogar = crearHogarPersistido();
         when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
@@ -103,6 +141,29 @@ class HogarServiceTest {
         hogarService.eliminarHogar(1L, 1L);
 
         verify(hogarRepository).delete(hogar);
+    }
+
+    @Test
+    void eliminarHogarDebePermitirAdminGlobal() {
+        Hogar hogar = crearHogarPersistido();
+        hogar.setUsuarioAdministradorId(5L);
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+
+        hogarService.eliminarHogar(1L, 99L, "ADMIN");
+
+        verify(hogarRepository).delete(hogar);
+    }
+
+    @Test
+    void eliminarHogarDebeRechazarClienteQueNoEsAdminDelHogar() {
+        Hogar hogar = crearHogarPersistido();
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> hogarService.eliminarHogar(1L, 2L, "CLIENTE"));
+
+        assertEquals("Solo el administrador del hogar puede realizar esta accion", exception.getMessage());
+        verify(hogarRepository, never()).delete(any(Hogar.class));
     }
 
     private Hogar crearHogarPersistido() {

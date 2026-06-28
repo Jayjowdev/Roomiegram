@@ -20,3 +20,9 @@ export function savePublicacionImage(id: number | string, image: string) {
   store[String(id)] = image;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 }
+
+export function removePublicacionImage(id: number | string) {
+  const store = readStore();
+  delete store[String(id)];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+}

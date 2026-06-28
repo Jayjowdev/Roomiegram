@@ -6,9 +6,11 @@ import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { publicacionService, type Historia } from "../services/publicacionService";
 import { tareaService } from "../services/tareaService";
+import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
 import type { Tarea } from "../types/Tarea";
+import type { UsuarioResumen } from "../types/Usuario";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 
 type DashboardStats = {
@@ -35,8 +37,11 @@ export default function Dashboard() {
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [deletingPublicationId, setDeletingPublicationId] = useState<number | null>(null);
   const [deletingHistoriaId, setDeletingHistoriaId] = useState<number | null>(null);
+  const [deletingTareaId, setDeletingTareaId] = useState<number | null>(null);
+  const [deletingHogarId, setDeletingHogarId] = useState<number | null>(null);
   const [editingHistoria, setEditingHistoria] = useState<Historia | null>(null);
   const [historiaForm, setHistoriaForm] = useState({ titulo: "", mensaje: "" });
   const [savingHistoria, setSavingHistoria] = useState(false);
@@ -53,12 +58,12 @@ export default function Dashboard() {
       publicacionService.listarHistorias(),
       hogarService.listar(),
       tareaService.listar(),
+      usuarioService.listar(),
     ])
-      .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult]) => {
+      .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult]) => {
         if (!isMounted) return;
 
-        const backendPublicaciones =
-          publicacionesResult.status === "fulfilled" ? publicacionesResult.value : [];
+        const backendPublicaciones = publicacionesResult.status === "fulfilled" ? publicacionesResult.value : [];
         const localPublicaciones = getLocalPublicaciones()
           .filter((publicacion) => !isGeneratedProfile(publicacion))
           .map((publicacion) => ({ ...publicacion, origen: "local" as const }));
@@ -69,6 +74,7 @@ export default function Dashboard() {
         const historiasData = historiasResult.status === "fulfilled" ? historiasResult.value : [];
         const hogaresData = hogaresResult.status === "fulfilled" ? hogaresResult.value : [];
         const tareasData = tareasResult.status === "fulfilled" ? tareasResult.value : [];
+        const usuariosData = usuariosResult.status === "fulfilled" ? usuariosResult.value : [];
         const solicitudesPendientes = hogaresData.reduce(
           (total, hogar) => total + (hogar.solicitudesPendientesIds?.length ?? 0),
           0,
@@ -85,8 +91,9 @@ export default function Dashboard() {
         setHistorias(historiasData);
         setHogares(hogaresData);
         setTareas(tareasData);
+        setUsuarios(usuariosData);
 
-        if ([publicacionesResult, historiasResult, hogaresResult, tareasResult].some((result) => result.status === "rejected")) {
+        if ([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult].some((result) => result.status === "rejected")) {
           setMessage("Algunos datos reales no se pudieron cargar. Intenta nuevamente.");
         }
       })
@@ -105,8 +112,7 @@ export default function Dashboard() {
       return;
     }
 
-    const titulo = getPublicationTitle(publicacion);
-    const confirmar = window.confirm(`Eliminar la publicacion "${titulo}"?`);
+    const confirmar = window.confirm(`Eliminar la publicacion "${getPublicationTitle(publicacion)}"?`);
     if (!confirmar) return;
 
     setDeletingPublicationId(publicacion.id);
@@ -120,7 +126,7 @@ export default function Dashboard() {
       }
 
       setPublicaciones((current) =>
-        current.filter((item) => !(item.id === publicacion.id && item.origen === publicacion.origen))
+        current.filter((item) => !(item.id === publicacion.id && item.origen === publicacion.origen)),
       );
       setStats((current) => ({
         ...current,
@@ -186,7 +192,7 @@ export default function Dashboard() {
         user.role,
       );
       setHistorias((current) =>
-        current.map((historia) => (historia.id === actualizada.id ? actualizada : historia))
+        current.map((historia) => (historia.id === actualizada.id ? actualizada : historia)),
       );
       setEditingHistoria(null);
       setHistoriaForm({ titulo: "", mensaje: "" });
@@ -226,6 +232,68 @@ export default function Dashboard() {
     }
   };
 
+  const eliminarTareaAdmin = async (tarea: Tarea) => {
+    if (user?.role !== "ADMIN") {
+      setMessage("Solo un administrador puede eliminar tareas.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Eliminar la tarea "${tarea.titulo}"?`);
+    if (!confirmar) return;
+
+    try {
+      setDeletingTareaId(tarea.id);
+      await tareaService.eliminar(tarea.id);
+      setTareas((current) => current.filter((item) => item.id !== tarea.id));
+      setHogares((current) =>
+        current.map((hogar) => ({
+          ...hogar,
+          tareasIds: hogar.tareasIds?.filter((tareaId) => tareaId !== tarea.id) ?? [],
+        })),
+      );
+      setStats((current) => ({
+        ...current,
+        tareas: Math.max(0, current.tareas - 1),
+      }));
+      setMessage("Tarea eliminada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la tarea.");
+    } finally {
+      setDeletingTareaId(null);
+    }
+  };
+
+  const eliminarHogarAdmin = async (hogar: Hogar) => {
+    if (user?.role !== "ADMIN") {
+      setMessage("Solo un administrador puede eliminar hogares.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `Eliminar el hogar "${hogar.nombre}"? Esta accion quitara el registro del hogar y sus asociaciones internas.`,
+    );
+    if (!confirmar) return;
+
+    try {
+      setDeletingHogarId(hogar.id);
+      await hogarService.eliminarComoAdmin(hogar.id, user.id);
+      setHogares((current) => current.filter((item) => item.id !== hogar.id));
+      setStats((current) => ({
+        ...current,
+        hogares: Math.max(0, current.hogares - 1),
+        solicitudesPendientes: Math.max(
+          0,
+          current.solicitudesPendientes - (hogar.solicitudesPendientesIds?.length ?? 0),
+        ),
+      }));
+      setMessage("Hogar eliminado correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar el hogar.");
+    } finally {
+      setDeletingHogarId(null);
+    }
+  };
+
   const formatDate = (value?: string) => {
     if (!value) return "Sin fecha";
     const date = new Date(value);
@@ -257,6 +325,26 @@ export default function Dashboard() {
     const filter = normalizeSearch(dashboardFilter);
     if (!filter) return true;
     return values.some((value) => normalizeSearch(value).includes(filter));
+  };
+
+  const getHogarDeTarea = (tareaId?: number) =>
+    hogares.find((hogar) => hogar.tareasIds?.includes(Number(tareaId)));
+
+  const usuariosById = useMemo(() => {
+    return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [usuarios]);
+
+  const getUsuarioLabel = (usuarioId?: number, prefix = "Usuario") => {
+    if (!usuarioId) return `${prefix} no informado`;
+    const usuario = usuariosById.get(usuarioId);
+    const nombre = usuario?.nombre || usuario?.usuario;
+    return nombre ? `${nombre} (#${usuarioId})` : `${prefix} #${usuarioId}`;
+  };
+
+  const getUsuarioSearchValues = (usuarioId?: number) => {
+    if (!usuarioId) return [];
+    const usuario = usuariosById.get(usuarioId);
+    return [usuarioId, `usuario ${usuarioId}`, usuario?.nombre, usuario?.usuario, usuario?.correo];
   };
 
   const publicacionesFiltradas = useMemo(
@@ -296,32 +384,41 @@ export default function Dashboard() {
     () =>
       hogares.filter((hogar) =>
         matchesFilter([
+          hogar.id,
           hogar.nombre,
           hogar.descripcion,
           hogar.activo ? "activo" : "inactivo",
           `creador ${hogar.usuarioCreadorId}`,
           `admin ${hogar.usuarioAdministradorId}`,
+          ...getUsuarioSearchValues(hogar.usuarioCreadorId),
+          ...getUsuarioSearchValues(hogar.usuarioAdministradorId),
+          ...(hogar.integrantesIds || []).flatMap((usuarioId) => getUsuarioSearchValues(usuarioId)),
           `integrantes ${hogar.integrantesIds?.length ?? 0}`,
+          (hogar.solicitudesPendientesIds?.length ?? 0) > 0 ? "con solicitudes" : "sin solicitudes",
           `solicitudes ${hogar.solicitudesPendientesIds?.length ?? 0}`,
           `tareas ${hogar.tareasIds?.length ?? 0}`,
           formatDate(hogar.fechaCreacion),
         ]),
       ),
-    [dashboardFilter, hogares],
+    [dashboardFilter, hogares, usuariosById],
   );
 
   const tareasFiltradas = useMemo(
     () =>
-      tareas.filter((tarea) =>
-        matchesFilter([
+      tareas.filter((tarea) => {
+        const hogar = getHogarDeTarea(tarea.id);
+        return matchesFilter([
+          tarea.id,
           tarea.titulo,
           tarea.descripcion,
           tarea.encargado,
+          hogar?.nombre,
+          hogar ? `hogar ${hogar.id}` : "sin hogar",
           tarea.completada ? "completada" : "pendiente",
           formatDate(tarea.fecha),
-        ]),
-      ),
-    [dashboardFilter, tareas],
+        ]);
+      }),
+    [dashboardFilter, tareas, hogares],
   );
 
   const hasActiveFilter = dashboardFilter.trim().length > 0;
@@ -342,9 +439,6 @@ export default function Dashboard() {
           <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         </div>
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" type="button" onClick={() => navigate("/convivencia")}>
-            Panel convivencia
-          </button>
           <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>
             Volver al inicio
           </button>
@@ -355,8 +449,8 @@ export default function Dashboard() {
       <section className="dashboard-welcome">
         <h1>Dashboard de administracion</h1>
         <p>
-          Hola, {user?.nombre || user?.usuario || "usuario"}. Revisa datos reales de RoomieGram y
-          modera publicaciones e historias registradas en la plataforma.
+          Hola, {user?.nombre || user?.usuario || "usuario"}. Revisa metricas, gestiona publicaciones y modera
+          contenido de la plataforma.
         </p>
       </section>
 
@@ -364,24 +458,20 @@ export default function Dashboard() {
 
       <section className="dashboard-stats">
         <article className="dashboard-card">
-          <h5>Total publicaciones</h5>
+          <h5>Publicaciones</h5>
           <h2>{isLoading ? "..." : stats.publicaciones}</h2>
         </article>
         <article className="dashboard-card">
-          <h5>Historias de usuarios</h5>
+          <h5>Historias</h5>
           <h2>{isLoading ? "..." : stats.historias}</h2>
         </article>
         <article className="dashboard-card">
-          <h5>Total hogares</h5>
+          <h5>Hogares</h5>
           <h2>{isLoading ? "..." : stats.hogares}</h2>
         </article>
         <article className="dashboard-card">
-          <h5>Tareas registradas</h5>
+          <h5>Tareas</h5>
           <h2>{isLoading ? "..." : stats.tareas}</h2>
-        </article>
-        <article className="dashboard-card">
-          <h5>Solicitudes pendientes</h5>
-          <h2>{isLoading ? "..." : stats.solicitudesPendientes}</h2>
         </article>
       </section>
 
@@ -454,8 +544,8 @@ export default function Dashboard() {
                   </div>
                   <p>{publicacion.descripcion || "Sin descripcion"}</p>
                   <span>
-                    {publicacion.tipo || (publicacion.origen === "backend" ? "ofrezco_casa" : "Sin tipo")} ·{" "}
-                    {publicacion.ubicacion || "Sin ubicacion"} ·{" "}
+                    {publicacion.tipo || (publicacion.origen === "backend" ? "ofrezco_casa" : "Sin tipo")} -{" "}
+                    {publicacion.ubicacion || "Sin ubicacion"} -{" "}
                     {getPublicationPrice(publicacion)}
                   </span>
                   <div className="item-actions">
@@ -476,23 +566,12 @@ export default function Dashboard() {
 
         <div className="dashboard-profile">
           <span className="demo-kicker">Sesion</span>
-          <h4>Administrador activo</h4>
+          <h4>Sesion activa</h4>
           <div className="admin-session-card">
-            <strong>{user?.nombre || user?.usuario || "Administrador"}</strong>
-            <span>{user?.usuario || "No informado"}</span>
+            <span><strong>Usuario:</strong> {user?.usuario || "No informado"}</span>
             <span className="status-pill success">{user?.role || "CLIENTE"}</span>
           </div>
-          <div className="admin-quick-actions">
-            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>
-              Ver Home
-            </button>
-            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/historias")}>
-              Ver historias
-            </button>
-            <button className="btn btn-outline-success" type="button" onClick={() => navigate("/convivencia")}>
-              Panel convivencia
-            </button>
-          </div>
+          <p className="admin-session-note">Permisos de moderacion y gestion de contenido.</p>
         </div>
       </section>
 
@@ -601,7 +680,12 @@ export default function Dashboard() {
       <section className={`dashboard-content dashboard-single-switch ${activeSection === "hogares" || activeSection === "tareas" ? "" : "dashboard-hidden-section"}`}>
         <div className={`dashboard-activity ${activeSection === "hogares" ? "" : "dashboard-hidden-section"}`}>
           <div className="section-heading-row">
-            <h4>Hogares registrados</h4>
+            <div>
+              <h4>Hogares registrados</h4>
+              <p className="dashboard-section-help">
+                Vista compacta de hogares, asociaciones y estado administrativo.
+              </p>
+            </div>
             <span className="status-pill">{hogaresFiltrados.length} resultados</span>
           </div>
           {isLoading ? (
@@ -611,25 +695,75 @@ export default function Dashboard() {
           ) : hogaresFiltrados.length === 0 ? (
             <div className="sin-resultados"><p>No hay resultados para este filtro.</p></div>
           ) : (
-            <div className="module-list">
-              {hogaresFiltrados.map((hogar) => (
-                <article className="module-item" key={hogar.id}>
-                  <div className="section-heading-row">
-                    <h4>{hogar.nombre}</h4>
-                    <span className="status-pill">{hogar.activo ? "Activo" : "Inactivo"}</span>
-                  </div>
-                  <p>{hogar.descripcion || "Sin descripcion"}</p>
-                  <span>
-                    Integrantes: {hogar.integrantesIds?.length ?? 0} · Solicitudes:{" "}
-                    {hogar.solicitudesPendientesIds?.length ?? 0} · Tareas asociadas:{" "}
-                    {hogar.tareasIds?.length ?? 0}
-                  </span>
-                  <small>
-                    Creador ID: {hogar.usuarioCreadorId ?? "No informado"} · Admin ID:{" "}
-                    {hogar.usuarioAdministradorId ?? "No informado"} · Creado: {formatDate(hogar.fechaCreacion)}
-                  </small>
-                </article>
-              ))}
+            <div className="admin-hogar-list">
+              {hogaresFiltrados.map((hogar) => {
+                const integrantesCount = hogar.integrantesIds?.length ?? 0;
+                const solicitudesCount = hogar.solicitudesPendientesIds?.length ?? 0;
+                const tareasCount = hogar.tareasIds?.length ?? 0;
+                const cuentasCount = hogar.hogarCuentaIds?.length ?? 0;
+                const comprobantesCount = hogar.comprobanteIds?.length ?? 0;
+                const tieneSolicitudes = solicitudesCount > 0;
+
+                return (
+                  <article className="admin-hogar-row" key={hogar.id}>
+                    <div className="admin-hogar-main">
+                      <span className="admin-hogar-id">#{hogar.id}</span>
+                      <h4>{hogar.nombre}</h4>
+                      <p>{hogar.descripcion || "Sin descripcion registrada."}</p>
+                    </div>
+
+                    <div className="admin-hogar-state">
+                      <span className={`status-pill ${hogar.activo ? "success" : ""}`}>
+                        {hogar.activo ? "Activo" : "Inactivo"}
+                      </span>
+                      {tieneSolicitudes && (
+                        <span className="status-pill warning">
+                          {solicitudesCount} {solicitudesCount === 1 ? "solicitud" : "solicitudes"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-hogar-counts" aria-label={`Datos del hogar ${hogar.nombre}`}>
+                      <span><strong>{integrantesCount}</strong> Integrantes</span>
+                      <span><strong>{tareasCount}</strong> Tareas</span>
+                      <span><strong>{cuentasCount}</strong> Cuentas</span>
+                      <span><strong>{comprobantesCount}</strong> Comprobantes</span>
+                    </div>
+
+                    <div className="admin-hogar-admin">
+                      <div>
+                        <span>Creador</span>
+                        <strong>{getUsuarioLabel(hogar.usuarioCreadorId, "Usuario")}</strong>
+                      </div>
+                      <div>
+                        <span>Admin</span>
+                        <strong>{getUsuarioLabel(hogar.usuarioAdministradorId, "Admin")}</strong>
+                      </div>
+                      <div>
+                        <span>Fecha de creacion</span>
+                        <strong>{formatDate(hogar.fechaCreacion)}</strong>
+                      </div>
+                    </div>
+
+                    {integrantesCount > 0 && (
+                      <div className="admin-hogar-integrantes">
+                        <span>Integrantes: {hogar.integrantesIds.map((usuarioId) => getUsuarioLabel(usuarioId, "Integrante")).join(", ")}</span>
+                      </div>
+                    )}
+
+                    <div className="admin-hogar-actions">
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        type="button"
+                        onClick={() => eliminarHogarAdmin(hogar)}
+                        disabled={deletingHogarId === hogar.id}
+                      >
+                        {deletingHogarId === hogar.id ? "Eliminando..." : "Eliminar"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
@@ -647,17 +781,38 @@ export default function Dashboard() {
             <div className="sin-resultados"><p>No hay resultados para este filtro.</p></div>
           ) : (
             <div className="module-list">
-              {tareasFiltradas.map((tarea) => (
-                <article className="module-item" key={tarea.id}>
-                  <div className="section-heading-row">
-                    <h4>{tarea.titulo}</h4>
-                    <span className="status-pill">{tarea.completada ? "Completada" : "Pendiente"}</span>
-                  </div>
-                  <p>{tarea.descripcion || "Sin descripcion"}</p>
-                  <span>Encargado: {tarea.encargado || "Sin encargado"}</span>
-                  <small>Fecha limite: {formatDate(tarea.fecha)}</small>
-                </article>
-              ))}
+              {tareasFiltradas.map((tarea) => {
+                const hogar = getHogarDeTarea(tarea.id);
+                return (
+                  <article className="module-item" key={tarea.id}>
+                    <div className="section-heading-row">
+                      <div>
+                        <h4>{tarea.titulo}</h4>
+                        <span>ID tarea: {tarea.id}</span>
+                      </div>
+                      <span className={`status-pill ${tarea.completada ? "success" : ""}`}>
+                        {tarea.completada ? "Completada" : "Pendiente"}
+                      </span>
+                    </div>
+                    <p>{tarea.descripcion || "Sin descripcion"}</p>
+                    <div className="admin-record-meta">
+                      <span>Hogar: {hogar?.nombre || "Sin hogar asociado"}</span>
+                      <span>Encargado: {tarea.encargado || "Sin encargado"}</span>
+                      <span>Fecha limite: {formatDate(tarea.fecha)}</span>
+                    </div>
+                    <div className="item-actions">
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        type="button"
+                        onClick={() => eliminarTareaAdmin(tarea)}
+                        disabled={deletingTareaId === tarea.id}
+                      >
+                        {deletingTareaId === tarea.id ? "Eliminando..." : "Eliminar tarea"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
@@ -50,15 +50,19 @@ function formatMemberName(
   }
 
   const usuario = usuariosById.get(usuarioId);
-  return usuario?.nombre || usuario?.usuario || "Integrante del hogar";
+  return usuario?.nombre || usuario?.usuario || `Usuario #${usuarioId}`;
 }
 
 export default function Hogares() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState(() => {
+    const titulo = searchParams.get("titulo")?.trim();
+    return titulo ? `Hogar de ${titulo}` : "";
+  });
   const [descripcion, setDescripcion] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -103,6 +107,17 @@ export default function Hogares() {
 
   const canCreateHogar = misHogares.length === 0;
 
+  const publicacionContexto = useMemo(() => {
+    const publicacionId = Number(searchParams.get("publicacionId"));
+    if (!Number.isFinite(publicacionId) || publicacionId <= 0) return null;
+
+    return {
+      id: publicacionId,
+      titulo: searchParams.get("titulo")?.trim() || "Publicacion sin titulo",
+      tipo: searchParams.get("tipo")?.trim() || "ofrezco_casa",
+    };
+  }, [searchParams]);
+
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
@@ -143,8 +158,22 @@ export default function Hogares() {
         descripcion: descripcion.trim(),
         usuarioCreadorId: user.id,
       });
-      setHogares((current) => [...current, creado]);
-      setMessage("Hogar creado correctamente.");
+
+      let hogarParaGuardar = creado;
+      let successMessage = "Hogar creado correctamente.";
+
+      if (publicacionContexto) {
+        try {
+          hogarParaGuardar = await hogarService.agregarPublicacion(creado.id, user.id, publicacionContexto.id);
+          successMessage = "Hogar creado y vinculado a la publicacion correctamente.";
+          setSearchParams({});
+        } catch {
+          successMessage = "Hogar creado, pero no se pudo vincular automaticamente a la publicacion.";
+        }
+      }
+
+      setHogares((current) => [...current, hogarParaGuardar]);
+      setMessage(successMessage);
       setNombre("");
       setDescripcion("");
     } catch {
@@ -303,6 +332,48 @@ export default function Hogares() {
     }
   };
 
+  const salirDelHogar = async (hogar: Hogar) => {
+    if (!user?.id) return;
+
+    if (isHogarAdmin(hogar, user.id)) {
+      setMessage("El administrador debe transferir o eliminar el hogar para salir.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Salir del hogar "${hogar.nombre}"?`);
+    if (!confirmar) return;
+
+    try {
+      setProcessingRequest(`salir-${hogar.id}`);
+      const actualizado = await hogarService.salir(hogar.id, user.id, user.id);
+      updateHogar(actualizado);
+      setMessage("Saliste del hogar correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo salir del hogar.");
+    } finally {
+      setProcessingRequest("");
+    }
+  };
+
+  const quitarIntegrante = async (hogar: Hogar, usuarioId: number) => {
+    if (!user?.id) return;
+
+    const nombreIntegrante = formatMemberName(usuarioId, usuariosById, user || undefined);
+    const confirmar = window.confirm(`Quitar a ${nombreIntegrante} del hogar "${hogar.nombre}"?`);
+    if (!confirmar) return;
+
+    try {
+      setProcessingRequest(`quitar-${hogar.id}-${usuarioId}`);
+      const actualizado = await hogarService.quitarIntegrante(hogar.id, usuarioId, user.id);
+      updateHogar(actualizado);
+      setMessage(`${nombreIntegrante} fue removido del hogar.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo quitar al integrante.");
+    } finally {
+      setProcessingRequest("");
+    }
+  };
+
   const renderHogarCard = (hogar: Hogar, mode: "mine" | "pending" | "available") => {
     const isAdmin = isHogarAdmin(hogar, user?.id);
     const integrantes = hogar.integrantesIds || [];
@@ -342,9 +413,38 @@ export default function Hogares() {
               )}
             </div>
 
+            {isAdmin && integrantes.length > 1 && (
+              <div className="hogar-integrantes-admin-list">
+                <h5>Gestion de integrantes</h5>
+                {integrantes
+                  .filter((usuarioId) => usuarioId !== user?.id)
+                  .map((usuarioId) => (
+                    <div className="hogar-integrante-row" key={usuarioId}>
+                      <span>{formatMemberName(usuarioId, usuariosById, user || undefined)}</span>
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        type="button"
+                        disabled={Boolean(processingRequest)}
+                        onClick={() => quitarIntegrante(hogar, usuarioId)}
+                      >
+                        {processingRequest === `quitar-${hogar.id}-${usuarioId}` ? "Quitando..." : "Quitar integrante"}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+
             <div className="item-actions">
               <button className="btn btn-success btn-sm" type="button" onClick={() => navigate("/convivencia")}>
                 Ver convivencia
+              </button>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                type="button"
+                disabled={processingRequest === `salir-${hogar.id}`}
+                onClick={() => salirDelHogar(hogar)}
+              >
+                {processingRequest === `salir-${hogar.id}` ? "Saliendo..." : "Salir del hogar"}
               </button>
               {isAdmin && (
                 <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => eliminarHogar(hogar)}>
@@ -469,6 +569,11 @@ export default function Hogares() {
             <p className="form-helper">
               Crea un hogar cuando quieras iniciar tu propio grupo de convivencia. Tu quedaras como administrador y podras aceptar solicitudes.
             </p>
+            {publicacionContexto && (
+              <p className="api-message">
+                Crear hogar para la publicacion: {publicacionContexto.titulo}
+              </p>
+            )}
             <input
               className="form-control"
               placeholder="Nombre del hogar"

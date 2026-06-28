@@ -1,5 +1,6 @@
 package com.roomiegram.publicacion.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -116,6 +117,23 @@ class PublicacionServiceTest {
         assertEquals("Habitacion actualizada", actualizada.getTitulo());
         assertEquals("Providencia", actualizada.getUbicacion());
         assertEquals(300000.0, actualizada.getPrecio());
+    }
+
+    @Test
+    void actualizaImagenesDePublicacion() {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setImagen("foto-anterior");
+        publicacion.setGaleria(List.of("foto-anterior"));
+        Publicacion datos = crearPublicacion();
+        datos.setImagen("foto-nueva");
+        datos.setGaleria(List.of("foto-nueva", "foto-extra"));
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion actualizada = publicacionService.actualizarPublicacion(1L, datos, "juan", "CLIENTE");
+
+        assertEquals("foto-nueva", actualizada.getImagen());
+        assertEquals(List.of("foto-nueva", "foto-extra"), actualizada.getGaleria());
     }
 
     @Test

@@ -92,9 +92,11 @@ public class HogarController {
     public ResponseEntity<?> removerIntegrante(
             @PathVariable Long id,
             @PathVariable Long usuarioId,
-            @RequestParam Long administradorId) {
+            @RequestParam(required = false) Long administradorId,
+            @RequestParam(required = false) Long solicitanteId) {
         try {
-            return ResponseEntity.ok(hogarService.removerIntegrante(id, usuarioId, administradorId));
+            Long solicitante = solicitanteId != null ? solicitanteId : administradorId;
+            return ResponseEntity.ok(hogarService.removerIntegrante(id, usuarioId, solicitante));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -121,9 +123,12 @@ public class HogarController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarHogar(@PathVariable Long id, @RequestParam Long administradorId) {
+    public ResponseEntity<?> eliminarHogar(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long administradorId,
+            @RequestParam(required = false) String rolSolicitante) {
         try {
-            hogarService.eliminarHogar(id, administradorId);
+            hogarService.eliminarHogar(id, administradorId, rolSolicitante);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

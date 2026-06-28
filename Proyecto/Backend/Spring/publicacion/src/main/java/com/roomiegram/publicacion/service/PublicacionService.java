@@ -1,5 +1,6 @@
 package com.roomiegram.publicacion.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -100,6 +101,8 @@ public class PublicacionService {
         publicacion.setUbicacion(datos.getUbicacion());
         publicacion.setDescripcion(datos.getDescripcion());
         publicacion.setPrecio(datos.getPrecio());
+        publicacion.setImagen(datos.getImagen());
+        publicacion.setGaleria(datos.getGaleria() != null ? new ArrayList<>(datos.getGaleria()) : new ArrayList<>());
 
         boolean esBusquedaRoomie = "busco_roomie".equalsIgnoreCase(publicacion.getTipo());
         if (esBusquedaRoomie) {

@@ -18,10 +18,12 @@ type DashboardStats = {
   historias: number;
   hogares: number;
   tareas: number;
+  usuarios: number;
   solicitudesPendientes: number;
 };
 
-type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas";
+type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas" | "usuarios";
+type UsuarioFiltro = "todos" | "sin-datos" | "suspendidos" | "clientes";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export default function Dashboard() {
     historias: 0,
     hogares: 0,
     tareas: 0,
+    usuarios: 0,
     solicitudesPendientes: 0,
   });
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
@@ -42,6 +45,12 @@ export default function Dashboard() {
   const [deletingHistoriaId, setDeletingHistoriaId] = useState<number | null>(null);
   const [deletingTareaId, setDeletingTareaId] = useState<number | null>(null);
   const [deletingHogarId, setDeletingHogarId] = useState<number | null>(null);
+  const [usuarioActionId, setUsuarioActionId] = useState<number | null>(null);
+  const [selectedUsuarioId, setSelectedUsuarioId] = useState<number | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState<{ usuario: string; value: string } | null>(null);
+  const [usuarioFiltro, setUsuarioFiltro] = useState<UsuarioFiltro>("todos");
+  const [selectedUsuariosIds, setSelectedUsuariosIds] = useState<number[]>([]);
+  const [deletingSelectedUsuarios, setDeletingSelectedUsuarios] = useState(false);
   const [editingHistoria, setEditingHistoria] = useState<Historia | null>(null);
   const [historiaForm, setHistoriaForm] = useState({ titulo: "", mensaje: "" });
   const [savingHistoria, setSavingHistoria] = useState(false);
@@ -58,7 +67,7 @@ export default function Dashboard() {
       publicacionService.listarHistorias(),
       hogarService.listar(),
       tareaService.listar(),
-      usuarioService.listar(),
+      usuarioService.listarAdmin(),
     ])
       .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult]) => {
         if (!isMounted) return;
@@ -85,6 +94,7 @@ export default function Dashboard() {
           historias: historiasData.length,
           hogares: hogaresData.length,
           tareas: tareasData.length,
+          usuarios: usuariosData.length,
           solicitudesPendientes,
         });
         setPublicaciones(publicacionesData);
@@ -294,6 +304,247 @@ export default function Dashboard() {
     }
   };
 
+  const getUsuarioRole = (usuario: UsuarioResumen) => usuario.rol || usuario.role || "CLIENTE";
+  const isUsuarioActivo = (usuario: UsuarioResumen) => usuario.cuentaActiva !== false;
+
+  const getDatosAsociadosUsuario = (usuario: UsuarioResumen) => {
+    const usuarioNormalizado = normalizeSearch(usuario.usuario);
+    const nombreNormalizado = normalizeSearch(usuario.nombre);
+    const publicacionesCount = publicaciones.filter(
+      (publicacion) =>
+        publicacion.usuarioId === usuario.id ||
+        normalizeSearch(publicacion.usuarioCreador) === usuarioNormalizado,
+    ).length;
+    const historiasCount = historias.filter(
+      (historia) => normalizeSearch(historia.usuarioCreador) === usuarioNormalizado,
+    ).length;
+    const hogaresCount = hogares.filter(
+      (hogar) =>
+        hogar.usuarioCreadorId === usuario.id ||
+        hogar.usuarioAdministradorId === usuario.id ||
+        hogar.integrantesIds?.includes(usuario.id) ||
+        hogar.solicitudesPendientesIds?.includes(usuario.id),
+    ).length;
+    const tareasCount = tareas.filter((tarea) => {
+      const encargado = normalizeSearch(tarea.encargado);
+      return encargado === usuarioNormalizado || encargado === nombreNormalizado;
+    }).length;
+    const total = publicacionesCount + historiasCount + hogaresCount + tareasCount;
+
+    return {
+      publicaciones: publicacionesCount,
+      historias: historiasCount,
+      hogares: hogaresCount,
+      tareas: tareasCount,
+      total,
+      tieneDatos: total > 0,
+    };
+  };
+
+  const esUsuarioEliminable = (usuario: UsuarioResumen) => {
+    const datosAsociados = getDatosAsociadosUsuario(usuario);
+    return usuario.id !== user?.id && getUsuarioRole(usuario) !== "ADMIN" && !datosAsociados.tieneDatos;
+  };
+
+  const reemplazarUsuario = (usuarioActualizado: UsuarioResumen) => {
+    setUsuarios((current) => current.map((item) => (item.id === usuarioActualizado.id ? usuarioActualizado : item)));
+  };
+
+  const suspenderUsuarioAdmin = async (usuarioObjetivo: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede suspender usuarios.");
+      return;
+    }
+    if (usuarioObjetivo.id === user.id) {
+      setMessage("No puedes suspender tu propia cuenta administrativa.");
+      return;
+    }
+
+    const confirmar = window.confirm(`¿Suspender la cuenta de ${usuarioObjetivo.usuario}?`);
+    if (!confirmar) return;
+
+    try {
+      setUsuarioActionId(usuarioObjetivo.id);
+      const actualizado = await usuarioService.suspender(usuarioObjetivo.id, user.id, user.role);
+      reemplazarUsuario(actualizado);
+      setTemporaryPassword(null);
+      setMessage("Cuenta suspendida correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo suspender la cuenta.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
+  const reactivarUsuarioAdmin = async (usuarioObjetivo: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede reactivar usuarios.");
+      return;
+    }
+
+    try {
+      setUsuarioActionId(usuarioObjetivo.id);
+      const actualizado = await usuarioService.reactivar(usuarioObjetivo.id, user.id, user.role);
+      reemplazarUsuario(actualizado);
+      setTemporaryPassword(null);
+      setMessage("Cuenta reactivada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo reactivar la cuenta.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
+  const restablecerContrasenaAdmin = async (usuarioObjetivo: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede restablecer contraseñas.");
+      return;
+    }
+    if (usuarioObjetivo.id === user.id) {
+      setMessage("No puedes restablecer tu propia contraseña desde el panel administrativo.");
+      return;
+    }
+
+    const confirmar = window.confirm(`¿Restablecer la contraseña de ${usuarioObjetivo.usuario}?`);
+    if (!confirmar) return;
+
+    try {
+      setUsuarioActionId(usuarioObjetivo.id);
+      const resultado = await usuarioService.restablecerContrasena(usuarioObjetivo.id, user.id, user.role);
+      reemplazarUsuario(resultado.usuario);
+      setTemporaryPassword({ usuario: usuarioObjetivo.usuario, value: resultado.contrasenaTemporal });
+      setMessage(resultado.mensaje);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo restablecer la contraseña.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
+  const eliminarUsuarioAdmin = async (usuarioObjetivo: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede eliminar usuarios.");
+      return;
+    }
+    if (usuarioObjetivo.id === user.id) {
+      setMessage("No puedes eliminar tu propia cuenta administrativa.");
+      return;
+    }
+    if (getUsuarioRole(usuarioObjetivo) === "ADMIN") {
+      setMessage("No se puede eliminar una cuenta con rol ADMIN desde esta acción.");
+      return;
+    }
+
+    const datosAsociados = getDatosAsociadosUsuario(usuarioObjetivo);
+    if (datosAsociados.tieneDatos) {
+      setSelectedUsuarioId(usuarioObjetivo.id);
+      setMessage("No se puede eliminar este usuario porque tiene información asociada. Revisa sus publicaciones, hogares o registros relacionados antes de continuar.");
+      return;
+    }
+
+    const confirmar = window.confirm("¿Seguro que quieres eliminar este usuario? Esta acción no se puede deshacer.");
+    if (!confirmar) return;
+
+    try {
+      setUsuarioActionId(usuarioObjetivo.id);
+      await usuarioService.eliminar(usuarioObjetivo.id, user.id, user.role);
+      setUsuarios((current) => current.filter((item) => item.id !== usuarioObjetivo.id));
+      setSelectedUsuariosIds((current) => current.filter((id) => id !== usuarioObjetivo.id));
+      setStats((current) => ({ ...current, usuarios: Math.max(0, current.usuarios - 1) }));
+      if (selectedUsuarioId === usuarioObjetivo.id) {
+        setSelectedUsuarioId(null);
+      }
+      setTemporaryPassword(null);
+      setMessage("Usuario eliminado correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar el usuario.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
+  const toggleUsuarioSeleccionado = (usuarioObjetivo: UsuarioResumen) => {
+    if (!esUsuarioEliminable(usuarioObjetivo)) {
+      setMessage("No se puede seleccionar este usuario porque tiene información asociada o permisos administrativos.");
+      return;
+    }
+
+    setSelectedUsuariosIds((current) =>
+      current.includes(usuarioObjetivo.id)
+        ? current.filter((id) => id !== usuarioObjetivo.id)
+        : [...current, usuarioObjetivo.id],
+    );
+  };
+
+  const seleccionarUsuariosEliminables = (usuariosVisibles: UsuarioResumen[]) => {
+    const idsEliminables = usuariosVisibles
+      .filter((usuarioItem) => esUsuarioEliminable(usuarioItem))
+      .map((usuarioItem) => usuarioItem.id);
+
+    setSelectedUsuariosIds(idsEliminables);
+    setMessage(idsEliminables.length > 0
+      ? `${idsEliminables.length} cuenta(s) sin datos asociados seleccionada(s).`
+      : "No hay usuarios eliminables en la vista actual.");
+  };
+
+  const limpiarSeleccionUsuarios = () => {
+    setSelectedUsuariosIds([]);
+  };
+
+  const eliminarUsuariosSeleccionados = async () => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede eliminar usuarios.");
+      return;
+    }
+
+    const usuariosSeleccionados = usuarios.filter((usuarioItem) => selectedUsuariosIds.includes(usuarioItem.id));
+    const usuariosEliminables = usuariosSeleccionados.filter((usuarioItem) => esUsuarioEliminable(usuarioItem));
+
+    if (usuariosEliminables.length === 0) {
+      setMessage("Selecciona usuarios sin datos asociados para eliminar.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Seguro que quieres eliminar los usuarios seleccionados? Esta acción no se puede deshacer.\n\nSe eliminarán ${usuariosEliminables.length} usuarios sin datos asociados.`,
+    );
+    if (!confirmar) return;
+
+    setDeletingSelectedUsuarios(true);
+    setMessage("");
+
+    const eliminados: number[] = [];
+    const fallidos: string[] = [];
+
+    for (const usuarioObjetivo of usuariosEliminables) {
+      try {
+        await usuarioService.eliminar(usuarioObjetivo.id, user.id, user.role);
+        eliminados.push(usuarioObjetivo.id);
+      } catch (error) {
+        const motivo = error instanceof Error ? error.message : "No se pudo eliminar.";
+        fallidos.push(`${usuarioObjetivo.usuario}: ${motivo}`);
+      }
+    }
+
+    if (eliminados.length > 0) {
+      setUsuarios((current) => current.filter((usuarioItem) => !eliminados.includes(usuarioItem.id)));
+      setStats((current) => ({ ...current, usuarios: Math.max(0, current.usuarios - eliminados.length) }));
+      if (selectedUsuarioId && eliminados.includes(selectedUsuarioId)) {
+        setSelectedUsuarioId(null);
+      }
+    }
+
+    setSelectedUsuariosIds([]);
+    setDeletingSelectedUsuarios(false);
+
+    if (fallidos.length > 0) {
+      setMessage(`Eliminados correctamente: ${eliminados.length}. No eliminados: ${fallidos.length}. ${fallidos.join(" ")}`);
+      return;
+    }
+
+    setMessage(`Eliminación completada. Se eliminaron ${eliminados.length} usuario(s) sin datos asociados.`);
+  };
+
   const formatDate = (value?: string) => {
     if (!value) return "Sin fecha";
     const date = new Date(value);
@@ -421,15 +672,65 @@ export default function Dashboard() {
     [dashboardFilter, tareas, hogares],
   );
 
+  const usuariosFiltrados = useMemo(
+    () =>
+      usuarios.filter((usuarioItem) => {
+        const datosAsociados = getDatosAsociadosUsuario(usuarioItem);
+        const usuarioEliminable = esUsuarioEliminable(usuarioItem);
+
+        if (usuarioFiltro === "sin-datos" && !usuarioEliminable) return false;
+        if (usuarioFiltro === "suspendidos" && isUsuarioActivo(usuarioItem)) return false;
+        if (usuarioFiltro === "clientes" && getUsuarioRole(usuarioItem) !== "CLIENTE") return false;
+
+        return matchesFilter([
+          usuarioItem.id,
+          usuarioItem.nombre,
+          usuarioItem.usuario,
+          usuarioItem.correo,
+          usuarioItem.telefono,
+          getUsuarioRole(usuarioItem),
+          isUsuarioActivo(usuarioItem) ? "activa" : "suspendida",
+          usuarioItem.estadoCuenta,
+          usuarioItem.hogarActual,
+          `publicaciones ${datosAsociados.publicaciones}`,
+          `historias ${datosAsociados.historias}`,
+          `hogares ${datosAsociados.hogares}`,
+          `tareas ${datosAsociados.tareas}`,
+        ]);
+      }),
+    [dashboardFilter, usuarioFiltro, usuarios, publicaciones, historias, hogares, tareas, user?.id],
+  );
+
+  const selectedUsuario = useMemo(
+    () => usuarios.find((usuarioItem) => usuarioItem.id === selectedUsuarioId) || usuariosFiltrados[0] || null,
+    [selectedUsuarioId, usuarios, usuariosFiltrados],
+  );
+
+  const usuariosEliminablesVisibles = useMemo(
+    () => usuariosFiltrados.filter((usuarioItem) => esUsuarioEliminable(usuarioItem)),
+    [usuariosFiltrados, publicaciones, historias, hogares, tareas, user?.id],
+  );
+
+  useEffect(() => {
+    setSelectedUsuariosIds((current) =>
+      current.filter((id) => usuarios.some((usuarioItem) => usuarioItem.id === id && esUsuarioEliminable(usuarioItem))),
+    );
+  }, [usuarios, publicaciones, historias, hogares, tareas, user?.id]);
+
   const hasActiveFilter = dashboardFilter.trim().length > 0;
   const filteredTotal =
-    publicacionesFiltradas.length + hogaresFiltrados.length + tareasFiltradas.length + historiasFiltradas.length;
-  const totalRegistros = stats.publicaciones + stats.historias + stats.hogares + stats.tareas;
+    publicacionesFiltradas.length +
+    hogaresFiltrados.length +
+    tareasFiltradas.length +
+    historiasFiltradas.length +
+    usuariosFiltrados.length;
+  const totalRegistros = stats.publicaciones + stats.historias + stats.hogares + stats.tareas + stats.usuarios;
   const dashboardTabs = [
     { id: "publicaciones" as const, label: "Publicaciones", count: publicacionesFiltradas.length },
     { id: "historias" as const, label: "Historias", count: historiasFiltradas.length },
     { id: "hogares" as const, label: "Hogares", count: hogaresFiltrados.length },
     { id: "tareas" as const, label: "Tareas", count: tareasFiltradas.length },
+    { id: "usuarios" as const, label: "Usuarios", count: usuariosFiltrados.length },
   ];
 
   return (
@@ -473,13 +774,17 @@ export default function Dashboard() {
           <h5>Tareas</h5>
           <h2>{isLoading ? "..." : stats.tareas}</h2>
         </article>
+        <article className="dashboard-card">
+          <h5>Usuarios</h5>
+          <h2>{isLoading ? "..." : stats.usuarios}</h2>
+        </article>
       </section>
 
       <section className="dashboard-filter-panel">
         <div>
           <label htmlFor="dashboard-filter">Buscar actividad</label>
           <p>
-            Filtra publicaciones, historias, hogares y tareas por usuario, titulo, descripcion, tipo, hogar,
+            Filtra publicaciones, historias, hogares, tareas y usuarios por nombre, correo, tipo, hogar,
             encargado o estado.
           </p>
         </div>
@@ -813,6 +1118,247 @@ export default function Dashboard() {
                   </article>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className={`dashboard-content dashboard-content-wide ${activeSection === "usuarios" ? "" : "dashboard-hidden-section"}`}>
+        <div className="dashboard-activity">
+          <div className="section-heading-row">
+            <div>
+              <h4>Gestión de usuarios</h4>
+              <p className="dashboard-section-help">
+                Revisa el estado de la cuenta, datos asociados y acciones administrativas disponibles.
+              </p>
+            </div>
+            <span className="status-pill">{usuariosFiltrados.length} resultados</span>
+          </div>
+
+          {temporaryPassword && (
+            <div className="admin-user-alert">
+              <strong>Contraseña temporal para {temporaryPassword.usuario}:</strong>
+              <code>{temporaryPassword.value}</code>
+              <span>Entrégala por un canal seguro y recomienda cambiarla al iniciar sesión.</span>
+            </div>
+          )}
+
+          <div className="admin-users-toolbar">
+            <div className="admin-users-filters" aria-label="Filtros de usuarios">
+              {[
+                { id: "todos" as const, label: "Todos" },
+                { id: "sin-datos" as const, label: "Sin datos asociados" },
+                { id: "suspendidos" as const, label: "Suspendidos" },
+                { id: "clientes" as const, label: "Clientes" },
+              ].map((filter) => (
+                <button
+                  className={`filter-chip ${usuarioFiltro === filter.id ? "active" : ""}`}
+                  key={filter.id}
+                  type="button"
+                  onClick={() => {
+                    setUsuarioFiltro(filter.id);
+                    setSelectedUsuariosIds([]);
+                  }}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            <div className="admin-users-bulk-actions">
+              <span>{selectedUsuariosIds.length} cuenta(s) seleccionada(s)</span>
+              <button
+                className="btn btn-outline-success btn-sm"
+                type="button"
+                onClick={() => seleccionarUsuariosEliminables(usuariosFiltrados)}
+                disabled={usuariosEliminablesVisibles.length === 0 || deletingSelectedUsuarios}
+              >
+                Seleccionar eliminables
+              </button>
+              <button
+                className="btn btn-outline-success btn-sm"
+                type="button"
+                onClick={limpiarSeleccionUsuarios}
+                disabled={selectedUsuariosIds.length === 0 || deletingSelectedUsuarios}
+              >
+                Limpiar selección
+              </button>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                type="button"
+                onClick={eliminarUsuariosSeleccionados}
+                disabled={selectedUsuariosIds.length === 0 || deletingSelectedUsuarios}
+              >
+                {deletingSelectedUsuarios ? "Eliminando..." : "Eliminar usuarios seleccionados"}
+              </button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="sin-resultados"><p>Cargando usuarios...</p></div>
+          ) : usuarios.length === 0 ? (
+            <div className="sin-resultados"><p>No hay usuarios registrados.</p></div>
+          ) : usuariosFiltrados.length === 0 ? (
+            <div className="sin-resultados"><p>No hay resultados para este filtro.</p></div>
+          ) : (
+            <div className="admin-users-layout">
+              <div className="admin-users-list">
+                {usuariosFiltrados.map((usuarioItem) => {
+                  const datosAsociados = getDatosAsociadosUsuario(usuarioItem);
+                  const usuarioActivo = isUsuarioActivo(usuarioItem);
+                  const usuarioEliminable = esUsuarioEliminable(usuarioItem);
+                  const usuarioSeleccionado = selectedUsuariosIds.includes(usuarioItem.id);
+
+                  return (
+                    <article
+                      className={`admin-user-row ${selectedUsuario?.id === usuarioItem.id ? "active" : ""}`}
+                      key={usuarioItem.id}
+                    >
+                      <label
+                        className={`admin-user-select ${usuarioEliminable ? "" : "disabled"}`}
+                        title={usuarioEliminable ? "Seleccionar cuenta" : "No se puede eliminar este usuario porque tiene información asociada o permisos administrativos"}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={usuarioSeleccionado}
+                          disabled={!usuarioEliminable || deletingSelectedUsuarios}
+                          onChange={() => toggleUsuarioSeleccionado(usuarioItem)}
+                        />
+                        <span className="sr-only">Seleccionar usuario</span>
+                      </label>
+                      <button
+                        className="admin-user-summary"
+                        type="button"
+                        onClick={() => setSelectedUsuarioId(usuarioItem.id)}
+                      >
+                        <span className="admin-user-avatar">
+                          {(usuarioItem.nombre || usuarioItem.usuario || "U").slice(0, 1).toUpperCase()}
+                        </span>
+                        <span>
+                          <strong>{usuarioItem.nombre || usuarioItem.usuario}</strong>
+                          <small>{usuarioItem.usuario} · {usuarioItem.correo || "Sin correo"}</small>
+                        </span>
+                      </button>
+                      <div className="admin-user-badges">
+                        <span className={`status-pill ${usuarioActivo ? "success" : "warning"}`}>
+                          {usuarioActivo ? "Activa" : "Suspendida"}
+                        </span>
+                        <span className="status-pill">{getUsuarioRole(usuarioItem)}</span>
+                        <span className="status-pill">{datosAsociados.total} datos asociados</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <aside className="admin-user-detail">
+                {selectedUsuario ? (() => {
+                  const datosAsociados = getDatosAsociadosUsuario(selectedUsuario);
+                  const usuarioActivo = isUsuarioActivo(selectedUsuario);
+                  const isCurrentAdmin = selectedUsuario.id === user?.id;
+                  const isAdminAccount = getUsuarioRole(selectedUsuario) === "ADMIN";
+                  const actionDisabled = usuarioActionId === selectedUsuario.id;
+
+                  return (
+                    <>
+                      <div className="section-heading-row">
+                        <div>
+                          <h4>Detalle de usuario</h4>
+                          <span>ID #{selectedUsuario.id}</span>
+                        </div>
+                        <span className={`status-pill ${usuarioActivo ? "success" : "warning"}`}>
+                          {selectedUsuario.estadoCuenta || (usuarioActivo ? "Activa" : "Suspendida")}
+                        </span>
+                      </div>
+
+                      <div className="admin-user-account-section">
+                        <h5>Datos de cuenta</h5>
+                      </div>
+
+                      <div className="admin-user-profile compact-admin-user-profile">
+                        <span><strong>Nombre:</strong> {selectedUsuario.nombre || "No informado"}</span>
+                        <span><strong>Usuario:</strong> {selectedUsuario.usuario}</span>
+                        <span><strong>Correo:</strong> {selectedUsuario.correo || "No informado"}</span>
+                        <span><strong>Teléfono:</strong> {selectedUsuario.telefono || "No informado"}</span>
+                        <span><strong>Rol:</strong> {getUsuarioRole(selectedUsuario)}</span>
+                        <span><strong>Estado de la cuenta:</strong> {usuarioActivo ? "Activa" : "Suspendida"}</span>
+                      </div>
+
+                      <div className="admin-user-associated">
+                        <h5>Datos asociados</h5>
+                        <div className="admin-user-associated-grid">
+                          <span><strong>{datosAsociados.publicaciones}</strong> Publicaciones</span>
+                          <span><strong>{datosAsociados.historias}</strong> Historias</span>
+                          <span><strong>{datosAsociados.hogares}</strong> Hogares</span>
+                          <span><strong>{datosAsociados.tareas}</strong> Tareas</span>
+                        </div>
+                        {datosAsociados.tieneDatos ? (
+                          <p>
+                            Este usuario tiene información asociada en la plataforma. Revisa sus publicaciones,
+                            hogares o registros relacionados antes de eliminarlo.
+                          </p>
+                        ) : (
+                          <p>No se detectaron datos asociados desde los registros cargados en el dashboard.</p>
+                        )}
+                      </div>
+
+                      <div className="admin-user-actions">
+                        {usuarioActivo ? (
+                          <button
+                            className="btn btn-outline-warning btn-sm"
+                            type="button"
+                            onClick={() => suspenderUsuarioAdmin(selectedUsuario)}
+                            disabled={actionDisabled || isCurrentAdmin || isAdminAccount}
+                          >
+                            {actionDisabled ? "Procesando..." : "Suspender cuenta"}
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-outline-success btn-sm"
+                            type="button"
+                            onClick={() => reactivarUsuarioAdmin(selectedUsuario)}
+                            disabled={actionDisabled}
+                          >
+                            {actionDisabled ? "Procesando..." : "Reactivar cuenta"}
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          type="button"
+                          onClick={() => restablecerContrasenaAdmin(selectedUsuario)}
+                          disabled={actionDisabled || isCurrentAdmin}
+                        >
+                          {actionDisabled ? "Procesando..." : "Restablecer contraseña"}
+                        </button>
+                        <button
+                          className="btn btn-outline-danger btn-sm"
+                          type="button"
+                          onClick={() => eliminarUsuarioAdmin(selectedUsuario)}
+                          disabled={actionDisabled || isCurrentAdmin || isAdminAccount || datosAsociados.tieneDatos}
+                          title={
+                            datosAsociados.tieneDatos
+                              ? "No se puede eliminar porque tiene información asociada"
+                              : undefined
+                          }
+                        >
+                          {actionDisabled ? "Procesando..." : "Eliminar usuario"}
+                        </button>
+                      </div>
+
+                      {(isCurrentAdmin || isAdminAccount || datosAsociados.tieneDatos) && (
+                        <p className="admin-user-warning">
+                          {isCurrentAdmin
+                            ? "No puedes eliminar ni suspender la cuenta administrativa actualmente activa."
+                            : isAdminAccount
+                              ? "Las cuentas ADMIN no se eliminan ni suspenden desde esta vista para proteger el acceso administrativo."
+                              : "No se puede eliminar este usuario porque tiene información asociada. Revisa sus publicaciones, hogares o registros relacionados antes de continuar."}
+                        </p>
+                      )}
+                    </>
+                  );
+                })() : (
+                  <div className="sin-resultados"><p>Selecciona un usuario para ver su detalle.</p></div>
+                )}
+              </aside>
             </div>
           )}
         </div>

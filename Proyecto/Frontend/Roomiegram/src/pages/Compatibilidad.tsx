@@ -57,6 +57,21 @@ function tienePreferenciasCompletas(preferencias?: Partial<PreferenciasCompatibi
     && Number(preferencias.presupuesto || 0) > 0;
 }
 
+function normalizarPreferencias(preferencias?: Partial<PreferenciasCompatibilidad> | null): PreferenciasCompatibilidad | null {
+  if (!preferencias) return null;
+
+  const normalizadas = {
+    limpieza: preferencias.limpieza || "",
+    ambiente: preferencias.ambiente || "",
+    horario: preferencias.horario || "",
+    mascotas: preferencias.mascotas || "",
+    fumar: preferencias.fumar || "",
+    presupuesto: String(preferencias.presupuesto || ""),
+  };
+
+  return tienePreferenciasCompletas(normalizadas) ? normalizadas : null;
+}
+
 function labelPreferencia(campo: keyof Omit<PreferenciasCompatibilidad, "presupuesto">, valor: string) {
   const labels = preferenciasLabels[campo] as Record<string, string>;
   return labels[valor] || valor.replaceAll("_", " ");
@@ -131,12 +146,18 @@ export default function Compatibilidad() {
 
   const candidatos = useMemo<MatchCandidate[]>(() => {
     return usuarios
-      .filter((usuario) => usuario.id !== user?.id && tienePreferenciasCompletas(usuario.preferenciasCompatibilidad))
+      .filter((usuario) => usuario.id !== user?.id && usuario.cuentaActiva !== false)
+      .map((usuario) => ({
+        usuario,
+        preferencias: normalizarPreferencias(usuario.preferenciasCompatibilidad),
+      }))
+      .filter((item): item is { usuario: UsuarioResumen; preferencias: PreferenciasCompatibilidad } => !!item.preferencias)
       .map((usuario) => {
-        const preferencias = usuario.preferenciasCompatibilidad as PreferenciasCompatibilidad;
-        const usuarioNormalizado = normalizarTexto(usuario.usuario);
+        const preferencias = usuario.preferencias;
+        const usuarioData = usuario.usuario;
+        const usuarioNormalizado = normalizarTexto(usuarioData.usuario);
         const publicacionesUsuario = publicaciones.filter((publicacion) =>
-          publicacion.usuarioId === usuario.id || normalizarTexto(publicacion.usuarioCreador) === usuarioNormalizado,
+          publicacion.usuarioId === usuarioData.id || normalizarTexto(publicacion.usuarioCreador) === usuarioNormalizado,
         );
         const publicacionBuscaRoomie = publicacionesUsuario.find((publicacion) => publicacion.tipo === "busco_roomie");
         const publicacionCasa = publicacionesUsuario.find((publicacion) => publicacion.tipo !== "busco_roomie");
@@ -144,21 +165,21 @@ export default function Compatibilidad() {
           ? hogares.find((hogar) => hogar.publicacionIds?.includes(publicacionCasa.id))
           : undefined;
         const perteneceAHogar = hogares.find((hogar) =>
-          hogar.usuarioAdministradorId === usuario.id
-          || hogar.usuarioCreadorId === usuario.id
-          || hogar.integrantesIds?.includes(usuario.id),
+          hogar.usuarioAdministradorId === usuarioData.id
+          || hogar.usuarioCreadorId === usuarioData.id
+          || hogar.integrantesIds?.includes(usuarioData.id),
         );
         const { coincidencias, diferencias } = evaluarCoincidencias(compatibilidad, preferencias);
 
         return {
-          id: usuario.id,
-          nombre: usuario.nombre || usuario.usuario,
-          usuario: usuario.usuario,
-          hogarActual: usuario.hogarActual,
-          descripcion: usuario.descripcion || publicacionBuscaRoomie?.descripcion || "Usuario registrado con preferencias de convivencia.",
-          imagen: usuario.fotoPerfil || publicacionBuscaRoomie?.imagen || avatar4,
+          id: usuarioData.id,
+          nombre: usuarioData.nombre || usuarioData.usuario,
+          usuario: usuarioData.usuario,
+          hogarActual: usuarioData.hogarActual,
+          descripcion: usuarioData.descripcion || publicacionBuscaRoomie?.descripcion || "Usuario registrado con preferencias de convivencia.",
+          imagen: usuarioData.fotoPerfil || publicacionBuscaRoomie?.imagen || avatar4,
           preferencias,
-          intereses: usuario.intereses || [],
+          intereses: usuarioData.intereses || [],
           score: scoreMatch(compatibilidad, preferencias),
           coincidencias,
           diferencias,
@@ -275,7 +296,7 @@ export default function Compatibilidad() {
 
       <section className="module-title">
         <h1>Buscar por compatibilidad</h1>
-        <p>Encuentra personas compatibles, entiende por que encajan contigo y elige la accion correcta segun su contexto.</p>
+          <p>Encuentra personas compatibles, entiende por qué encajan contigo y elige la acción correcta según su contexto.</p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -284,7 +305,7 @@ export default function Compatibilidad() {
         <div className="compatibility-form">
           <span className="compatibility-kicker">Match inteligente</span>
           <h3>Tus preferencias</h3>
-          <p>Ajusta tus habitos para buscar usuarios compatibles.</p>
+          <p>Ajusta tus hábitos para buscar usuarios compatibles.</p>
           <div className="compatibility-grid">
             <select className="form-control" value={compatibilidad.limpieza} onChange={(e) => setCompatibilidad({ ...compatibilidad, limpieza: e.target.value })}>
               <option value="ordenado">Muy ordenado</option>
@@ -311,7 +332,7 @@ export default function Compatibilidad() {
               <option value="fuma">Fumador</option>
               <option value="indiferente_fuma">Me da igual</option>
             </select>
-            <input className="form-control" type="number" min="1" placeholder="Presupuesto maximo" value={compatibilidad.presupuesto} onChange={(e) => setCompatibilidad({ ...compatibilidad, presupuesto: e.target.value })} />
+            <input className="form-control" type="number" min="1" placeholder="Presupuesto máximo" value={compatibilidad.presupuesto} onChange={(e) => setCompatibilidad({ ...compatibilidad, presupuesto: e.target.value })} />
           </div>
 
           {hogaresAdministrables.length > 1 && (
@@ -338,7 +359,8 @@ export default function Compatibilidad() {
           </div>
           {candidatos.length === 0 ? (
             <div className="sin-resultados">
-              <p>Aun no hay otros usuarios registrados con preferencias guardadas.</p>
+              <p>Aún no hay personas compatibles disponibles.</p>
+              <p>Cuando otros usuarios completen sus preferencias de convivencia, aparecerán aquí.</p>
             </div>
           ) : (
             candidatos.map((candidato) => {
@@ -414,7 +436,7 @@ export default function Compatibilidad() {
                           disabled={processingId === candidato.id}
                           onClick={() => mostrarInteres(candidato)}
                         >
-                          {processingId === candidato.id ? "Registrando..." : "Mostrar interes"}
+                          {processingId === candidato.id ? "Registrando..." : "Mostrar interés"}
                         </button>
                       )}
                     </div>

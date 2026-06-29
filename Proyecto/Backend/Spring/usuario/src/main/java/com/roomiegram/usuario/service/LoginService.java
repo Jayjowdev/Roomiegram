@@ -73,6 +73,12 @@ public class LoginService {
         if (!passwordEncoder.matches(contrasena, login.getContrasena())) {
             throw new IllegalArgumentException("Usuario o contraseña incorrectos");
         }
+
+        registerRepository.findByUsuario(login.getUsuario())
+                .filter(register -> Boolean.TRUE.equals(register.getCuentaSuspendida()))
+                .ifPresent(register -> {
+                    throw new IllegalArgumentException("La cuenta está suspendida. Contacta al administrador de Roomiegram.");
+                });
         
         return login;
     }

@@ -62,4 +62,7 @@ public class Register {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String preferenciasCompatibilidad;
+
+    @Column(nullable = false)
+    private Boolean cuentaSuspendida = false;
 }

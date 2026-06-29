@@ -10,6 +10,71 @@ export async function listarUsuarios() {
   }
 }
 
+export async function listarUsuariosAdmin() {
+  try {
+    const { data } = await usuarioApi.get<UsuarioResumen[]>("/auth/admin/usuarios")
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function obtenerUsuario(id: number) {
+  try {
+    const { data } = await usuarioApi.get<UsuarioResumen>(`/auth/admin/usuarios/${id}`)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function suspenderUsuario(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.patch<UsuarioResumen>(`/auth/admin/usuarios/${id}/suspender`, null, {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function reactivarUsuario(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.patch<UsuarioResumen>(`/auth/admin/usuarios/${id}/reactivar`, null, {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function restablecerContrasenaUsuario(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.post<{
+      mensaje: string
+      contrasenaTemporal: string
+      usuario: UsuarioResumen
+    }>(`/auth/admin/usuarios/${id}/restablecer-contrasena`, null, {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function eliminarUsuario(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    await usuarioApi.delete(`/auth/admin/usuarios/${id}`, {
+      params: { adminId, rolSolicitante },
+    })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function enviarCorreoTareaAsignada(payload: {
   usuarioId: number
   titulo: string
@@ -88,6 +153,12 @@ export async function enviarContactoSoporte(payload: {
 
 export const usuarioService = {
   listar: listarUsuarios,
+  listarAdmin: listarUsuariosAdmin,
+  obtener: obtenerUsuario,
+  suspender: suspenderUsuario,
+  reactivar: reactivarUsuario,
+  restablecerContrasena: restablecerContrasenaUsuario,
+  eliminar: eliminarUsuario,
   enviarCorreoTareaAsignada,
   enviarCorreoTareaCompletada,
   enviarCorreoSolicitudRecibida,

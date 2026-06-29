@@ -28,6 +28,10 @@ export type UsuarioResumen = {
   nombre: string
   correo?: string
   telefono: string
+  rol?: UsuarioRole
+  role?: UsuarioRole
+  cuentaActiva?: boolean
+  estadoCuenta?: string
   fotoPerfil?: string
   descripcion?: string
   intereses?: string[]

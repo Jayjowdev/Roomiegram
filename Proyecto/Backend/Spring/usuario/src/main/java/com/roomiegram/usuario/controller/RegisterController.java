@@ -20,7 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.usuario.DTO.CreateAdminRequest;
 import com.roomiegram.usuario.DTO.RegisterRequest;
+import com.roomiegram.usuario.enums.Role;
+import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
+import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import com.roomiegram.usuario.service.RegisterService;
 
@@ -36,6 +39,9 @@ public class RegisterController {
 
     @Autowired
     private RegisterRepository registerRepository;
+
+    @Autowired
+    private LoginRepository loginRepository;
 
     @GetMapping("/usuarios")
     public ResponseEntity<?> listarUsuarios() {
@@ -146,6 +152,9 @@ public class RegisterController {
                 Map.entry("nombre", usuario.getNombre()),
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
+                Map.entry("rol", getRole(usuario).name()),
+                Map.entry("cuentaActiva", !Boolean.TRUE.equals(usuario.getCuentaSuspendida())),
+                Map.entry("estadoCuenta", Boolean.TRUE.equals(usuario.getCuentaSuspendida()) ? "Suspendida" : "Activa"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
                 Map.entry("descripcion", usuario.getDescripcion() == null ? "" : usuario.getDescripcion()),
                 Map.entry("intereses", usuario.getIntereses() == null ? List.of() : usuario.getIntereses()),
@@ -162,7 +171,9 @@ public class RegisterController {
                 Map.entry("nombre", usuario.getNombre()),
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
-                Map.entry("role", "CLIENTE"),
+                Map.entry("role", getRole(usuario).name()),
+                Map.entry("cuentaActiva", !Boolean.TRUE.equals(usuario.getCuentaSuspendida())),
+                Map.entry("estadoCuenta", Boolean.TRUE.equals(usuario.getCuentaSuspendida()) ? "Suspendida" : "Activa"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
                 Map.entry("descripcion", usuario.getDescripcion() == null ? "" : usuario.getDescripcion()),
                 Map.entry("intereses", usuario.getIntereses() == null ? List.of() : usuario.getIntereses()),
@@ -191,5 +202,11 @@ public class RegisterController {
 
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
+    }
+
+    private Role getRole(Register usuario) {
+        return loginRepository.findByUsuario(usuario.getUsuario())
+                .map(Login::getRole)
+                .orElse(Role.CLIENTE);
     }
 }

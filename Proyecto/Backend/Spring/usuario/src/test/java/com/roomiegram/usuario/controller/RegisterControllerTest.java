@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.roomiegram.usuario.DTO.RegisterRequest;
+import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import com.roomiegram.usuario.service.RegisterService;
@@ -36,6 +37,9 @@ class RegisterControllerTest {
 
     @Mock
     private RegisterRepository registerRepository;
+
+    @Mock
+    private LoginRepository loginRepository;
 
     @InjectMocks
     private RegisterController registerController;

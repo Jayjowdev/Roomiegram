@@ -175,6 +175,14 @@ export default function MiPerfil() {
                 {user.intereses.map((interes) => <span className="home-tag" key={interes}>{interes}</span>)}
               </div>
             ) : null}
+            <div className="profile-main-actions">
+              <button className="btn btn-success" type="button" onClick={() => navigate("/configuracion")}>
+                Editar configuracion
+              </button>
+              <button className="btn btn-outline-success" type="button" onClick={() => navigate(`/perfil-publico/${user?.id}`)}>
+                Ver perfil publico
+              </button>
+            </div>
           </div>
         </div>
 
@@ -188,10 +196,13 @@ export default function MiPerfil() {
             </div>
           ) : null}
           <button className="btn btn-outline-success w-100 mb-2" onClick={() => navigate("/preferencias")}>
-            Editar preferencias
+            Preferencias de convivencia
           </button>
           <button className="btn btn-success w-100" onClick={() => navigate("/compatibilidad")}>
             Buscar matches
+          </button>
+          <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/hogares")}>
+            Mis hogares
           </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/planes")}>
             {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}

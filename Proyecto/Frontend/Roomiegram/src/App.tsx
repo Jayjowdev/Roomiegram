@@ -14,6 +14,7 @@ import Perfil from "./pages/Perfil"
 import MiPerfil from "./pages/MiPerfil"
 import MisPublicaciones from "./pages/MisPublicaciones"
 import Preferencias from "./pages/Preferencias"
+import Configuracion from "./pages/Configuracion"
 import DetallePublicacion from "./pages/DetallePublicacion"
 import CrearPublicacion from "./pages/CrearPublicacion"
 import Tareas from "./pages/Tareas"
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
         <Route path="/mis-publicaciones" element={<ProtectedRoute><MisPublicaciones /></ProtectedRoute>} />
         <Route path="/preferencias" element={<ProtectedRoute><Preferencias /></ProtectedRoute>} />
+        <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
         <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/perfil-publico/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/detalle-publicacion/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />

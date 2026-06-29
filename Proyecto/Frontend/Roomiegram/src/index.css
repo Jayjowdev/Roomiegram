@@ -1343,6 +1343,34 @@ p {
   justify-content: flex-end;
 }
 
+.profile-main-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.settings-card {
+  border: 1px solid #d3ebe5;
+}
+
+.settings-shortcuts {
+  display: grid;
+  gap: 12px;
+}
+
+.preferences-helper-card {
+  align-self: start;
+  border: 1px solid #d3ebe5;
+}
+
 /* ---------- PERFIL ---------- */
 
 .perfil-page {

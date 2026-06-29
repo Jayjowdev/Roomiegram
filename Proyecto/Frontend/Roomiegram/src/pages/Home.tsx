@@ -42,6 +42,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     id: pub.id,
     tipo,
     origen: "backend",
+    usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
     titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
@@ -316,7 +317,12 @@ export default function Home() {
                     </div>
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}
-                    <button className="btn btn-success w-100 mt-4" onClick={() => navigate(`/perfil/${pub.id}`)}>Ver perfil</button>
+                    <button
+                      className="btn btn-success w-100 mt-4"
+                      onClick={() => navigate(pub.usuarioId ? `/perfil-publico/${pub.usuarioId}` : `/perfil/${pub.id}`)}
+                    >
+                      Ver perfil
+                    </button>
                     {puedeEliminarPublicacion(pub) && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub)}>Eliminar</button>}
                   </div>
                 </>

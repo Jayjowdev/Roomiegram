@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
@@ -12,7 +12,14 @@ import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
 import type { Hogar } from "../types/Hogar";
+import type { UsuarioResumen } from "../types/Usuario";
 import { getLocalPublicaciones } from "../utils/localPublicaciones";
+import {
+  aceptarInvitacionHogar,
+  aceptarSolicitudIngreso,
+  rechazarInvitacionHogar,
+  rechazarSolicitudIngreso,
+} from "../utils/notificacionActions";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 const fallbackGallery = [home1, home2, home3];
@@ -61,14 +68,19 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
 export default function DetallePublicacion() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [publicacion, setPublicacion] = useState<Publicacion | null>(
     getLocalPublicaciones().find((pub) => String(pub.id) === id) || null,
   );
   const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [message, setMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
+  const [contextMessage, setContextMessage] = useState("");
+  const [contextResolved, setContextResolved] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
+  const [selectedHogarId, setSelectedHogarId] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
   const [processingRequest, setProcessingRequest] = useState("");
 
@@ -91,9 +103,11 @@ export default function DetallePublicacion() {
   }, [id]);
 
   useEffect(() => {
-    hogarService
-      .listar()
-      .then((data) => setHogares(data))
+    Promise.allSettled([hogarService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, usuariosResult]) => {
+        if (hogaresResult.status === "fulfilled") setHogares(hogaresResult.value);
+        if (usuariosResult.status === "fulfilled") setUsuarios(usuariosResult.value);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -102,7 +116,40 @@ export default function DetallePublicacion() {
     return hogares.find((hogar) => hogar.publicacionIds?.includes(publicacion.id)) || null;
   }, [hogares, publicacion?.id, publicacion?.tipo]);
 
+  const notificationContext = useMemo(() => {
+    const fromNotifications = searchParams.get("from") === "notificaciones";
+    const tipoAccion = searchParams.get("tipoAccion");
+    const hogarId = Number(searchParams.get("hogarId"));
+    const usuarioId = Number(searchParams.get("usuarioId"));
+    const notificacionId = Number(searchParams.get("notificacionId"));
+
+    if (!fromNotifications || (tipoAccion !== "solicitud" && tipoAccion !== "invitacion") || !Number.isFinite(hogarId)) {
+      return null;
+    }
+
+    const hogar = hogares.find((item) => item.id === hogarId) || hogarVinculado || undefined;
+
+    return {
+      tipoAccion,
+      hogarId,
+      usuarioId: Number.isFinite(usuarioId) ? usuarioId : undefined,
+      notificacionId: Number.isFinite(notificacionId) ? notificacionId : undefined,
+      hogar,
+    };
+  }, [hogarVinculado, hogares, searchParams]);
+
   const esOfertaCasa = publicacion?.tipo !== "busco_roomie";
+
+  const misHogaresAdministrables = useMemo(() => {
+    if (!user?.id) return [];
+    return hogares.filter((hogar) => hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id);
+  }, [hogares, user?.id]);
+
+  useEffect(() => {
+    if (!selectedHogarId && misHogaresAdministrables.length === 1) {
+      setSelectedHogarId(String(misHogaresAdministrables[0].id));
+    }
+  }, [misHogaresAdministrables, selectedHogarId]);
 
   const esCreadorPublicacion = !!publicacion?.usuarioCreador
     && (
@@ -119,6 +166,11 @@ export default function DetallePublicacion() {
 
   const solicitudYaEnviada = !!user?.id && !!hogarVinculado?.solicitudesPendientesIds?.includes(user.id);
 
+  const getNombreUsuario = (usuarioId: number) => {
+    const usuario = usuarios.find((item) => item.id === usuarioId);
+    return usuario?.nombre || usuario?.usuario || `Usuario #${usuarioId}`;
+  };
+
   const irACrearHogarParaPublicacion = () => {
     if (!publicacion?.id || !esOfertaCasa) return;
     const params = new URLSearchParams({
@@ -127,6 +179,119 @@ export default function DetallePublicacion() {
       tipo: "ofrezco_casa",
     });
     navigate(`/hogares?${params.toString()}`);
+  };
+
+  const volver = () => {
+    if (notificationContext) {
+      navigate("/notificaciones");
+      return;
+    }
+    navigate("/home");
+  };
+
+  const verPerfilPublico = () => {
+    if (!publicacion) return;
+    const usuarioPerfilId = publicacion.usuarioId || publicacion.id;
+    navigate(`/perfil-publico/${usuarioPerfilId}`);
+  };
+
+  const mostrarInteres = async () => {
+    if (!user?.id || !publicacion) return;
+
+    try {
+      setIsRequesting(true);
+      if (publicacion.usuarioId && publicacion.usuarioId !== user.id) {
+        await notificacionService.crear({
+          usuarioEmisorId: user.id,
+          usuarioReceptorId: publicacion.usuarioId,
+          hogarId: 0,
+          referenciaId: publicacion.id,
+          tipo: "INTERES_ROOMIE",
+          estado: "PENDIENTE",
+          titulo: "Nuevo interes por tu perfil",
+          mensaje: `${user.nombre || user.usuario || "Un usuario"} mostro interes en tu publicacion de busqueda roomie.`,
+        });
+      }
+      setContactMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
+    } catch {
+      setContactMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const invitarAMiHogar = async () => {
+    if (!user?.id || !publicacion?.usuarioId) return;
+    const hogar = misHogaresAdministrables.find((item) => String(item.id) === selectedHogarId);
+    if (!hogar) {
+      setContactMessage("Selecciona un hogar valido para enviar la invitacion.");
+      return;
+    }
+
+    try {
+      setIsRequesting(true);
+      await notificacionService.crear({
+        usuarioEmisorId: user.id,
+        usuarioReceptorId: publicacion.usuarioId,
+        hogarId: hogar.id,
+        referenciaId: hogar.id,
+        tipo: "INVITACION_HOGAR",
+        estado: "PENDIENTE",
+        titulo: "Invitacion a hogar Roomiegram",
+        mensaje: `${user.nombre || user.usuario || "Un usuario"} te invito a unirte al hogar ${hogar.nombre}.`,
+      });
+      setContactMessage(`Invitacion enviada para el hogar ${hogar.nombre}.`);
+    } catch {
+      setContactMessage("No se pudo enviar la invitacion. La publicacion no fue modificada.");
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const responderContexto = async (accion: "aceptar" | "rechazar") => {
+    if (!user?.id || !notificationContext || contextResolved) return;
+
+    try {
+      setIsRequesting(true);
+      if (notificationContext.tipoAccion === "solicitud") {
+        if (!notificationContext.usuarioId) throw new Error("No se pudo identificar al solicitante.");
+        if (accion === "aceptar") {
+          const resultado = await aceptarSolicitudIngreso({
+            hogarId: notificationContext.hogarId,
+            solicitanteId: notificationContext.usuarioId,
+            administradorId: user.id,
+            notificacionId: notificationContext.notificacionId,
+            hogarNombre: notificationContext.hogar?.nombre,
+          });
+          setContextMessage(resultado.message);
+        } else {
+          const resultado = await rechazarSolicitudIngreso({
+            hogarId: notificationContext.hogarId,
+            solicitanteId: notificationContext.usuarioId,
+            administradorId: user.id,
+            notificacionId: notificationContext.notificacionId,
+            hogarNombre: notificationContext.hogar?.nombre,
+          });
+          setContextMessage(resultado.message);
+        }
+      } else if (accion === "aceptar") {
+        const resultado = await aceptarInvitacionHogar({
+          hogarId: notificationContext.hogarId,
+          usuarioId: user.id,
+          administradorId: notificationContext.hogar?.usuarioAdministradorId || notificationContext.usuarioId || user.id,
+          notificacionId: notificationContext.notificacionId,
+        });
+        setContextMessage(resultado.message);
+      } else {
+        const resultado = await rechazarInvitacionHogar({ notificacionId: notificationContext.notificacionId });
+        setContextMessage(resultado.message);
+      }
+      setContextResolved(true);
+    } catch (error) {
+      setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificacion.");
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   const solicitarIngreso = async () => {
@@ -237,17 +402,58 @@ export default function DetallePublicacion() {
           <img src={logo} alt="RoomieGram" className="perfil-logo" onClick={() => navigate("/home")} />
         </div>
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Volver</button>
+          <button className="btn btn-outline-success" onClick={volver}>Volver</button>
           <LogoutButton />
         </div>
       </header>
 
       {message && <p className="api-message">{message}</p>}
       {contactMessage && <p className="api-message">{contactMessage}</p>}
+      {contextMessage && <p className="api-message">{contextMessage}</p>}
 
       {!publicacion ? (
         <div className="sin-resultados"><p>No se encontro la publicacion.</p></div>
       ) : (
+        <>
+        {notificationContext && (
+          <section className="notification-review-panel">
+            <span className="eyebrow">Contexto de notificacion</span>
+            <h2>
+              {notificationContext.tipoAccion === "solicitud"
+                ? "Solicitud relacionada con esta publicacion"
+                : "Invitacion relacionada con esta casa"}
+            </h2>
+            <p>
+              {notificationContext.tipoAccion === "solicitud"
+                ? "Revisa la publicacion y el perfil del solicitante antes de aceptar o rechazar."
+                : "Revisa esta casa y el perfil del anfitrion antes de aceptar o rechazar."}
+            </p>
+            <div className="notification-context-grid">
+              <span><strong>Hogar:</strong> {notificationContext.hogar?.nombre || `#${notificationContext.hogarId}`}</span>
+              <span><strong>Publicacion:</strong> {publicacion.titulo || "Casa disponible"}</span>
+            </div>
+            <div className="dashboard-actions mt-3">
+              {notificationContext.usuarioId && (
+                <button
+                  className="btn btn-outline-success btn-sm"
+                  type="button"
+                  onClick={() => navigate(`/perfil-publico/${notificationContext.usuarioId}?${searchParams.toString()}`)}
+                >
+                  {notificationContext.tipoAccion === "solicitud" ? "Ver perfil del solicitante" : "Ver perfil del anfitrion"}
+                </button>
+              )}
+              <button className="btn btn-success btn-sm" disabled={isRequesting || contextResolved} onClick={() => responderContexto("aceptar")}>
+                {notificationContext.tipoAccion === "solicitud" ? "Aceptar solicitud" : "Aceptar invitacion"}
+              </button>
+              <button className="btn btn-outline-danger btn-sm" disabled={isRequesting || contextResolved} onClick={() => responderContexto("rechazar")}>
+                Rechazar
+              </button>
+              <button className="btn btn-outline-success btn-sm" type="button" onClick={() => navigate("/notificaciones")}>
+                Volver a notificaciones
+              </button>
+            </div>
+          </section>
+        )}
         <div className="detalle-publicacion">
           <section className="detalle-main">
             <div className="detalle-gallery">
@@ -288,11 +494,42 @@ export default function DetallePublicacion() {
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
             <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitacion/casa" : "Busqueda de roomie"}</p>
             {!esOfertaCasa ? (
-              <div className="mt-3">
-                <p>Esta publicacion es un aviso de busqueda. No necesita hogar vinculado.</p>
-                <button className="btn btn-outline-success w-100 mt-3" type="button" onClick={() => navigate("/home?tipo=ofrezco_casa")}>
-                  Buscar publicaciones de casa
-                </button>
+              <div className="mt-3 profile-action-panel">
+                <p>Esta publicacion es de una persona buscando roomie. No es un hogar al que puedas solicitar ingreso.</p>
+                {misHogaresAdministrables.length > 1 && (
+                  <label className="field-label">
+                    <span>Hogar para invitar</span>
+                    <select className="form-control" value={selectedHogarId} onChange={(event) => setSelectedHogarId(event.target.value)}>
+                      <option value="">Selecciona un hogar</option>
+                      {misHogaresAdministrables.map((hogar) => (
+                        <option key={hogar.id} value={hogar.id}>{hogar.nombre}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <div className="item-actions vertical-actions">
+                  <button className="btn btn-outline-success w-100" type="button" onClick={verPerfilPublico}>
+                    Ver perfil
+                  </button>
+                  {misHogaresAdministrables.length > 0 && publicacion.usuarioId !== user?.id && (
+                    <button
+                      className="btn btn-success w-100"
+                      type="button"
+                      disabled={isRequesting || (misHogaresAdministrables.length > 1 && !selectedHogarId)}
+                      onClick={invitarAMiHogar}
+                    >
+                      {isRequesting ? "Enviando..." : "Invitar a mi hogar"}
+                    </button>
+                  )}
+                  {publicacion.usuarioId !== user?.id && (
+                    <button className="btn btn-outline-success w-100" type="button" disabled={isRequesting} onClick={mostrarInteres}>
+                      {isRequesting ? "Registrando..." : "Mostrar interes"}
+                    </button>
+                  )}
+                  <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/home?tipo=ofrezco_casa")}>
+                    Buscar publicaciones de casa
+                  </button>
+                </div>
               </div>
             ) : puedeAdministrarSolicitudes ? (
               <div className="mt-3">
@@ -301,9 +538,19 @@ export default function DetallePublicacion() {
                   <p>No hay solicitudes pendientes por revisar.</p>
                 ) : (
                   hogarVinculado.solicitudesPendientesIds.map((usuarioId) => (
-                    <div className="request-row" key={usuarioId}>
-                      <span>Solicitud de integrante</span>
+                    <div className="request-row request-row-context" key={usuarioId}>
+                      <span>
+                        <strong>{getNombreUsuario(usuarioId)}</strong>
+                        <small> quiere ingresar a {hogarVinculado.nombre}</small>
+                      </span>
                       <div>
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          type="button"
+                          onClick={() => navigate(`/perfil-publico/${usuarioId}`)}
+                        >
+                          Ver perfil
+                        </button>
                         <button
                           className="btn btn-outline-success btn-sm"
                           disabled={Boolean(processingRequest)}
@@ -349,6 +596,7 @@ export default function DetallePublicacion() {
             )}
           </aside>
         </div>
+        </>
       )}
     </div>
   );

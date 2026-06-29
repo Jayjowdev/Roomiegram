@@ -5,9 +5,18 @@ import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
+import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Notificacion } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+import type { Publicacion } from "../types/Publicacion";
+import type { UsuarioResumen } from "../types/Usuario";
+import {
+  aceptarInvitacionHogar,
+  aceptarSolicitudIngreso,
+  rechazarInvitacionHogar,
+  rechazarSolicitudIngreso,
+} from "../utils/notificacionActions";
 
 const filterDefaults = {
   busqueda: "",
@@ -36,16 +45,28 @@ export default function Notificaciones() {
   const { user } = useAuth();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [filters, setFilters] = useState(filterDefaults);
   const [message, setMessage] = useState("");
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   useEffect(() => {
-    Promise.all([notificacionService.listar(), hogarService.listar()])
-      .then(([data, hogaresData]) => {
-        setNotificaciones(data);
-        setHogares(hogaresData);
+    Promise.allSettled([
+      notificacionService.listar(),
+      hogarService.listar(),
+      usuarioService.listar(),
+      publicacionService.listar(),
+    ])
+      .then(([notificacionesResult, hogaresResult, usuariosResult, publicacionesResult]) => {
+        if (notificacionesResult.status === "fulfilled") setNotificaciones(notificacionesResult.value);
+        if (hogaresResult.status === "fulfilled") setHogares(hogaresResult.value);
+        if (usuariosResult.status === "fulfilled") setUsuarios(usuariosResult.value);
+        if (publicacionesResult.status === "fulfilled") setPublicaciones(publicacionesResult.value);
         setMessage("");
+        if ([notificacionesResult, hogaresResult, usuariosResult, publicacionesResult].some((result) => result.status === "rejected")) {
+          setMessage("Algunos datos de contexto no se pudieron cargar.");
+        }
       })
       .catch(() => setMessage("Servicio no disponible. Intenta nuevamente."));
   }, []);
@@ -71,6 +92,16 @@ export default function Notificaciones() {
     return hogares.find((hogar) => hogar.id === notificacion.hogarId);
   };
 
+  const getUsuario = (usuarioId: number) => {
+    return usuarios.find((usuario) => usuario.id === usuarioId);
+  };
+
+  const getPublicacionDelHogar = (hogar?: Hogar) => {
+    const publicacionId = hogar?.publicacionIds?.[0];
+    if (!publicacionId) return undefined;
+    return publicaciones.find((publicacion) => publicacion.id === publicacionId);
+  };
+
   const esAdminDelHogar = (hogar?: Hogar) => {
     return !!user?.id && !!hogar && (
       hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id
@@ -80,6 +111,35 @@ export default function Notificaciones() {
   const esSolicitudRecibida = (notificacion: Notificacion) => {
     const hogar = getHogarNotificacion(notificacion);
     return esAdminDelHogar(hogar) && hogar?.solicitudesPendientesIds?.includes(notificacion.usuarioEmisorId);
+  };
+
+  const getNotificationContext = (notificacion: Notificacion) => {
+    const hogar = getHogarNotificacion(notificacion);
+    const emisor = getUsuario(notificacion.usuarioEmisorId);
+    const publicacion = getPublicacionDelHogar(hogar);
+    const esSolicitud = esSolicitudRecibida(notificacion);
+
+    return {
+      hogar,
+      emisor,
+      publicacion,
+      esSolicitud,
+      nombreEmisor: emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`,
+    };
+  };
+
+  const buildNotificationParams = (notificacion: Notificacion, publicacion?: Publicacion, esSolicitud?: boolean) => {
+    const params = new URLSearchParams({
+      from: "notificaciones",
+      tipoAccion: esSolicitud ? "solicitud" : "invitacion",
+      hogarId: String(notificacion.hogarId),
+      usuarioId: String(notificacion.usuarioEmisorId),
+    });
+
+    if (notificacion.id) params.set("notificacionId", String(notificacion.id));
+    if (publicacion?.id) params.set("publicacionId", String(publicacion.id));
+
+    return params.toString();
   };
 
   const tiposDisponibles = useMemo(
@@ -128,53 +188,30 @@ export default function Notificaciones() {
       setProcessingId(notificacion.id);
 
       if (esSolicitudRecibida(notificacion)) {
-        const actualizado = await hogarService.aprobarSolicitud(notificacion.hogarId, notificacion.usuarioEmisorId, {
+        const resultado = await aceptarSolicitudIngreso({
+          hogarId: notificacion.hogarId,
+          solicitanteId: notificacion.usuarioEmisorId,
           administradorId: user.id,
+          notificacionId: notificacion.id,
+          hogarNombre: hogar?.nombre,
         });
-        setHogares((current) => current.map((item) => item.id === actualizado.id ? actualizado : item));
-        let correoEnviado = true;
-        try {
-          const correo = await usuarioService.enviarCorreoSolicitudResuelta({
-            usuarioSolicitanteId: notificacion.usuarioEmisorId,
-            administradorId: user.id,
-            hogarNombre: hogar?.nombre || actualizado.nombre,
-            aceptada: true,
-          });
-          correoEnviado = correo.enviado;
-        } catch {
-          correoEnviado = false;
+        if (resultado.hogar) {
+          setHogares((current) => current.map((item) => item.id === resultado.hogar?.id ? resultado.hogar : item));
         }
-        setMessage(correoEnviado
-          ? "Solicitud aceptada. La persona ya forma parte de tu grupo y fue avisada por correo."
-          : "Solicitud aceptada. La persona ya forma parte de tu grupo, pero no se pudo enviar el correo.");
+        setMessage(resultado.message);
       } else {
-        const administradorId = hogar?.usuarioAdministradorId || notificacion.usuarioEmisorId;
-
-        try {
-          await hogarService.solicitarIngreso(notificacion.hogarId, { usuarioId: user.id });
-        } catch (error) {
-          const mensaje = error instanceof Error ? error.message : "";
-          if (!mensaje.includes("Ya tienes una solicitud") && !mensaje.includes("Ya formas parte")) {
-            throw error;
-          }
+        const resultado = await aceptarInvitacionHogar({
+          hogarId: notificacion.hogarId,
+          usuarioId: user.id,
+          administradorId: hogar?.usuarioAdministradorId || notificacion.usuarioEmisorId,
+          notificacionId: notificacion.id,
+        });
+        if (resultado.hogar) {
+          setHogares((current) => current.map((item) => item.id === resultado.hogar?.id ? resultado.hogar : item));
         }
-
-        try {
-          const actualizado = await hogarService.aprobarSolicitud(notificacion.hogarId, user.id, {
-            administradorId,
-          });
-          setHogares((current) => current.map((item) => item.id === actualizado.id ? actualizado : item));
-        } catch (error) {
-          const mensaje = error instanceof Error ? error.message : "";
-          if (!mensaje.includes("Ya formas parte")) {
-            throw error;
-          }
-        }
-
-        setMessage("Invitacion aceptada. Ya formas parte del grupo.");
+        setMessage(resultado.message);
       }
 
-      await notificacionService.eliminar(notificacion.id);
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo aceptar la solicitud.");
@@ -190,23 +227,20 @@ export default function Notificaciones() {
       setProcessingId(notificacion.id);
       if (user?.id && esSolicitudRecibida(notificacion)) {
         const hogar = getHogarNotificacion(notificacion);
-        const actualizado = await hogarService.rechazarSolicitud(notificacion.hogarId, notificacion.usuarioEmisorId, {
+        const resultado = await rechazarSolicitudIngreso({
+          hogarId: notificacion.hogarId,
+          solicitanteId: notificacion.usuarioEmisorId,
           administradorId: user.id,
+          notificacionId: notificacion.id,
+          hogarNombre: hogar?.nombre,
         });
-        setHogares((current) => current.map((item) => item.id === actualizado.id ? actualizado : item));
-        try {
-          await usuarioService.enviarCorreoSolicitudResuelta({
-            usuarioSolicitanteId: notificacion.usuarioEmisorId,
-            administradorId: user.id,
-            hogarNombre: hogar?.nombre || actualizado.nombre,
-            aceptada: false,
-          });
-        } catch {
-          // La solicitud ya fue rechazada; el correo no debe romper el flujo.
+        if (resultado.hogar) {
+          setHogares((current) => current.map((item) => item.id === resultado.hogar?.id ? resultado.hogar : item));
         }
+      } else {
+        await rechazarInvitacionHogar({ notificacionId: notificacion.id });
       }
 
-      await notificacionService.eliminar(notificacion.id);
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
       setMessage(esSolicitudRecibida(notificacion) ? "Solicitud rechazada." : "Invitacion rechazada.");
     } catch {
@@ -282,32 +316,62 @@ export default function Notificaciones() {
           <div className="sin-resultados"><p>No tienes solicitudes pendientes.</p></div>
         ) : (
           invitacionesPendientes.map((notificacion) => {
-            const esSolicitud = esSolicitudRecibida(notificacion);
+            const { esSolicitud, hogar, emisor, publicacion, nombreEmisor } = getNotificationContext(notificacion);
 
             return (
-              <article className="module-item" key={notificacion.id || notificacion.titulo}>
-                <h4>{esSolicitud ? "Solicitud para tu grupo" : notificacion.titulo}</h4>
-                <p>{notificacion.mensaje}</p>
-                <span>
-                  {esSolicitud ? "Solicitud de ingreso" : formatLabel(notificacion.tipo)} - {formatDate(notificacion.fechaCreacion)}
-                </span>
-              <div className="dashboard-actions mt-3">
-                <button
-                  className="btn btn-success btn-sm"
-                  disabled={processingId === notificacion.id}
-                  onClick={() => aceptarNotificacionPendiente(notificacion)}
-                >
-                  {processingId === notificacion.id ? "Aceptando..." : "Aceptar"}
-                </button>
-                <button
-                  className="btn btn-outline-danger btn-sm"
-                  disabled={processingId === notificacion.id}
-                  onClick={() => rechazarNotificacionPendiente(notificacion)}
-                >
-                  Rechazar
-                </button>
-              </div>
-            </article>
+              <article className="module-item notification-context-card" key={notificacion.id || notificacion.titulo}>
+                <div className="notification-context-head">
+                  <div className="notification-avatar">
+                    {(emisor?.nombre || emisor?.usuario || "U").slice(0, 1).toUpperCase()}
+                  </div>
+                  <div>
+                    <span className="eyebrow">{esSolicitud ? "Solicitud de ingreso" : "Invitacion recibida"}</span>
+                    <h4>{esSolicitud ? `${nombreEmisor} quiere unirse` : `${nombreEmisor} te invito a un hogar`}</h4>
+                    <p>{notificacion.mensaje}</p>
+                  </div>
+                </div>
+
+                <div className="notification-context-grid">
+                  <span><strong>Persona:</strong> {nombreEmisor}</span>
+                  <span><strong>Hogar:</strong> {hogar?.nombre || `#${notificacion.hogarId}`}</span>
+                  <span><strong>Fecha:</strong> {formatDate(notificacion.fechaCreacion)}</span>
+                  <span><strong>Estado:</strong> {formatLabel(notificacion.estado)}</span>
+                  {publicacion && <span><strong>Publicacion:</strong> {publicacion.titulo || "Casa disponible"}</span>}
+                </div>
+
+                <div className="dashboard-actions mt-3">
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    type="button"
+                    onClick={() => navigate(`/perfil-publico/${notificacion.usuarioEmisorId}?${buildNotificationParams(notificacion, publicacion, esSolicitud)}`)}
+                  >
+                    Ver perfil
+                  </button>
+                  {publicacion && (
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      type="button"
+                      onClick={() => navigate(`/detalle-publicacion/${publicacion.id}?${buildNotificationParams(notificacion, publicacion, esSolicitud)}`)}
+                    >
+                      Ver publicacion de casa
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-success btn-sm"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => aceptarNotificacionPendiente(notificacion)}
+                  >
+                    {processingId === notificacion.id ? "Aceptando..." : esSolicitud ? "Aceptar solicitud" : "Aceptar invitacion"}
+                  </button>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => rechazarNotificacionPendiente(notificacion)}
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </article>
             );
           })
         )}

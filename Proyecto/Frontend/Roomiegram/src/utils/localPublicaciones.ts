@@ -2,11 +2,19 @@ import type { Publicacion } from "../types/Publicacion";
 
 const STORAGE_KEY = "roomiegram-publicaciones-locales";
 const GENERATED_PROFILE_TITLE = /^perfil de\s+/i;
+const GENERATED_PROFILE_DESCRIPTION = "usuario registrado con preferencias de convivencia";
 
 export function isGeneratedProfile(publicacion: Publicacion) {
+  const descripcion = publicacion.descripcion?.trim().toLowerCase() || "";
+  const ubicacion = publicacion.ubicacion?.trim().toLowerCase() || "";
+
   return (
     publicacion.tipo === "busco_roomie" &&
-    GENERATED_PROFILE_TITLE.test(publicacion.titulo || "")
+    (
+      GENERATED_PROFILE_TITLE.test(publicacion.titulo || "") ||
+      descripcion === GENERATED_PROFILE_DESCRIPTION ||
+      ubicacion === "ubicacion no informada"
+    )
   );
 }
 

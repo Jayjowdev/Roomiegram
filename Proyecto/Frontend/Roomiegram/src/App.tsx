@@ -39,6 +39,7 @@ export default function App() {
         <Route path="/mis-publicaciones" element={<ProtectedRoute><MisPublicaciones /></ProtectedRoute>} />
         <Route path="/preferencias" element={<ProtectedRoute><Preferencias /></ProtectedRoute>} />
         <Route path="/perfil/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+        <Route path="/perfil-publico/:id" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/detalle-publicacion/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />
         <Route path="/crear-publicacion" element={<ProtectedRoute><CrearPublicacion /></ProtectedRoute>} />
         <Route path="/publicaciones/:id" element={<ProtectedRoute><DetallePublicacion /></ProtectedRoute>} />

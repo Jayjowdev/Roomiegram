@@ -4,25 +4,32 @@ import logo from "../assets/Logo-removebg-preview.png";
 import avatar4 from "../assets/avatar4.svg";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
+import { notificacionService } from "../services/notificacionService";
+import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { PreferenciasCompatibilidad } from "../types/auth";
+import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
 import type { UsuarioResumen } from "../types/Usuario";
-import { saveLocalPublicacion } from "../utils/localPublicaciones";
 import { preferenciasIniciales, preferenciasLabels } from "../utils/preferenciasCompatibilidad";
 
 type MatchCandidate = {
   id: number
   nombre: string
   usuario: string
-  correo?: string
-  telefono: string
   hogarActual?: string
   descripcion?: string
   imagen?: string
   preferencias: PreferenciasCompatibilidad
   intereses: string[]
   score: number
+  coincidencias: string[]
+  diferencias: string[]
+  publicacionBuscaRoomie?: Publicacion
+  publicacionCasa?: Publicacion
+  hogarDisponible?: Hogar
+  perteneceAHogar?: Hogar
 }
 
 function scoreMatch(preferencias: PreferenciasCompatibilidad, candidato: PreferenciasCompatibilidad) {
@@ -50,12 +57,41 @@ function tienePreferenciasCompletas(preferencias?: Partial<PreferenciasCompatibi
     && Number(preferencias.presupuesto || 0) > 0;
 }
 
-function preferenciasTags(preferencias: PreferenciasCompatibilidad) {
-  return [
-    preferenciasLabels.limpieza[preferencias.limpieza as keyof typeof preferenciasLabels.limpieza],
-    preferenciasLabels.ambiente[preferencias.ambiente as keyof typeof preferenciasLabels.ambiente],
-    preferenciasLabels.horario[preferencias.horario as keyof typeof preferenciasLabels.horario],
-  ].filter(Boolean);
+function labelPreferencia(campo: keyof Omit<PreferenciasCompatibilidad, "presupuesto">, valor: string) {
+  const labels = preferenciasLabels[campo] as Record<string, string>;
+  return labels[valor] || valor.replaceAll("_", " ");
+}
+
+function evaluarCoincidencias(preferencias: PreferenciasCompatibilidad, candidato: PreferenciasCompatibilidad) {
+  const campos: Array<keyof Omit<PreferenciasCompatibilidad, "presupuesto">> = ["limpieza", "ambiente", "horario", "mascotas", "fumar"];
+  const coincidencias: string[] = [];
+  const diferencias: string[] = [];
+
+  campos.forEach((campo) => {
+    const valorUsuario = preferencias[campo] || "";
+    const valorCandidato = candidato[campo] || "";
+    if (!valorUsuario || !valorCandidato) return;
+
+    if (valorUsuario === valorCandidato || valorUsuario.startsWith("indiferente") || valorCandidato.startsWith("indiferente")) {
+      coincidencias.push(labelPreferencia(campo, valorCandidato));
+      return;
+    }
+
+    diferencias.push(`${labelPreferencia(campo, valorUsuario)} / ${labelPreferencia(campo, valorCandidato)}`);
+  });
+
+  return { coincidencias, diferencias };
+}
+
+function normalizarTexto(valor?: string) {
+  return valor?.trim().toLowerCase() || "";
+}
+
+function getEstadoCandidato(candidato: MatchCandidate) {
+  if (candidato.publicacionCasa && candidato.hogarDisponible) return "Ofrece casa";
+  if (candidato.publicacionBuscaRoomie) return "Busca casa";
+  if (candidato.perteneceAHogar) return "Pertenece a un hogar";
+  return "Perfil compatible";
 }
 
 export default function Compatibilidad() {
@@ -63,67 +99,77 @@ export default function Compatibilidad() {
   const { user, updateProfile } = useAuth();
   const [compatibilidad, setCompatibilidad] = useState<PreferenciasCompatibilidad>(user?.preferenciasCompatibilidad || preferenciasIniciales);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [selectedHogarId, setSelectedHogarId] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
   useEffect(() => {
-    usuarioService
-      .listar()
-      .then(setUsuarios)
-      .catch(() => setMessage("No se pudieron cargar usuarios para buscar matches."));
+    Promise.allSettled([usuarioService.listar(), publicacionService.listar(), hogarService.listar()])
+      .then(([usuariosResult, publicacionesResult, hogaresResult]) => {
+        if (usuariosResult.status === "fulfilled") setUsuarios(usuariosResult.value);
+        if (publicacionesResult.status === "fulfilled") setPublicaciones(publicacionesResult.value);
+        if (hogaresResult.status === "fulfilled") setHogares(hogaresResult.value);
+        if ([usuariosResult, publicacionesResult, hogaresResult].some((result) => result.status === "rejected")) {
+          setMessage("Algunos datos de compatibilidad no se pudieron cargar.");
+        }
+      });
   }, []);
+
+  const hogaresAdministrables = useMemo(() => {
+    if (!user?.id) return [];
+    return hogares.filter((hogar) => hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id);
+  }, [hogares, user?.id]);
+
+  useEffect(() => {
+    if (!selectedHogarId && hogaresAdministrables.length === 1) {
+      setSelectedHogarId(String(hogaresAdministrables[0].id));
+    }
+  }, [hogaresAdministrables, selectedHogarId]);
 
   const candidatos = useMemo<MatchCandidate[]>(() => {
     return usuarios
       .filter((usuario) => usuario.id !== user?.id && tienePreferenciasCompletas(usuario.preferenciasCompatibilidad))
       .map((usuario) => {
         const preferencias = usuario.preferenciasCompatibilidad as PreferenciasCompatibilidad;
+        const usuarioNormalizado = normalizarTexto(usuario.usuario);
+        const publicacionesUsuario = publicaciones.filter((publicacion) =>
+          publicacion.usuarioId === usuario.id || normalizarTexto(publicacion.usuarioCreador) === usuarioNormalizado,
+        );
+        const publicacionBuscaRoomie = publicacionesUsuario.find((publicacion) => publicacion.tipo === "busco_roomie");
+        const publicacionCasa = publicacionesUsuario.find((publicacion) => publicacion.tipo !== "busco_roomie");
+        const hogarDisponible = publicacionCasa
+          ? hogares.find((hogar) => hogar.publicacionIds?.includes(publicacionCasa.id))
+          : undefined;
+        const perteneceAHogar = hogares.find((hogar) =>
+          hogar.usuarioAdministradorId === usuario.id
+          || hogar.usuarioCreadorId === usuario.id
+          || hogar.integrantesIds?.includes(usuario.id),
+        );
+        const { coincidencias, diferencias } = evaluarCoincidencias(compatibilidad, preferencias);
 
         return {
           id: usuario.id,
           nombre: usuario.nombre || usuario.usuario,
           usuario: usuario.usuario,
-          correo: usuario.correo,
-          telefono: usuario.telefono,
           hogarActual: usuario.hogarActual,
-          descripcion: usuario.descripcion || "Usuario registrado con preferencias de convivencia.",
-          imagen: usuario.fotoPerfil || avatar4,
+          descripcion: usuario.descripcion || publicacionBuscaRoomie?.descripcion || "Usuario registrado con preferencias de convivencia.",
+          imagen: usuario.fotoPerfil || publicacionBuscaRoomie?.imagen || avatar4,
           preferencias,
           intereses: usuario.intereses || [],
           score: scoreMatch(compatibilidad, preferencias),
+          coincidencias,
+          diferencias,
+          publicacionBuscaRoomie,
+          publicacionCasa,
+          hogarDisponible,
+          perteneceAHogar,
         };
       })
       .sort((a, b) => b.score - a.score);
-  }, [compatibilidad, user?.id, usuarios]);
-
-  const verPerfil = (candidato: MatchCandidate) => {
-    const perfil: Publicacion = {
-      id: candidato.id,
-      tipo: "busco_roomie",
-      origen: "local",
-      usuarioId: candidato.id,
-      usuarioCreador: candidato.usuario,
-      nombre: candidato.nombre,
-      titulo: `${candidato.nombre} busca roomie`,
-      ubicacion: candidato.hogarActual || "Ubicacion no informada",
-      descripcion: candidato.descripcion || "Usuario registrado con preferencias de convivencia.",
-      presupuestoMaximo: Number(candidato.preferencias.presupuesto || 0),
-      imagen: candidato.imagen,
-      telefono: candidato.telefono,
-      correo: candidato.correo,
-      intereses: candidato.intereses,
-      habitos: [
-        candidato.preferencias.limpieza,
-        candidato.preferencias.ambiente,
-        candidato.preferencias.horario,
-        candidato.preferencias.mascotas,
-        candidato.preferencias.fumar,
-      ],
-    };
-
-    saveLocalPublicacion(perfil);
-    navigate(`/perfil/${candidato.id}`);
-  };
+  }, [compatibilidad, hogares, publicaciones, user?.id, usuarios]);
 
   const guardarPreferencias = async () => {
     setMessage("");
@@ -149,6 +195,73 @@ export default function Compatibilidad() {
     }
   };
 
+  const mostrarInteres = async (candidato: MatchCandidate) => {
+    if (!user?.id) return;
+
+    setProcessingId(candidato.id);
+    try {
+      await notificacionService.crear({
+        usuarioEmisorId: user.id,
+        usuarioReceptorId: candidato.id,
+        hogarId: candidato.perteneceAHogar?.id || 0,
+        referenciaId: candidato.id,
+        tipo: "INTERES_ROOMIE",
+        estado: "PENDIENTE",
+        titulo: "Nuevo interes de compatibilidad",
+        mensaje: `${user.nombre || user.usuario} mostro interes en conectar contigo por compatibilidad.`,
+      });
+      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
+    } catch {
+      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const invitarAMiHogar = async (candidato: MatchCandidate) => {
+    if (!user?.id || !selectedHogarId) return;
+
+    const hogar = hogaresAdministrables.find((item) => String(item.id) === selectedHogarId);
+    if (!hogar) {
+      setMessage("Selecciona un hogar valido para enviar la invitacion.");
+      return;
+    }
+
+    setProcessingId(candidato.id);
+    try {
+      await notificacionService.crear({
+        usuarioEmisorId: user.id,
+        usuarioReceptorId: candidato.id,
+        hogarId: hogar.id,
+        referenciaId: hogar.id,
+        tipo: "INVITACION_HOGAR",
+        estado: "PENDIENTE",
+        titulo: "Invitacion a hogar Roomiegram",
+        mensaje: `${user.nombre || user.usuario} te invito a unirte al hogar ${hogar.nombre}.`,
+      });
+      setMessage(`Invitacion enviada a ${candidato.nombre} para el hogar ${hogar.nombre}.`);
+    } catch {
+      setMessage("No se pudo enviar la invitacion. La accion no modifico el hogar.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const solicitarIngreso = async (candidato: MatchCandidate) => {
+    if (!user?.id || !candidato.hogarDisponible) return;
+
+    setProcessingId(candidato.id);
+    try {
+      const actualizado = await hogarService.solicitarIngreso(candidato.hogarDisponible.id, { usuarioId: user.id });
+      setHogares((current) => current.map((hogar) => hogar.id === actualizado.id ? actualizado : hogar));
+      setMessage(`Solicitud enviada al hogar ${actualizado.nombre}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return (
     <div className="module-page">
       <header className="module-header">
@@ -162,12 +275,12 @@ export default function Compatibilidad() {
 
       <section className="module-title">
         <h1>Buscar por compatibilidad</h1>
-        <p>Encuentra usuarios registrados con habitos, presupuesto y estilo de convivencia parecidos a los tuyos.</p>
+        <p>Encuentra personas compatibles, entiende por que encajan contigo y elige la accion correcta segun su contexto.</p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
 
-      <section className="compatibility-panel">
+      <section className="compatibility-panel compatibility-panel-upgraded">
         <div className="compatibility-form">
           <span className="compatibility-kicker">Match inteligente</span>
           <h3>Tus preferencias</h3>
@@ -201,6 +314,18 @@ export default function Compatibilidad() {
             <input className="form-control" type="number" min="1" placeholder="Presupuesto maximo" value={compatibilidad.presupuesto} onChange={(e) => setCompatibilidad({ ...compatibilidad, presupuesto: e.target.value })} />
           </div>
 
+          {hogaresAdministrables.length > 1 && (
+            <label className="field-label mt-3">
+              <span>Hogar para invitaciones</span>
+              <select className="form-control" value={selectedHogarId} onChange={(event) => setSelectedHogarId(event.target.value)}>
+                <option value="">Selecciona un hogar</option>
+                {hogaresAdministrables.map((hogar) => (
+                  <option key={hogar.id} value={hogar.id}>{hogar.nombre}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <button className="btn btn-success w-100 mt-3" onClick={guardarPreferencias} disabled={isSaving}>
             {isSaving ? "Guardando..." : "Guardar cambios"}
           </button>
@@ -208,58 +333,95 @@ export default function Compatibilidad() {
 
         <div className="compatibility-results">
           <div className="compatibility-results-title">
-            <span>Usuarios compatibles</span>
-            <strong>{candidatos.length} usuario(s)</strong>
+            <span>Personas compatibles</span>
+            <strong>{candidatos.length} resultado(s)</strong>
           </div>
           {candidatos.length === 0 ? (
             <div className="sin-resultados">
               <p>Aun no hay otros usuarios registrados con preferencias guardadas.</p>
             </div>
           ) : (
-            candidatos.map((candidato) => (
-              <article
-                className="compatibility-match"
-                key={candidato.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => verPerfil(candidato)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") verPerfil(candidato);
-                }}
-              >
-                <img src={candidato.imagen || avatar4} alt={candidato.nombre} />
-                <div className="match-copy">
-                  <div className="match-topline">
-                    <span className="match-name">{candidato.nombre}</span>
-                    <strong>{candidato.score}% compatible</strong>
-                    <div className="match-score-bar">
-                      <span style={{ width: `${candidato.score}%` }} />
+            candidatos.map((candidato) => {
+              const puedeSolicitarIngreso = !!candidato.hogarDisponible && !candidato.hogarDisponible.solicitudesPendientesIds?.includes(user?.id || 0);
+              const puedeInvitar = !!candidato.publicacionBuscaRoomie && hogaresAdministrables.length > 0;
+              const estado = getEstadoCandidato(candidato);
+
+              return (
+                <article className="compatibility-match compatibility-match-card" key={candidato.id}>
+                  <img src={candidato.imagen || avatar4} alt={candidato.nombre} />
+                  <div className="match-copy">
+                    <div className="match-topline">
+                      <span className="match-name">{candidato.nombre}</span>
+                      <strong>{candidato.score}% compatible</strong>
+                      <div className="match-score-bar">
+                        <span style={{ width: `${candidato.score}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="match-context-row">
+                      <span className="status-pill success">{estado}</span>
+                      {candidato.hogarDisponible && <span className="status-pill">Hogar: {candidato.hogarDisponible.nombre}</span>}
+                    </div>
+
+                    <p className="match-description">{candidato.descripcion}</p>
+
+                    <div className="match-insights">
+                      <div>
+                        <span className="match-insight-title">Coincidencias</span>
+                        <div className="match-tags">
+                          {candidato.coincidencias.slice(0, 4).map((tag) => <em key={tag}>{tag}</em>)}
+                          {candidato.intereses.slice(0, 2).map((interes) => <em key={interes}>{interes}</em>)}
+                        </div>
+                      </div>
+                      {candidato.diferencias.length > 0 && (
+                        <div>
+                          <span className="match-insight-title">Diferencias</span>
+                          <div className="match-tags match-tags-muted">
+                            {candidato.diferencias.slice(0, 2).map((tag) => <em key={tag}>{tag}</em>)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="match-actions">
+                      <button className="btn btn-outline-success btn-sm" type="button" onClick={() => navigate(`/perfil-publico/${candidato.id}`)}>
+                        Ver perfil
+                      </button>
+                      {puedeSolicitarIngreso && (
+                        <button
+                          className="btn btn-success btn-sm"
+                          type="button"
+                          disabled={processingId === candidato.id}
+                          onClick={() => solicitarIngreso(candidato)}
+                        >
+                          {processingId === candidato.id ? "Enviando..." : "Solicitar ingreso"}
+                        </button>
+                      )}
+                      {puedeInvitar && (
+                        <button
+                          className="btn btn-success btn-sm"
+                          type="button"
+                          disabled={processingId === candidato.id || (hogaresAdministrables.length > 1 && !selectedHogarId)}
+                          onClick={() => invitarAMiHogar(candidato)}
+                        >
+                          {processingId === candidato.id ? "Invitando..." : "Invitar a mi hogar"}
+                        </button>
+                      )}
+                      {!puedeSolicitarIngreso && !puedeInvitar && (
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          type="button"
+                          disabled={processingId === candidato.id}
+                          onClick={() => mostrarInteres(candidato)}
+                        >
+                          {processingId === candidato.id ? "Registrando..." : "Mostrar interes"}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <small>{candidato.descripcion}</small>
-                  <small>
-                    Telefono: {candidato.telefono}
-                    {candidato.correo ? ` - ${candidato.correo}` : ""}
-                  </small>
-                  <div className="match-tags">
-                    {preferenciasTags(candidato.preferencias).map((tag) => <em key={tag}>{tag}</em>)}
-                    {candidato.intereses.slice(0, 3).map((interes) => <em key={interes}>{interes}</em>)}
-                  </div>
-                  <div className="match-actions">
-                    <button
-                      className="btn btn-outline-success btn-sm"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        verPerfil(candidato);
-                      }}
-                    >
-                      Ver perfil
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))
+                </article>
+              );
+            })
           )}
         </div>
       </section>

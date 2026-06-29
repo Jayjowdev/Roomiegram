@@ -144,6 +144,31 @@ class HogarServiceTest {
     }
 
     @Test
+    void eliminarHogarDebeRechazarCuandoTieneActividadCritica() {
+        Hogar hogar = crearHogarPersistido();
+        hogar.getTareasIds().add(7L);
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> hogarService.eliminarHogar(1L, 1L));
+
+        assertEquals("Este hogar tiene actividad o integrantes. Por seguridad solo puedes eliminar la publicacion.",
+                exception.getMessage());
+        verify(hogarRepository, never()).delete(any(Hogar.class));
+    }
+
+    @Test
+    void eliminarHogarDebeRechazarCuandoTieneOtroIntegrante() {
+        Hogar hogar = crearHogarPersistido();
+        hogar.getIntegrantesIds().add(2L);
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+
+        assertThrows(IllegalArgumentException.class, () -> hogarService.eliminarHogar(1L, 1L));
+
+        verify(hogarRepository, never()).delete(any(Hogar.class));
+    }
+
+    @Test
     void eliminarHogarDebePermitirAdminGlobal() {
         Hogar hogar = crearHogarPersistido();
         hogar.setUsuarioAdministradorId(5L);

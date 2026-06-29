@@ -5,7 +5,6 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
-import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
@@ -19,10 +18,6 @@ function userBelongsToHogar(hogar: Hogar, userId?: number) {
     hogar.usuarioAdministradorId === userId ||
     hogar.usuarioCreadorId === userId
   );
-}
-
-function userRequestedHogar(hogar: Hogar, userId?: number) {
-  return !!userId && hogar.solicitudesPendientesIds?.includes(userId);
 }
 
 function isHogarAdmin(hogar: Hogar, userId?: number) {
@@ -68,6 +63,7 @@ export default function Hogares() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [processingRequest, setProcessingRequest] = useState("");
+  const [showPrivateHogarForm, setShowPrivateHogarForm] = useState(false);
 
   const loadHogares = () => {
     setIsLoading(true);
@@ -95,17 +91,21 @@ export default function Hogares() {
     return hogares.filter((hogar) => userBelongsToHogar(hogar, user?.id));
   }, [hogares, user?.id]);
 
-  const solicitudesPendientes = useMemo(() => {
-    return hogares.filter((hogar) => userRequestedHogar(hogar, user?.id));
-  }, [hogares, user?.id]);
-
-  const hogaresDisponibles = useMemo(() => {
-    return hogares.filter((hogar) => {
-      return !userBelongsToHogar(hogar, user?.id) && !userRequestedHogar(hogar, user?.id);
-    });
-  }, [hogares, user?.id]);
-
   const canCreateHogar = misHogares.length === 0;
+
+  const buscarPublicacionesCasa = () => {
+    navigate("/home?tipo=ofrezco_casa");
+  };
+
+  const crearPublicacionCasa = (hogarId?: number) => {
+    const params = new URLSearchParams({ tipo: "ofrezco_casa" });
+    if (hogarId) params.set("hogarId", String(hogarId));
+    navigate(`/crear-publicacion?${params.toString()}`);
+  };
+
+  const hogaresAdministrablesSinPublicacion = useMemo(() => {
+    return misHogares.filter((hogar) => isHogarAdmin(hogar, user?.id) && (hogar.publicacionIds?.length ?? 0) === 0);
+  }, [misHogares, user?.id]);
 
   const publicacionContexto = useMemo(() => {
     const publicacionId = Number(searchParams.get("publicacionId"));
@@ -176,67 +176,11 @@ export default function Hogares() {
       setMessage(successMessage);
       setNombre("");
       setDescripcion("");
+      setShowPrivateHogarForm(false);
     } catch {
       setMessage("Servicio no disponible. Intenta nuevamente.");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const solicitarIngreso = async (hogarId: number) => {
-    if (!user?.id) {
-      setMessage("Debes iniciar sesion para solicitar ingreso.");
-      return;
-    }
-
-    const requestKey = `solicitar-${hogarId}`;
-    const hogar = hogares.find((item) => item.id === hogarId);
-    const usuarioReceptorId = hogar?.usuarioAdministradorId || hogar?.usuarioCreadorId;
-
-    try {
-      setProcessingRequest(requestKey);
-      const actualizado = await hogarService.solicitarIngreso(hogarId, { usuarioId: user.id });
-      updateHogar(actualizado);
-      let avisosEnviados = true;
-
-      if (usuarioReceptorId) {
-        try {
-          await notificacionService.crear({
-            usuarioEmisorId: user.id,
-            usuarioReceptorId,
-            hogarId,
-            referenciaId: user.id,
-            tipo: "INVITACION_HOGAR",
-            estado: "PENDIENTE",
-            titulo: "Solicitud de ingreso pendiente",
-            mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogar?.nombre || "seleccionado"}.`,
-          });
-        } catch {
-          avisosEnviados = false;
-        }
-
-        try {
-          const correo = await usuarioService.enviarCorreoSolicitudRecibida({
-            usuarioReceptorId,
-            usuarioSolicitanteId: user.id,
-            solicitanteNombre: user.nombre || user.usuario,
-            hogarNombre: hogar?.nombre,
-          });
-          avisosEnviados = avisosEnviados && correo.enviado;
-        } catch {
-          avisosEnviados = false;
-        }
-      }
-
-      setMessage(!usuarioReceptorId
-        ? "Solicitud enviada correctamente."
-        : avisosEnviados
-          ? "Solicitud enviada correctamente. Se notifico al administrador del hogar."
-          : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
-    } catch {
-      setMessage("No se pudo enviar la solicitud. Revisa que el servicio este disponible.");
-    } finally {
-      setProcessingRequest("");
     }
   };
 
@@ -374,13 +318,13 @@ export default function Hogares() {
     }
   };
 
-  const renderHogarCard = (hogar: Hogar, mode: "mine" | "pending" | "available") => {
+  const renderHogarCard = (hogar: Hogar) => {
     const isAdmin = isHogarAdmin(hogar, user?.id);
     const integrantes = hogar.integrantesIds || [];
     const solicitudes = hogar.solicitudesPendientesIds || [];
 
     return (
-      <article className={`module-item hogar-card hogar-card-${mode}`} key={hogar.id}>
+      <article className="module-item hogar-card hogar-card-mine" key={hogar.id}>
         <div className="section-heading-row">
           <div>
             <h4>{hogar.nombre}</h4>
@@ -398,138 +342,90 @@ export default function Hogares() {
           <span><strong>{hogar.hogarCuentaIds?.length || 0}</strong> gasto(s)</span>
         </div>
 
-        {mode === "mine" && (
-          <>
-            <div className="home-tags mt-3">
-              {integrantes.length === 0 ? (
-                <span className="home-tag">Sin integrantes registrados</span>
-              ) : (
-                integrantes.map((usuarioId) => (
-                  <span className="home-tag" key={usuarioId}>
-                    {formatMemberName(usuarioId, usuariosById, user || undefined)}
-                    {usuarioId === hogar.usuarioAdministradorId ? " - Admin" : ""}
-                  </span>
-                ))
-              )}
-            </div>
+        <div className="home-tags mt-3">
+          {integrantes.length === 0 ? (
+            <span className="home-tag">Sin integrantes registrados</span>
+          ) : (
+            integrantes.map((usuarioId) => (
+              <span className="home-tag" key={usuarioId}>
+                {formatMemberName(usuarioId, usuariosById, user || undefined)}
+                {usuarioId === hogar.usuarioAdministradorId ? " - Admin" : ""}
+              </span>
+            ))
+          )}
+        </div>
 
-            {isAdmin && integrantes.length > 1 && (
-              <div className="hogar-integrantes-admin-list">
-                <h5>Gestion de integrantes</h5>
-                {integrantes
-                  .filter((usuarioId) => usuarioId !== user?.id)
-                  .map((usuarioId) => (
-                    <div className="hogar-integrante-row" key={usuarioId}>
-                      <span>{formatMemberName(usuarioId, usuariosById, user || undefined)}</span>
-                      <button
-                        className="btn btn-outline-danger btn-sm"
-                        type="button"
-                        disabled={Boolean(processingRequest)}
-                        onClick={() => quitarIntegrante(hogar, usuarioId)}
-                      >
-                        {processingRequest === `quitar-${hogar.id}-${usuarioId}` ? "Quitando..." : "Quitar integrante"}
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            <div className="item-actions">
-              <button className="btn btn-success btn-sm" type="button" onClick={() => navigate("/convivencia")}>
-                Ver convivencia
-              </button>
-              <button
-                className="btn btn-outline-danger btn-sm"
-                type="button"
-                disabled={processingRequest === `salir-${hogar.id}`}
-                onClick={() => salirDelHogar(hogar)}
-              >
-                {processingRequest === `salir-${hogar.id}` ? "Saliendo..." : "Salir del hogar"}
-              </button>
-              {isAdmin && (
-                <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => eliminarHogar(hogar)}>
-                  Eliminar
-                </button>
-              )}
-            </div>
-
-            {isAdmin && solicitudes.length > 0 && (
-              <div className="request-list">
-                <h5>Solicitudes por revisar</h5>
-                {solicitudes.map((usuarioId) => (
-                  <div className="request-row" key={usuarioId}>
-                    <span>{formatMemberName(usuarioId, usuariosById, user || undefined)}</span>
-                    <div>
-                      <button
-                        className="btn btn-outline-success btn-sm"
-                        type="button"
-                        disabled={Boolean(processingRequest)}
-                        onClick={() => aprobarSolicitud(hogar.id, usuarioId)}
-                      >
-                        {processingRequest === `aprobar-${hogar.id}-${usuarioId}` ? "Aprobando..." : "Aprobar"}
-                      </button>
-                      <button
-                        className="btn btn-outline-danger btn-sm"
-                        type="button"
-                        disabled={Boolean(processingRequest)}
-                        onClick={() => rechazarSolicitud(hogar.id, usuarioId)}
-                      >
-                        {processingRequest === `rechazar-${hogar.id}-${usuarioId}` ? "Rechazando..." : "Rechazar"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {mode === "pending" && (
-          <div className="item-actions">
-            <span className="status-pill">Solicitud enviada</span>
+        {isAdmin && integrantes.length > 1 && (
+          <div className="hogar-integrantes-admin-list">
+            <h5>Gestion de integrantes</h5>
+            {integrantes
+              .filter((usuarioId) => usuarioId !== user?.id)
+              .map((usuarioId) => (
+                <div className="hogar-integrante-row" key={usuarioId}>
+                  <span>{formatMemberName(usuarioId, usuariosById, user || undefined)}</span>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled={Boolean(processingRequest)}
+                    onClick={() => quitarIntegrante(hogar, usuarioId)}
+                  >
+                    {processingRequest === `quitar-${hogar.id}-${usuarioId}` ? "Quitando..." : "Quitar integrante"}
+                  </button>
+                </div>
+              ))}
           </div>
         )}
 
-        {mode === "available" && (
-          <div className="item-actions">
-            <button
-              className="btn btn-outline-success btn-sm"
-              type="button"
-              disabled={Boolean(processingRequest)}
-              onClick={() => solicitarIngreso(hogar.id)}
-            >
-              {processingRequest === `solicitar-${hogar.id}` ? "Enviando..." : "Solicitar ingreso"}
+        <div className="item-actions">
+          <button className="btn btn-success btn-sm" type="button" onClick={() => navigate("/convivencia")}>
+            Ver convivencia
+          </button>
+          <button
+            className="btn btn-outline-danger btn-sm"
+            type="button"
+            disabled={processingRequest === `salir-${hogar.id}`}
+            onClick={() => salirDelHogar(hogar)}
+          >
+            {processingRequest === `salir-${hogar.id}` ? "Saliendo..." : "Salir del hogar"}
+          </button>
+          {isAdmin && (
+            <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => eliminarHogar(hogar)}>
+              Eliminar
             </button>
+          )}
+        </div>
+
+        {isAdmin && solicitudes.length > 0 && (
+          <div className="request-list">
+            <h5>Solicitudes por revisar</h5>
+            {solicitudes.map((usuarioId) => (
+              <div className="request-row" key={usuarioId}>
+                <span>{formatMemberName(usuarioId, usuariosById, user || undefined)}</span>
+                <div>
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    type="button"
+                    disabled={Boolean(processingRequest)}
+                    onClick={() => aprobarSolicitud(hogar.id, usuarioId)}
+                  >
+                    {processingRequest === `aprobar-${hogar.id}-${usuarioId}` ? "Aprobando..." : "Aprobar"}
+                  </button>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled={Boolean(processingRequest)}
+                    onClick={() => rechazarSolicitud(hogar.id, usuarioId)}
+                  >
+                    {processingRequest === `rechazar-${hogar.id}-${usuarioId}` ? "Rechazando..." : "Rechazar"}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </article>
     );
   };
-
-  const renderSolicitudesPendientes = () => (
-    <section className="hogares-section">
-      <h3>Solicitudes pendientes</h3>
-      {solicitudesPendientes.length === 0 ? (
-        <p className="empty-state">No tienes solicitudes pendientes.</p>
-      ) : (
-        solicitudesPendientes.map((hogar) => renderHogarCard(hogar, "pending"))
-      )}
-    </section>
-  );
-
-  const renderHogaresDisponibles = () => (
-    <section className="hogares-section hogares-section-secondary">
-      <h3>Hogares disponibles</h3>
-      <p className="form-helper">
-        Puedes revisar otros hogares registrados y solicitar ingreso cuando corresponda.
-      </p>
-      {hogaresDisponibles.length === 0 ? (
-        <p className="empty-state">No hay hogares disponibles para solicitar ingreso.</p>
-      ) : (
-        hogaresDisponibles.map((hogar) => renderHogarCard(hogar, "available"))
-      )}
-    </section>
-  );
 
   return (
     <div className="module-page">
@@ -563,43 +459,67 @@ export default function Hogares() {
           <div className="sin-resultados"><p>Cargando hogares...</p></div>
         </section>
       ) : canCreateHogar ? (
-        <section className="module-layout hogares-layout">
-          <form className="module-form" onSubmit={handleSubmit}>
-            <h3>Crear mi grupo roomie</h3>
-            <p className="form-helper">
-              Crea un hogar cuando quieras iniciar tu propio grupo de convivencia. Tu quedaras como administrador y podras aceptar solicitudes.
+        <section className="module-list hogares-empty-flow">
+          <section className="module-item hogares-path-card hogares-path-primary">
+            <span className="eyebrow">Camino principal</span>
+            <h3>Ofrecer casa o habitacion</h3>
+            <p>
+              Crea una publicacion de casa para que otros usuarios puedan encontrarte y enviarte solicitudes.
             </p>
-            {publicacionContexto && (
-              <p className="api-message">
-                Crear hogar para la publicacion: {publicacionContexto.titulo}
-              </p>
-            )}
-            <input
-              className="form-control"
-              placeholder="Nombre del hogar"
-              value={nombre}
-              onChange={(event) => setNombre(event.target.value)}
-              required
-            />
-            <textarea
-              className="form-control"
-              placeholder="Descripcion del hogar"
-              value={descripcion}
-              onChange={(event) => setDescripcion(event.target.value)}
-            />
-            <button className="btn btn-success w-100" disabled={isSaving}>
-              {isSaving ? "Guardando..." : "Crear grupo roomie"}
+            <button className="btn btn-success" type="button" onClick={() => crearPublicacionCasa()}>
+              Crear publicacion de casa
             </button>
-          </form>
+          </section>
 
-          <div className="module-list">
-            <section className="hogares-section">
-              <h3>Mi hogar actual</h3>
-              <div className="sin-resultados"><p>Aun no perteneces a un hogar.</p></div>
-            </section>
-            {renderSolicitudesPendientes()}
-            {renderHogaresDisponibles()}
-          </div>
+          <section className="module-item hogares-path-card">
+            <span className="eyebrow">Flujo secundario</span>
+            <h3>Ya tengo un grupo y quiero gestionar convivencia</h3>
+            <p>
+              Crea un hogar privado para organizar integrantes, tareas y gastos.
+            </p>
+            <div className="item-actions">
+              <button
+                className="btn btn-outline-success"
+                type="button"
+                onClick={() => setShowPrivateHogarForm((current) => !current)}
+              >
+                {showPrivateHogarForm ? "Ocultar formulario" : "Crear hogar privado"}
+              </button>
+              <button className="btn btn-outline-success" type="button" onClick={buscarPublicacionesCasa}>
+                Buscar publicaciones de casa
+              </button>
+            </div>
+          </section>
+
+          {(showPrivateHogarForm || publicacionContexto) && (
+            <form className="module-form hogares-private-form" onSubmit={handleSubmit}>
+              <h3>Crear hogar privado</h3>
+              <p className="form-helper">
+                Usa este flujo solo si el grupo ya existe y quieres gestionar convivencia interna.
+              </p>
+              {publicacionContexto && (
+                <p className="api-message">
+                  Crear hogar para la publicacion: {publicacionContexto.titulo}
+                </p>
+              )}
+              <input
+                className="form-control"
+                placeholder="Nombre del hogar"
+                value={nombre}
+                onChange={(event) => setNombre(event.target.value)}
+                required
+              />
+              <textarea
+                className="form-control"
+                placeholder="Descripcion del hogar"
+                value={descripcion}
+                onChange={(event) => setDescripcion(event.target.value)}
+              />
+              <button className="btn btn-success w-100" disabled={isSaving}>
+                {isSaving ? "Guardando..." : "Crear hogar privado"}
+              </button>
+            </form>
+          )}
         </section>
       ) : (
         <section className="hogares-product-layout">
@@ -613,16 +533,41 @@ export default function Hogares() {
                 Ver convivencia
               </button>
             </div>
-            {misHogares.map((hogar) => renderHogarCard(hogar, "mine"))}
-          </div>
-
-          <div className="hogares-secondary-grid">
-            <div className="module-list hogares-secondary-panel">
-              {renderSolicitudesPendientes()}
-            </div>
-            <div className="module-list hogares-secondary-panel">
-              {renderHogaresDisponibles()}
-            </div>
+            {misHogares.map((hogar) => renderHogarCard(hogar))}
+            {hogaresAdministrablesSinPublicacion.length > 0 && (
+              <div className="module-item hogar-next-step">
+                <span className="eyebrow">Siguiente paso</span>
+                <h3>Tu hogar todavia no tiene una publicacion de casa vinculada</h3>
+                <p>
+                  Crea una publicacion para recibir solicitudes y mantenerlas asociadas a este mismo hogar.
+                </p>
+                <div className="item-actions">
+                  {hogaresAdministrablesSinPublicacion.length === 1 ? (
+                    <button
+                      className="btn btn-success"
+                      type="button"
+                      onClick={() => crearPublicacionCasa(hogaresAdministrablesSinPublicacion[0].id)}
+                    >
+                      Crear publicacion de casa
+                    </button>
+                  ) : (
+                    hogaresAdministrablesSinPublicacion.map((hogar) => (
+                      <button
+                        className="btn btn-success"
+                        type="button"
+                        key={hogar.id}
+                        onClick={() => crearPublicacionCasa(hogar.id)}
+                      >
+                        Crear publicacion para {hogar.nombre}
+                      </button>
+                    ))
+                  )}
+                  <button className="btn btn-outline-success" type="button" onClick={() => navigate("/convivencia")}>
+                    Ver convivencia
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}

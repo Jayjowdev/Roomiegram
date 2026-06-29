@@ -8,9 +8,11 @@ import home3 from "../assets/home3.svg";
 import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
 import { publicacionService } from "../services/publicacionService";
 import type { UserSession } from "../types/auth";
 import type { PublicacionRequest } from "../types/Backend";
+import type { Hogar } from "../types/Hogar";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
 import { removePublicacionImage, savePublicacionImage } from "../utils/publicacionImages";
@@ -101,45 +103,88 @@ export default function CrearPublicacion() {
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [cropSource, setCropSource] = useState("");
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [selectedHogarId, setSelectedHogarId] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
+  const [isLoadingHogares, setIsLoadingHogares] = useState(true);
   const [editingPublicacion, setEditingPublicacion] = useState<Publicacion | null>(null);
   const tituloRef = useRef<HTMLInputElement>(null);
   const ubicacionRef = useRef<HTMLInputElement>(null);
   const descripcionRef = useRef<HTMLTextAreaElement>(null);
+  const hogarSelectRef = useRef<HTMLSelectElement>(null);
   const precioRef = useRef<HTMLInputElement>(null);
   const habitacionesRef = useRef<HTMLInputElement>(null);
   const personasRef = useRef<HTMLInputElement>(null);
   const banosRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const tipo = searchParams.get("tipo");
+    if (!editingPublicacion && (tipo === "ofrezco_casa" || tipo === "busco_roomie")) {
+      setTipoPublicacion(tipo);
+    }
+  }, [editingPublicacion, searchParams]);
+
+  useEffect(() => {
     let isMounted = true;
     setIsLoadingPublicaciones(true);
+    setIsLoadingHogares(true);
 
-    publicacionService
-      .listar()
-      .then((data) => {
+    Promise.allSettled([publicacionService.listar(), hogarService.listar()])
+      .then(([publicacionesResult, hogaresResult]) => {
         if (!isMounted) return;
 
         const locales = getLocalPublicacionesDelUsuario(user);
-        const backend = data.map(mapBackendPublicacion);
+        const backend = publicacionesResult.status === "fulfilled"
+          ? publicacionesResult.value.map(mapBackendPublicacion)
+          : [];
 
         setPublicaciones([...locales, ...backend]);
-      })
-      .catch(() => {
-        if (isMounted) {
-          setPublicaciones(getLocalPublicacionesDelUsuario(user));
-        }
+        setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
       })
       .finally(() => {
-        if (isMounted) setIsLoadingPublicaciones(false);
+        if (isMounted) {
+          setIsLoadingPublicaciones(false);
+          setIsLoadingHogares(false);
+        }
       });
 
     return () => {
       isMounted = false;
     };
   }, [user]);
+
+  const hogaresAdministrables = useMemo(() => {
+    if (!user?.id) return [];
+
+    return hogares.filter((hogar) =>
+      hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id,
+    );
+  }, [hogares, user?.id]);
+
+  useEffect(() => {
+    if (editingPublicacion || tipoPublicacion !== "ofrezco_casa" || isLoadingHogares) return;
+
+    const hogarIdParam = Number(searchParams.get("hogarId"));
+    const hogarParamValido = hogaresAdministrables.some((hogar) => hogar.id === hogarIdParam);
+
+    if (Number.isFinite(hogarIdParam) && hogarParamValido) {
+      setSelectedHogarId(String(hogarIdParam));
+      return;
+    }
+
+    if (!selectedHogarId && hogaresAdministrables.length === 1) {
+      setSelectedHogarId(String(hogaresAdministrables[0].id));
+    }
+  }, [
+    editingPublicacion,
+    hogaresAdministrables,
+    isLoadingHogares,
+    searchParams,
+    selectedHogarId,
+    tipoPublicacion,
+  ]);
 
   const misPublicaciones = useMemo(() => {
     const usuarioActual = normalizarTexto(user?.usuario);
@@ -200,6 +245,7 @@ export default function CrearPublicacion() {
     setImagenesPreview([]);
     setCropQueue([]);
     setCropSource("");
+    setSelectedHogarId("");
     setMessage("");
     setSearchParams({});
   }
@@ -213,6 +259,9 @@ export default function CrearPublicacion() {
     }
     if (form.descripcion.trim().length < 20) {
       return { message: "La descripcion debe tener al menos 20 caracteres.", ref: descripcionRef };
+    }
+    if (!editingPublicacion && tipoPublicacion === "ofrezco_casa" && hogaresAdministrables.length > 1 && !selectedHogarId) {
+      return { message: "Selecciona a que hogar quieres vincular esta publicacion.", ref: hogarSelectRef };
     }
     if (Number(form.precio) <= 0) {
       return { message: "El precio debe ser mayor a cero.", ref: precioRef };
@@ -418,6 +467,22 @@ export default function CrearPublicacion() {
         throw new Error("No se pudo identificar el usuario.");
       }
 
+      const hogarSeleccionadoId = Number(selectedHogarId);
+      const hogarSeleccionado = hogaresAdministrables.find((hogar) => hogar.id === hogarSeleccionadoId);
+
+      if (hogarSeleccionado) {
+        const publicacion = await publicacionService.crear({
+          ...payload,
+          imagen: imagenesPublicacion[0] || undefined,
+          galeria: imagenesPublicacion.length > 0 ? imagenesPublicacion : undefined,
+        });
+
+        await hogarService.agregarPublicacion(hogarSeleccionado.id, user.id, publicacion.id);
+        if (imagenesPublicacion[0]) savePublicacionImage(publicacion.id, imagenesPublicacion[0]);
+        navigate("/home");
+        return;
+      }
+
       const resultado = await publicacionService.crearConHogar({
         ...form,
         ...payload,
@@ -507,10 +572,41 @@ export default function CrearPublicacion() {
             </div>
             <p className="create-section-help">
               {tipoPublicacion === "ofrezco_casa"
-                ? "Esta publicacion se enviara al servicio de publicaciones de hogares."
+                ? "Esta publicacion quedara vinculada a un hogar privado para gestionar solicitudes."
                 : "Esta publicacion se guardara en el servicio de publicaciones para que otros usuarios la vean."}
             </p>
           </div>
+
+          {!editingPublicacion && tipoPublicacion === "ofrezco_casa" && hogaresAdministrables.length > 0 && (
+            <div className="create-section">
+              <h3>Hogar vinculado</h3>
+              <p className="create-section-help">
+                Usa un hogar existente para evitar duplicados. Las solicitudes de esta publicacion llegaran a ese mismo grupo.
+              </p>
+              {hogaresAdministrables.length === 1 ? (
+                <p className="api-message">
+                  Se vinculara con: {hogaresAdministrables[0].nombre}
+                </p>
+              ) : (
+                <label className="field-label">
+                  <span>Selecciona el hogar</span>
+                  <select
+                    ref={hogarSelectRef}
+                    className="form-control"
+                    value={selectedHogarId}
+                    onChange={(event) => setSelectedHogarId(event.target.value)}
+                  >
+                    <option value="">Selecciona un hogar existente</option>
+                    {hogaresAdministrables.map((hogar) => (
+                      <option key={hogar.id} value={hogar.id}>
+                        {hogar.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
 
           <div className="create-section">
             <h3>Informacion principal</h3>

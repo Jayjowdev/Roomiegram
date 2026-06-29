@@ -29,26 +29,30 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   const imagenGuardada = getPublicacionImage(pub.id);
   const imagen = pub.imagen || imagenGuardada || home1;
   const galeria = pub.galeria?.length ? buildGallery(pub.galeria) : buildGallery([imagen]);
+  const tipo = pub.tipo === "busco_roomie" ? "busco_roomie" : "ofrezco_casa";
 
   return {
     id: pub.id,
-    tipo: "ofrezco_casa",
+    tipo,
     usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
-    titulo: pub.titulo || "Habitacion disponible",
-    precioMensual: pub.precio || pub.precioMensual || 0,
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    precioMensual: tipo === "ofrezco_casa" ? (pub.precio || pub.precioMensual || 0) : undefined,
+    presupuestoMaximo: tipo === "busco_roomie" ? (pub.presupuestoMaximo || pub.precio || 0) : undefined,
     precio: pub.precio || pub.precioMensual || 0,
     numeroHabitaciones: pub.numeroHabitaciones,
     numeroPersonas: pub.numeroPersonas,
     numeroBanos: pub.numeroBanos,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
-    amenidades: [
-      `${pub.numeroHabitaciones || 1} habitacion(es)`,
-      `${pub.numeroPersonas || 1} cupo(s)`,
-      `${pub.numeroBanos || 1} bano(s)`,
-    ],
+    amenidades: tipo === "ofrezco_casa"
+      ? [
+          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroPersonas || 1} cupo(s)`,
+          `${pub.numeroBanos || 1} bano(s)`,
+        ]
+      : undefined,
     imagen,
     galeria,
   };
@@ -59,7 +63,7 @@ export default function DetallePublicacion() {
   const { id } = useParams();
   const { user } = useAuth();
   const [publicacion, setPublicacion] = useState<Publicacion | null>(
-    getLocalPublicaciones().find((pub) => pub.tipo === "ofrezco_casa" && String(pub.id) === id) || null,
+    getLocalPublicaciones().find((pub) => String(pub.id) === id) || null,
   );
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [message, setMessage] = useState("");
@@ -94,9 +98,11 @@ export default function DetallePublicacion() {
   }, []);
 
   const hogarVinculado = useMemo(() => {
-    if (!publicacion?.id) return null;
+    if (!publicacion?.id || publicacion.tipo === "busco_roomie") return null;
     return hogares.find((hogar) => hogar.publicacionIds?.includes(publicacion.id)) || null;
-  }, [hogares, publicacion?.id]);
+  }, [hogares, publicacion?.id, publicacion?.tipo]);
+
+  const esOfertaCasa = publicacion?.tipo !== "busco_roomie";
 
   const esCreadorPublicacion = !!publicacion?.usuarioCreador
     && (
@@ -105,7 +111,7 @@ export default function DetallePublicacion() {
       || normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.nombre)
     );
 
-  const puedeAdministrarSolicitudes = !!user?.id && !!hogarVinculado && (
+  const puedeAdministrarSolicitudes = esOfertaCasa && !!user?.id && !!hogarVinculado && (
     hogarVinculado.usuarioAdministradorId === user.id
     || hogarVinculado.usuarioCreadorId === user.id
     || esCreadorPublicacion
@@ -114,11 +120,11 @@ export default function DetallePublicacion() {
   const solicitudYaEnviada = !!user?.id && !!hogarVinculado?.solicitudesPendientesIds?.includes(user.id);
 
   const irACrearHogarParaPublicacion = () => {
-    if (!publicacion?.id) return;
+    if (!publicacion?.id || !esOfertaCasa) return;
     const params = new URLSearchParams({
       publicacionId: String(publicacion.id),
       titulo: publicacion.titulo || "Publicacion sin titulo",
-      tipo: publicacion.tipo || "ofrezco_casa",
+      tipo: "ofrezco_casa",
     });
     navigate(`/hogares?${params.toString()}`);
   };
@@ -258,13 +264,19 @@ export default function DetallePublicacion() {
             </div>
             <p className="home-ubicacion">Ubicacion: {publicacion.ubicacion}</p>
             <h1>{publicacion.titulo}</h1>
-            <p className="home-precio">${publicacion.precioMensual?.toLocaleString("es-CL")} / mes</p>
+            <p className="home-precio">
+              {esOfertaCasa
+                ? `$${publicacion.precioMensual?.toLocaleString("es-CL")} / mes`
+                : `Presupuesto: $${(publicacion.presupuestoMaximo || publicacion.precio || 0).toLocaleString("es-CL")}`}
+            </p>
             <p className="detalle-desc">{publicacion.descripcion}</p>
-            <div className="detalle-info-grid">
-              <span><strong>Habitaciones:</strong> {publicacion.numeroHabitaciones || 1}</span>
-              <span><strong>Cupos:</strong> {publicacion.numeroPersonas || 1}</span>
-              <span><strong>Banos:</strong> {publicacion.numeroBanos || 1}</span>
-            </div>
+            {esOfertaCasa && (
+              <div className="detalle-info-grid">
+                <span><strong>Habitaciones:</strong> {publicacion.numeroHabitaciones || 1}</span>
+                <span><strong>Cupos:</strong> {publicacion.numeroPersonas || 1}</span>
+                <span><strong>Banos:</strong> {publicacion.numeroBanos || 1}</span>
+              </div>
+            )}
             {publicacion.amenidades && (
               <div className="home-tags">
                 {publicacion.amenidades.map((amenidad) => <span key={amenidad} className="home-tag amenidad-tag">{amenidad}</span>)}
@@ -274,8 +286,15 @@ export default function DetallePublicacion() {
           <aside className="detalle-side">
             <h3>Datos del anfitrion</h3>
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
-            <p><strong>Tipo:</strong> Oferta de habitacion/casa</p>
-            {puedeAdministrarSolicitudes ? (
+            <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitacion/casa" : "Busqueda de roomie"}</p>
+            {!esOfertaCasa ? (
+              <div className="mt-3">
+                <p>Esta publicacion es un aviso de busqueda. No necesita hogar vinculado.</p>
+                <button className="btn btn-outline-success w-100 mt-3" type="button" onClick={() => navigate("/home?tipo=ofrezco_casa")}>
+                  Buscar publicaciones de casa
+                </button>
+              </div>
+            ) : puedeAdministrarSolicitudes ? (
               <div className="mt-3">
                 <h4>Solicitudes del hogar</h4>
                 {!hogarVinculado?.solicitudesPendientesIds?.length ? (
@@ -314,7 +333,10 @@ export default function DetallePublicacion() {
               )
             ) : (
               <div className="mt-3">
-              <p className="mt-3">Esta publicación no tiene un hogar vinculado para gestionar solicitudes.</p>
+                <p className="mt-3">
+                  Esta publicacion no tiene un hogar vinculado para gestionar solicitudes.
+                  {esCreadorPublicacion ? " Puedes crear un hogar para volver a gestionarla." : ""}
+                </p>
                 {esCreadorPublicacion && (
                   <>
                     <p className="form-helper">Puedes crear un hogar y vincularlo a esta publicacion al guardarlo.</p>

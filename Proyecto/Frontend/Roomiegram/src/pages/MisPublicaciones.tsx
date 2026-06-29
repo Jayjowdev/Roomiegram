@@ -4,7 +4,9 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { hogarService } from "../services/hogarService";
 import { mapBackendPublicacionToOferta, publicacionService } from "../services/publicacionService";
+import type { Hogar } from "../types/Hogar";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 import { getPublicacionImage } from "../utils/publicacionImages";
@@ -57,6 +59,13 @@ function getDescripcionResumen(publicacion: Publicacion) {
   return descripcion.length > 150 ? `${descripcion.slice(0, 150).trim()}...` : descripcion;
 }
 
+type DeleteContext = {
+  publicacion: Publicacion;
+  hogar?: Hogar;
+  puedeEliminarHogar: boolean;
+  motivoBloqueo?: string;
+};
+
 export default function MisPublicaciones() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -65,16 +74,18 @@ export default function MisPublicaciones() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [deleteContext, setDeleteContext] = useState<DeleteContext | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
 
-    publicacionService
-      .listar()
-      .then((data) => {
+    Promise.allSettled([publicacionService.listar(), hogarService.listar()])
+      .then(([publicacionesResult, hogaresResult]) => {
         if (!isMounted) return;
 
+        const data = publicacionesResult.status === "fulfilled" ? publicacionesResult.value : [];
         const backendPublicaciones = data
           .map((publicacion) => ({
             ...mapBackendPublicacionToOferta(publicacion),
@@ -89,7 +100,8 @@ export default function MisPublicaciones() {
           .filter((publicacion) => publicacionPerteneceAlUsuario(publicacion, user?.usuario, user?.correo));
 
         setPublicaciones([...localPublicaciones, ...backendPublicaciones]);
-        setMessage("");
+        setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
+        setMessage(publicacionesResult.status === "fulfilled" ? "" : "No se pudo cargar el servicio de publicaciones. Mostrando publicaciones locales si existen.");
       })
       .catch(() => {
         if (!isMounted) return;
@@ -116,14 +128,71 @@ export default function MisPublicaciones() {
     return publicaciones.filter((publicacion) => publicacion.tipo === filtro);
   }, [filtro, publicaciones]);
 
+  const getHogarVinculado = (publicacion: Publicacion) => {
+    if (publicacion.tipo !== "ofrezco_casa" || publicacion.origen !== "backend") return undefined;
+    return hogares.find((hogar) => hogar.publicacionIds?.includes(publicacion.id));
+  };
+
+  const evaluarEliminacionHogar = (hogar?: Hogar) => {
+    if (!hogar || !user?.id) {
+      return { puedeEliminarHogar: false, motivoBloqueo: undefined };
+    }
+
+    const esAdminDelHogar = hogar.usuarioAdministradorId === user.id || hogar.usuarioCreadorId === user.id;
+    const tieneIntegrantesExternos = (hogar.integrantesIds || []).some((usuarioId) =>
+      usuarioId !== hogar.usuarioCreadorId && usuarioId !== hogar.usuarioAdministradorId,
+    );
+    const tieneActividad = Boolean(
+      (hogar.solicitudesPendientesIds?.length ?? 0) > 0
+      || (hogar.tareasIds?.length ?? 0) > 0
+      || (hogar.hogarCuentaIds?.length ?? 0) > 0
+      || (hogar.comprobanteIds?.length ?? 0) > 0
+      || (hogar.publicacionIds?.length ?? 0) > 1
+    );
+
+    if (!esAdminDelHogar) {
+      return { puedeEliminarHogar: false, motivoBloqueo: "Solo el administrador del hogar puede eliminar el hogar vinculado." };
+    }
+
+    if (tieneIntegrantesExternos || tieneActividad) {
+      return {
+        puedeEliminarHogar: false,
+        motivoBloqueo: "Este hogar tiene actividad o integrantes. Por seguridad solo puedes eliminar la publicacion.",
+      };
+    }
+
+    return { puedeEliminarHogar: true, motivoBloqueo: undefined };
+  };
+
   const handleDelete = async (publicacion: Publicacion) => {
     if (!user?.usuario) {
       setMessage("No se pudo identificar tu sesion.");
       return;
     }
 
+    const hogar = getHogarVinculado(publicacion);
+    if (hogar) {
+      const evaluacion = evaluarEliminacionHogar(hogar);
+      setDeleteContext({
+        publicacion,
+        hogar,
+        puedeEliminarHogar: evaluacion.puedeEliminarHogar,
+        motivoBloqueo: evaluacion.motivoBloqueo,
+      });
+      return;
+    }
+
     const confirmar = window.confirm(`Eliminar la publicacion "${getTitulo(publicacion)}"?`);
     if (!confirmar) return;
+
+    await eliminarPublicacion(publicacion, "normal");
+  };
+
+  const eliminarPublicacion = async (publicacion: Publicacion, modo: "normal" | "mantener-hogar" | "con-hogar") => {
+    if (!user?.usuario) {
+      setMessage("No se pudo identificar tu sesion.");
+      return;
+    }
 
     try {
       setDeletingId(publicacion.id);
@@ -134,10 +203,26 @@ export default function MisPublicaciones() {
         deleteLocalPublicacion(publicacion.id);
       }
 
+      if (modo === "con-hogar") {
+        const hogar = getHogarVinculado(publicacion);
+        if (!hogar || !user.id) {
+          throw new Error("No se pudo identificar el hogar vinculado.");
+        }
+        await hogarService.eliminar(hogar.id, user.id);
+        setHogares((current) => current.filter((item) => item.id !== hogar.id));
+      }
+
       setPublicaciones((current) => current.filter((item) =>
         !(item.id === publicacion.id && item.origen === publicacion.origen)
       ));
-      setMessage("Publicacion eliminada correctamente.");
+      setDeleteContext(null);
+      setMessage(
+        modo === "con-hogar"
+          ? "Publicacion y hogar eliminados correctamente."
+          : modo === "mantener-hogar"
+            ? "Publicacion eliminada. El hogar vinculado se mantiene privado."
+            : "Publicacion eliminada correctamente."
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
     } finally {
@@ -169,6 +254,41 @@ export default function MisPublicaciones() {
       </header>
 
       {message && <p className="api-message">{message}</p>}
+
+      {deleteContext && (
+        <div className="modal-backdrop-light" role="dialog" aria-modal="true">
+          <div className="modal-card">
+            <h3>Eliminar publicacion vinculada</h3>
+            <p>
+              Esta publicacion tiene un hogar vinculado. Si eliminas solo la publicacion, el hogar seguira existiendo como espacio privado de convivencia.
+            </p>
+            {!deleteContext.puedeEliminarHogar && deleteContext.motivoBloqueo && (
+              <p className="form-helper">{deleteContext.motivoBloqueo}</p>
+            )}
+            <div className="item-actions">
+              <button
+                className="btn btn-outline-danger"
+                type="button"
+                disabled={deletingId === deleteContext.publicacion.id}
+                onClick={() => eliminarPublicacion(deleteContext.publicacion, "mantener-hogar")}
+              >
+                Eliminar solo publicacion
+              </button>
+              <button
+                className="btn btn-danger"
+                type="button"
+                disabled={!deleteContext.puedeEliminarHogar || deletingId === deleteContext.publicacion.id}
+                onClick={() => eliminarPublicacion(deleteContext.publicacion, "con-hogar")}
+              >
+                Eliminar publicacion y hogar
+              </button>
+              <button className="btn btn-outline-success" type="button" onClick={() => setDeleteContext(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="my-publications-hero">
         <div>

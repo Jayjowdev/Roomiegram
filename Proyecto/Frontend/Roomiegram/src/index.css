@@ -1853,6 +1853,31 @@ p {
   max-width: none;
 }
 
+.hogares-empty-flow {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.hogares-path-card {
+  border: 1px solid #d3ebe5;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.hogares-path-primary {
+  background: linear-gradient(135deg, #f0fbf7 0%, #ffffff 72%);
+  border-color: #bfe5d8;
+}
+
+.hogares-path-card h3 {
+  color: #173f35;
+}
+
+.hogares-private-form {
+  max-width: none;
+  border: 1px solid #d3ebe5;
+}
+
 .hogares-primary-panel {
   border: 1px solid #d3ebe5;
 }
@@ -3892,6 +3917,34 @@ p {
   .hogar-integrante-row .btn {
     width: 100%;
   }
+}
+
+.modal-backdrop-light {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 45, 39, 0.32);
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border: 1px solid #d9e8e2;
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(25, 51, 46, 0.22);
+  padding: 22px;
+}
+
+.modal-card h3 {
+  margin-bottom: 10px;
+  color: #153f35;
+}
+
+.modal-card p {
+  color: #45524e;
 }
 
 @media (max-width: 430px) {

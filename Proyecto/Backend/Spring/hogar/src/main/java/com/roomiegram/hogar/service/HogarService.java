@@ -142,6 +142,7 @@ public class HogarService {
         if (!esAdminGlobal(rolSolicitante)) {
             validarId(administradorId, "El administrador es obligatorio");
             validarAdministradorDelHogar(hogar, administradorId);
+            validarHogarSinActividadCritica(hogar);
         }
 
         hogarRepository.delete(hogar);
@@ -219,6 +220,22 @@ public class HogarService {
 
     private boolean esAdminGlobal(String rolSolicitante) {
         return rolSolicitante != null && "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
+    }
+
+    private void validarHogarSinActividadCritica(Hogar hogar) {
+        boolean tieneIntegrantesExternos = hogar.getIntegrantesIds().stream()
+                .anyMatch(usuarioId -> !usuarioId.equals(hogar.getUsuarioCreadorId())
+                        && !usuarioId.equals(hogar.getUsuarioAdministradorId()));
+
+        if (tieneIntegrantesExternos
+                || !hogar.getSolicitudesPendientesIds().isEmpty()
+                || !hogar.getTareasIds().isEmpty()
+                || !hogar.getHogarCuentaIds().isEmpty()
+                || !hogar.getComprobanteIds().isEmpty()
+                || hogar.getPublicacionIds().size() > 1) {
+            throw new IllegalArgumentException(
+                    "Este hogar tiene actividad o integrantes. Por seguridad solo puedes eliminar la publicacion.");
+        }
     }
 
     private void validarId(Long value, String message) {

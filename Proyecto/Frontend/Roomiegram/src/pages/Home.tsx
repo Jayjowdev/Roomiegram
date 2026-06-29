@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
@@ -104,6 +104,7 @@ const historiasFallback = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [filtro, setFiltro] = useState<"busco_roomie" | "ofrezco_casa" | "todos">("todos");
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
@@ -113,6 +114,13 @@ export default function Home() {
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [isLoadingHistorias, setIsLoadingHistorias] = useState(true);
   const usuarioActual = normalizarTexto(user?.usuario);
+
+  useEffect(() => {
+    const tipo = searchParams.get("tipo");
+    if (tipo === "ofrezco_casa" || tipo === "busco_roomie" || tipo === "todos") {
+      setFiltro(tipo);
+    }
+  }, [searchParams]);
 
   const loadPublicaciones = () => {
     let isMounted = true;

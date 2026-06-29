@@ -30,8 +30,14 @@ export default function Register() {
   const [telefono, setTelefono] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [localError, setLocalError] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+
+  const confirmacionIniciada = confirmPassword.length > 0;
+  const contrasenasCoinciden = confirmacionIniciada && contrasena === confirmPassword;
+  const contrasenasNoCoinciden = confirmacionIniciada && contrasena !== confirmPassword;
 
   const passwordRules = [
     { label: "Minimo 8 caracteres", ok: contrasena.length >= 8 },
@@ -104,7 +110,27 @@ export default function Register() {
           <input type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
           <input type="tel" className="form-control" placeholder="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
-          <input type="password" className="form-control" placeholder="Contrasena segura" value={contrasena} onChange={(e) => setContrasena(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} disabled={isLoading} />
+          <div className="password-input-group">
+            <input
+              type={mostrarContrasena ? "text" : "password"}
+              className="form-control"
+              placeholder="Contrasena segura"
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
+              disabled={isLoading}
+              aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+            >
+              {mostrarContrasena ? "Ocultar" : "Ver"}
+            </button>
+          </div>
 
           {(passwordFocused || contrasena.length > 0) && (
             <ul className="password-hints">
@@ -115,7 +141,28 @@ export default function Register() {
               ))}
             </ul>
           )}
-          <input type="password" className="form-control" placeholder="Confirmar contrasena" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+          <div className="password-input-group">
+            <input
+              type={mostrarConfirmacion ? "text" : "password"}
+              className="form-control"
+              placeholder="Confirmar contrasena"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setMostrarConfirmacion((valorActual) => !valorActual)}
+              disabled={isLoading}
+              aria-label={mostrarConfirmacion ? "Ocultar confirmacion de contrasena" : "Mostrar confirmacion de contrasena"}
+            >
+              {mostrarConfirmacion ? "Ocultar" : "Ver"}
+            </button>
+          </div>
+
+          {contrasenasNoCoinciden && <p className="form-error">Las contrasenas no coinciden.</p>}
+          {contrasenasCoinciden && <p className="form-success">Las contrasenas coinciden.</p>}
 
           <button className="btn btn-success w-100 mt-3" type="submit" disabled={isLoading}>
             {isLoading ? "Creando cuenta..." : "Crear cuenta"}

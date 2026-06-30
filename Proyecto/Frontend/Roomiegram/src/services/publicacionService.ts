@@ -27,9 +27,11 @@ export async function listarPublicaciones() {
   }
 }
 
-export async function listarPublicacionesModeracion() {
+export async function listarPublicacionesModeracion(moderadorId: number) {
   try {
-    const { data } = await publicacionApi.get<Publicacion[]>("/publicaciones/moderacion")
+    const { data } = await publicacionApi.get<Publicacion[]>("/publicaciones/moderacion", {
+      params: { moderadorId },
+    })
     return data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
@@ -73,6 +75,15 @@ export async function eliminarPublicacion(id: number, usuarioSolicitante: string
 export async function ocultarPublicacion(id: number, payload: { moderadorId: number; motivo: string }) {
   try {
     const { data } = await publicacionApi.patch<Publicacion>(`/publicaciones/${id}/moderacion/ocultar`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function restaurarPublicacion(id: number, payload: { moderadorId: number; motivo: string }) {
+  try {
+    const { data } = await publicacionApi.patch<Publicacion>(`/publicaciones/${id}/moderacion/restaurar`, payload)
     return data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
@@ -156,6 +167,7 @@ export const publicacionService = {
   actualizar: actualizarPublicacion,
   eliminar: eliminarPublicacion,
   ocultar: ocultarPublicacion,
+  restaurar: restaurarPublicacion,
   listarHistorias,
   crearHistoria,
   actualizarHistoria,

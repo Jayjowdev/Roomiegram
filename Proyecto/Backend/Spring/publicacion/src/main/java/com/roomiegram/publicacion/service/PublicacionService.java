@@ -83,7 +83,11 @@ public class PublicacionService {
                 .toList();
     }
 
-    public List<Publicacion> listarPublicacionesModeracion() {
+    public List<Publicacion> listarPublicacionesModeracion(Long moderadorId) {
+        if (moderadorId == null) {
+            throw new IllegalArgumentException("El moderador es obligatorio");
+        }
+        validarModerador(moderadorId);
         return publicacionRepository.findAll();
     }
 
@@ -104,6 +108,30 @@ public class PublicacionService {
                 .orElseThrow(() -> new IllegalArgumentException("La publicacion no existe"));
 
         publicacion.setEstadoModeracion("OCULTA_MODERACION");
+        publicacion.setMotivoModeracion(request.motivo().trim());
+        publicacion.setModeradoPorId(request.moderadorId());
+        publicacion.setFechaModeracion(LocalDateTime.now());
+
+        return publicacionRepository.save(publicacion);
+    }
+
+    public Publicacion restaurarPublicacion(Long id, ModeracionRequest request) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la publicacion es obligatorio");
+        }
+        if (request == null || request.moderadorId() == null) {
+            throw new IllegalArgumentException("El moderador es obligatorio");
+        }
+        if (request.motivo() == null || request.motivo().trim().length() < 5) {
+            throw new IllegalArgumentException("El motivo de restauracion es obligatorio");
+        }
+
+        validarModerador(request.moderadorId());
+
+        Publicacion publicacion = publicacionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La publicacion no existe"));
+
+        publicacion.setEstadoModeracion("ACTIVA");
         publicacion.setMotivoModeracion(request.motivo().trim());
         publicacion.setModeradoPorId(request.moderadorId());
         publicacion.setFechaModeracion(LocalDateTime.now());

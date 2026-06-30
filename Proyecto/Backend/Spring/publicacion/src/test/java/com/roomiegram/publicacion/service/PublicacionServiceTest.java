@@ -136,11 +136,21 @@ class PublicacionServiceTest {
         Publicacion oculta = crearPublicacion();
         oculta.setId(2L);
         oculta.setEstadoModeracion("OCULTA_MODERACION");
+        when(restTemplate.getForEntity(eq("http://usuario:8088/auth/usuarios/7/moderador-valido"), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("puedeModerar", true)));
         when(publicacionRepository.findAll()).thenReturn(List.of(activa, oculta));
 
-        List<Publicacion> moderables = publicacionService.listarPublicacionesModeracion();
+        List<Publicacion> moderables = publicacionService.listarPublicacionesModeracion(7L);
 
         assertEquals(2, moderables.size());
+    }
+
+    @Test
+    void listarPublicacionesModeracionRechazaModeradorNoValido() {
+        when(restTemplate.getForEntity(eq("http://usuario:8088/auth/usuarios/8/moderador-valido"), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("puedeModerar", false)));
+
+        assertThrows(SecurityException.class, () -> publicacionService.listarPublicacionesModeracion(8L));
     }
 
     @Test
@@ -166,6 +176,30 @@ class PublicacionServiceTest {
         assertThrows(SecurityException.class,
                 () -> publicacionService.ocultarPublicacion(1L, new ModeracionRequest(8L, "Motivo valido")));
 
+        verify(publicacionRepository, never()).save(any(Publicacion.class));
+    }
+
+    @Test
+    void restauraPublicacionCuandoModeradorEsValido() {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setEstadoModeracion("OCULTA_MODERACION");
+        publicacion.setMotivoModeracion("Oculta por error");
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+        when(restTemplate.getForEntity(eq("http://usuario:8088/auth/usuarios/7/moderador-valido"), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("puedeModerar", true)));
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion restaurada = publicacionService.restaurarPublicacion(1L, new ModeracionRequest(7L, "Revision completada"));
+
+        assertEquals("ACTIVA", restaurada.getEstadoModeracion());
+        assertEquals("Revision completada", restaurada.getMotivoModeracion());
+        assertEquals(7L, restaurada.getModeradoPorId());
+    }
+
+    @Test
+    void rechazaRestaurarPublicacionCuandoMotivoEsVacio() {
+        assertThrows(IllegalArgumentException.class,
+                () -> publicacionService.restaurarPublicacion(1L, new ModeracionRequest(7L, " ")));
         verify(publicacionRepository, never()).save(any(Publicacion.class));
     }
 

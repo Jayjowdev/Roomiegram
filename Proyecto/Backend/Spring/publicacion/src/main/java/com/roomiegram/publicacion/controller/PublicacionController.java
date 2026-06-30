@@ -63,8 +63,14 @@ public class PublicacionController {
     }
 
     @GetMapping("/moderacion")
-    public ResponseEntity<List<Publicacion>> listarPublicacionesModeracion() {
-        return ResponseEntity.ok(publicacionService.listarPublicacionesModeracion());
+    public ResponseEntity<?> listarPublicacionesModeracion(@RequestParam Long moderadorId) {
+        try {
+            return ResponseEntity.ok(publicacionService.listarPublicacionesModeracion(moderadorId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
     }
 
     @PatchMapping("/{id}/moderacion/ocultar")
@@ -75,7 +81,25 @@ public class PublicacionController {
             Publicacion resultado = publicacionService.ocultarPublicacion(id, request);
             return ResponseEntity.ok(resultado);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return publicacionNoExiste(e)
+                    ? ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage())
+                    : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/moderacion/restaurar")
+    public ResponseEntity<?> restaurarPublicacion(
+            @PathVariable Long id,
+            @RequestBody ModeracionRequest request) {
+        try {
+            Publicacion resultado = publicacionService.restaurarPublicacion(id, request);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return publicacionNoExiste(e)
+                    ? ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage())
+                    : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
@@ -157,5 +181,9 @@ public class PublicacionController {
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
+    }
+
+    private boolean publicacionNoExiste(IllegalArgumentException e) {
+        return e.getMessage() != null && e.getMessage().toLowerCase().contains("no existe");
     }
 }

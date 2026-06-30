@@ -95,11 +95,20 @@ class PublicacionControllerTest {
     void listarModeracionDebeRetornarActivasYOcultas() throws Exception {
         Publicacion publicacion = crearPublicacion();
         publicacion.setEstadoModeracion("OCULTA_MODERACION");
-        when(publicacionService.listarPublicacionesModeracion()).thenReturn(List.of(publicacion));
+        when(publicacionService.listarPublicacionesModeracion(7L)).thenReturn(List.of(publicacion));
 
-        mockMvc.perform(get("/publicaciones/moderacion"))
+        mockMvc.perform(get("/publicaciones/moderacion").param("moderadorId", "7"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].estadoModeracion").value("OCULTA_MODERACION"));
+    }
+
+    @Test
+    void listarModeracionDebeRetornar403CuandoNoPuedeModerar() throws Exception {
+        doThrow(new SecurityException("No tienes permisos para moderar publicaciones"))
+                .when(publicacionService).listarPublicacionesModeracion(9L);
+
+        mockMvc.perform(get("/publicaciones/moderacion").param("moderadorId", "9"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -126,6 +135,32 @@ class PublicacionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ModeracionRequest(8L, "Motivo valido"))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void restaurarDebeRetornar200() throws Exception {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setEstadoModeracion("ACTIVA");
+        publicacion.setMotivoModeracion("Revision completada");
+        when(publicacionService.restaurarPublicacion(eq(1L), any(ModeracionRequest.class))).thenReturn(publicacion);
+
+        mockMvc.perform(patch("/publicaciones/1/moderacion/restaurar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ModeracionRequest(7L, "Revision completada"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoModeracion").value("ACTIVA"))
+                .andExpect(jsonPath("$.motivoModeracion").value("Revision completada"));
+    }
+
+    @Test
+    void restaurarDebeRetornar404CuandoPublicacionNoExiste() throws Exception {
+        doThrow(new IllegalArgumentException("La publicacion no existe"))
+                .when(publicacionService).restaurarPublicacion(eq(99L), any(ModeracionRequest.class));
+
+        mockMvc.perform(patch("/publicaciones/99/moderacion/restaurar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ModeracionRequest(7L, "Revision completada"))))
+                .andExpect(status().isNotFound());
     }
 
     @Test

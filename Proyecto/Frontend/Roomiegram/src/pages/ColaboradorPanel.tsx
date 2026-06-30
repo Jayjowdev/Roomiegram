@@ -55,12 +55,18 @@ export default function ColaboradorPanel() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    if (!user?.id) {
+      setMessage("No se pudo identificar al moderador.");
+      setIsLoading(false);
+      return;
+    }
+
     let isMounted = true;
     setIsLoading(true);
     setMessage("");
 
     publicacionService
-      .listarModeracion()
+      .listarModeracion(user.id)
       .then((data) => {
         if (!isMounted) return;
         setPublicaciones(data.map(mapPublicacionModeracion));
@@ -76,10 +82,11 @@ export default function ColaboradorPanel() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   const recargarPublicaciones = async () => {
-    const data = await publicacionService.listarModeracion();
+    if (!user?.id) return;
+    const data = await publicacionService.listarModeracion(user.id);
     setPublicaciones(data.map(mapPublicacionModeracion));
   };
 
@@ -138,6 +145,32 @@ export default function ColaboradorPanel() {
     }
   };
 
+  const handleRestaurar = async (pub: Publicacion) => {
+    if (!user?.id) {
+      setMessage("No se pudo identificar al moderador.");
+      return;
+    }
+
+    const motivo = window.prompt("Indica el motivo para restaurar esta publicacion:");
+    const motivoLimpio = motivo?.trim() || "";
+    if (!motivoLimpio) {
+      setMessage("Debes indicar un motivo para restaurar la publicacion.");
+      return;
+    }
+
+    const confirmar = window.confirm("Esta accion volvera a mostrar la publicacion en Home y listados normales. Deseas continuar?");
+    if (!confirmar) return;
+
+    try {
+      setMessage("");
+      await publicacionService.restaurar(pub.id, { moderadorId: user.id, motivo: motivoLimpio });
+      await recargarPublicaciones();
+      setMessage("Publicacion restaurada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo restaurar la publicacion. Intenta nuevamente.");
+    }
+  };
+
   return (
     <div className="dashboard-page collaborator-page">
       <header className="dashboard-header">
@@ -163,11 +196,11 @@ export default function ColaboradorPanel() {
         <div>
           <span className="status-pill success">{user?.role || "COLABORADOR"}</span>
           <h1>Panel de moderacion</h1>
-          <p>Revisa publicaciones y oculta contenido que incumpla las normas de la comunidad.</p>
+          <p>Revisa publicaciones y gestiona contenido que incumpla las normas de la comunidad.</p>
         </div>
         <div className="collaborator-scope-card">
           <strong>Permisos limitados</strong>
-          <span>Este panel permite ocultar publicaciones problemáticas sin eliminar datos. Las acciones administrativas avanzadas siguen reservadas para ADMIN.</span>
+          <span>Este panel permite ocultar y restaurar publicaciones sin eliminar datos. Las acciones administrativas avanzadas siguen reservadas para ADMIN.</span>
         </div>
       </section>
 
@@ -303,6 +336,11 @@ export default function ColaboradorPanel() {
                 {estadoModeracion(pub) === "ACTIVA" && (
                   <button className="btn btn-outline-danger" type="button" onClick={() => handleOcultar(pub)}>
                     Ocultar publicacion
+                  </button>
+                )}
+                {estadoModeracion(pub) === "OCULTA_MODERACION" && (
+                  <button className="btn btn-success" type="button" onClick={() => handleRestaurar(pub)}>
+                    Restaurar publicacion
                   </button>
                 )}
               </div>

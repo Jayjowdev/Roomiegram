@@ -57,6 +57,7 @@ public class RegisterService {
         // Encriptar la contraseña antes de guardarla
         String contrasenaEncriptada = passwordEncoder.encode(register.getContrasena());
         register.setContrasena(contrasenaEncriptada);
+        register.setCuentaActiva(true);
 
         //Guardar en Register
         Register registroGuardado = registerRepository.save(register);
@@ -108,6 +109,7 @@ public class RegisterService {
         // Encriptar la contraseña antes de guardarla
         String contrasenaEncriptada = passwordEncoder.encode(register.getContrasena());
         register.setContrasena(contrasenaEncriptada);
+        register.setCuentaActiva(true);
 
         //Guardar en Register
         Register registroGuardado = registerRepository.save(register);

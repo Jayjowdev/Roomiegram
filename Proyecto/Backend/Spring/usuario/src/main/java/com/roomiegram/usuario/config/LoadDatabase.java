@@ -29,6 +29,7 @@ public class LoadDatabase {
                 cliente.setUsuario("juanperez");
                 cliente.setContrasena(passwordEncoder.encode("password123"));
                 cliente.setTelefono("9876543210");
+                cliente.setCuentaActiva(true);
                 registerRepository.save(cliente);
 
                 Login loginCliente = new Login();
@@ -54,6 +55,7 @@ public class LoadDatabase {
             admin.setUsuario("admin");
             admin.setContrasena(passwordEncoder.encode("admin123"));
             admin.setTelefono("1234567890");
+            admin.setCuentaActiva(true);
             registerRepository.save(admin);
         }
 

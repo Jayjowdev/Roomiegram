@@ -75,9 +75,9 @@ public class LoginService {
         }
 
         registerRepository.findByUsuario(login.getUsuario())
-                .filter(register -> Boolean.TRUE.equals(register.getCuentaSuspendida()))
+                .filter(register -> !register.isCuentaActiva())
                 .ifPresent(register -> {
-                    throw new IllegalArgumentException("La cuenta está suspendida. Contacta al administrador de Roomiegram.");
+                    throw new IllegalArgumentException("La cuenta se encuentra suspendida. Contacta a un administrador.");
                 });
         
         return login;

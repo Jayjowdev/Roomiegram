@@ -3903,6 +3903,53 @@ p {
   padding: 12px;
 }
 
+.admin-user-blockers {
+  background: #fffdf5;
+  border: 1px solid #ecd88b;
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.admin-user-blockers h5 {
+  color: #7c6214;
+  font-weight: 900;
+  margin: 0 0 4px;
+}
+
+.admin-user-blockers p {
+  color: #61573a;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.admin-user-blockers ul {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-user-blockers li {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #efe5b6;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.admin-user-blockers li span {
+  color: #384743;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .admin-user-alert {
   align-items: center;
   background: #f7fbfa;

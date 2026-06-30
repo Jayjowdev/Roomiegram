@@ -104,7 +104,7 @@ class LoginServiceTest {
         Login login = crearLogin("juan123", contrasenaEncriptada, Role.CLIENTE);
         Register register = new Register();
         register.setUsuario("juan123");
-        register.setCuentaSuspendida(true);
+        register.setCuentaActiva(false);
 
         when(loginRepository.findByUsuario("juan123")).thenReturn(Optional.of(login));
         when(registerRepository.findByUsuario("juan123")).thenReturn(Optional.of(register));
@@ -112,7 +112,7 @@ class LoginServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> loginService.autenticarUsuario("juan123", "contrasena123"));
 
-        assertEquals("La cuenta está suspendida. Contacta al administrador de Roomiegram.", exception.getMessage());
+        assertEquals("La cuenta se encuentra suspendida. Contacta a un administrador.", exception.getMessage());
     }
 
     @Test

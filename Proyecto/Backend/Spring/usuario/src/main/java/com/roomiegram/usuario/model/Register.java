@@ -10,6 +10,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -63,6 +65,41 @@ public class Register {
     @Column(columnDefinition = "LONGTEXT")
     private String preferenciasCompatibilidad;
 
-    @Column(nullable = false)
+    @Column(name = "cuenta_activa", nullable = false)
+    private Boolean cuentaActiva = true;
+
+    @Column(name = "cuenta_suspendida", nullable = false)
     private Boolean cuentaSuspendida = false;
+
+    public Boolean getCuentaActiva() {
+        return cuentaActiva == null ? Boolean.TRUE : cuentaActiva;
+    }
+
+    public void setCuentaActiva(Boolean cuentaActiva) {
+        this.cuentaActiva = cuentaActiva == null ? Boolean.TRUE : cuentaActiva;
+        this.cuentaSuspendida = !this.cuentaActiva;
+    }
+
+    public boolean isCuentaActiva() {
+        return Boolean.TRUE.equals(getCuentaActiva());
+    }
+
+    public Boolean getCuentaSuspendida() {
+        return !isCuentaActiva();
+    }
+
+    public void setCuentaSuspendida(Boolean cuentaSuspendida) {
+        boolean suspendida = Boolean.TRUE.equals(cuentaSuspendida);
+        this.cuentaSuspendida = suspendida;
+        this.cuentaActiva = !suspendida;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void sincronizarEstadoCuenta() {
+        if (cuentaActiva == null) {
+            cuentaActiva = true;
+        }
+        cuentaSuspendida = !cuentaActiva;
+    }
 }

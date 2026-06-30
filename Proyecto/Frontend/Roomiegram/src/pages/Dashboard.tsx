@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
@@ -24,10 +24,23 @@ type DashboardStats = {
 
 type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas" | "usuarios";
 type UsuarioFiltro = "todos" | "sin-datos" | "suspendidos" | "clientes";
+type BloqueoSection = Exclude<DashboardSection, "usuarios">;
+type BloqueoEliminarUsuario = {
+  key: BloqueoSection;
+  text: string;
+  action: string;
+  label: string;
+};
+type FiltroAsociacionUsuario = {
+  section: BloqueoSection;
+  usuarioId: number;
+  label: string;
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const messageRef = useRef<HTMLParagraphElement | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     publicaciones: 0,
     historias: 0,
@@ -57,7 +70,13 @@ export default function Dashboard() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardFilter, setDashboardFilter] = useState("");
+  const [associationFilter, setAssociationFilter] = useState<FiltroAsociacionUsuario | null>(null);
   const [activeSection, setActiveSection] = useState<DashboardSection>("publicaciones");
+
+  useEffect(() => {
+    if (!message) return;
+    messageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [message]);
 
   useEffect(() => {
     let isMounted = true;
@@ -307,28 +326,30 @@ export default function Dashboard() {
   const getUsuarioRole = (usuario: UsuarioResumen) => usuario.rol || usuario.role || "CLIENTE";
   const isUsuarioActivo = (usuario: UsuarioResumen) => usuario.cuentaActiva !== false;
 
-  const getDatosAsociadosUsuario = (usuario: UsuarioResumen) => {
+  const isPublicacionAsociadaUsuario = (publicacion: Publicacion, usuario: UsuarioResumen) => {
     const usuarioNormalizado = normalizeSearch(usuario.usuario);
-    const nombreNormalizado = normalizeSearch(usuario.nombre);
-    const publicacionesCount = publicaciones.filter(
-      (publicacion) =>
-        publicacion.usuarioId === usuario.id ||
-        normalizeSearch(publicacion.usuarioCreador) === usuarioNormalizado,
-    ).length;
-    const historiasCount = historias.filter(
-      (historia) => normalizeSearch(historia.usuarioCreador) === usuarioNormalizado,
-    ).length;
-    const hogaresCount = hogares.filter(
-      (hogar) =>
-        hogar.usuarioCreadorId === usuario.id ||
-        hogar.usuarioAdministradorId === usuario.id ||
-        hogar.integrantesIds?.includes(usuario.id) ||
-        hogar.solicitudesPendientesIds?.includes(usuario.id),
-    ).length;
-    const tareasCount = tareas.filter((tarea) => {
-      const encargado = normalizeSearch(tarea.encargado);
-      return encargado === usuarioNormalizado || encargado === nombreNormalizado;
-    }).length;
+    return publicacion.usuarioId === usuario.id || normalizeSearch(publicacion.usuarioCreador) === usuarioNormalizado;
+  };
+
+  const isHistoriaAsociadaUsuario = (historia: Historia, usuario: UsuarioResumen) =>
+    normalizeSearch(historia.usuarioCreador) === normalizeSearch(usuario.usuario);
+
+  const isHogarAsociadoUsuario = (hogar: Hogar, usuario: UsuarioResumen) =>
+    hogar.usuarioCreadorId === usuario.id ||
+    hogar.usuarioAdministradorId === usuario.id ||
+    hogar.integrantesIds?.includes(usuario.id) ||
+    hogar.solicitudesPendientesIds?.includes(usuario.id);
+
+  const isTareaAsociadaUsuario = (tarea: Tarea, usuario: UsuarioResumen) => {
+    const encargado = normalizeSearch(tarea.encargado);
+    return encargado === normalizeSearch(usuario.usuario) || encargado === normalizeSearch(usuario.nombre);
+  };
+
+  const getDatosAsociadosUsuario = (usuario: UsuarioResumen) => {
+    const publicacionesCount = publicaciones.filter((publicacion) => isPublicacionAsociadaUsuario(publicacion, usuario)).length;
+    const historiasCount = historias.filter((historia) => isHistoriaAsociadaUsuario(historia, usuario)).length;
+    const hogaresCount = hogares.filter((hogar) => isHogarAsociadoUsuario(hogar, usuario)).length;
+    const tareasCount = tareas.filter((tarea) => isTareaAsociadaUsuario(tarea, usuario)).length;
     const total = publicacionesCount + historiasCount + hogaresCount + tareasCount;
 
     return {
@@ -339,6 +360,82 @@ export default function Dashboard() {
       total,
       tieneDatos: total > 0,
     };
+  };
+
+  const pluralizar = (cantidad: number, singular: string, plural: string) =>
+    `${cantidad} ${cantidad === 1 ? singular : plural}`;
+
+  const getUsuarioFiltroAsociado = (usuario: UsuarioResumen, section: DashboardSection) => {
+    if (section === "hogares") {
+      return usuario.usuario || usuario.correo || usuario.nombre || `usuario ${usuario.id}`;
+    }
+
+    if (section === "tareas") {
+      return usuario.usuario || usuario.nombre || usuario.correo || "";
+    }
+
+    return usuario.usuario || usuario.nombre || usuario.correo || "";
+  };
+
+  const irABloqueoUsuario = (section: BloqueoSection, usuario: UsuarioResumen, label: string) => {
+    const filtro = getUsuarioFiltroAsociado(usuario, section);
+
+    setActiveSection(section);
+    setAssociationFilter({ section, usuarioId: usuario.id, label });
+    if (filtro) {
+      setDashboardFilter(filtro);
+      setMessage(`Mostrando ${label.toLowerCase()} asociados a ${usuario.usuario || usuario.nombre}.`);
+    } else {
+      setMessage("Revisa este dato desde el módulo correspondiente.");
+    }
+
+    window.setTimeout(() => {
+      document.getElementById(`dashboard-section-${section}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  };
+
+  const getBloqueosEliminarUsuario = (usuario: UsuarioResumen): BloqueoEliminarUsuario[] => {
+    const datos = getDatosAsociadosUsuario(usuario);
+
+    const bloqueos: Array<BloqueoEliminarUsuario | null> = [
+      datos.hogares > 0
+        ? {
+            key: "hogares" as const,
+            text: `Pertenece a ${pluralizar(datos.hogares, "hogar", "hogares")}`,
+            action: "Ver hogares",
+            label: "hogares",
+          }
+        : null,
+      datos.tareas > 0
+        ? {
+            key: "tareas" as const,
+            text: `Tiene ${pluralizar(datos.tareas, "tarea asociada", "tareas asociadas")}`,
+            action: "Ver tareas",
+            label: "tareas",
+          }
+        : null,
+      datos.publicaciones > 0
+        ? {
+            key: "publicaciones" as const,
+            text: `Tiene ${pluralizar(datos.publicaciones, "publicación asociada", "publicaciones asociadas")}`,
+            action: "Ver publicaciones",
+            label: "publicaciones",
+          }
+        : null,
+      datos.historias > 0
+        ? {
+            key: "historias" as const,
+            text: `Tiene ${pluralizar(datos.historias, "historia publicada", "historias publicadas")}`,
+            action: "Ver historias",
+            label: "historias",
+          }
+        : null,
+    ];
+
+    return bloqueos.filter((bloqueo): bloqueo is BloqueoEliminarUsuario => Boolean(bloqueo));
   };
 
   const esUsuarioEliminable = (usuario: UsuarioResumen) => {
@@ -598,9 +695,18 @@ export default function Dashboard() {
     return [usuarioId, `usuario ${usuarioId}`, usuario?.nombre, usuario?.usuario, usuario?.correo];
   };
 
+  const usuarioFiltroAsociacion = associationFilter ? usuariosById.get(associationFilter.usuarioId) : undefined;
+
+  const isFiltroAsociacionActivo = (section: BloqueoSection) =>
+    associationFilter?.section === section && Boolean(usuarioFiltroAsociacion);
+
   const publicacionesFiltradas = useMemo(
-    () =>
-      publicaciones.filter((publicacion) =>
+    () => {
+      if (isFiltroAsociacionActivo("publicaciones") && usuarioFiltroAsociacion) {
+        return publicaciones.filter((publicacion) => isPublicacionAsociadaUsuario(publicacion, usuarioFiltroAsociacion));
+      }
+
+      return publicaciones.filter((publicacion) =>
         matchesFilter([
           getPublicationTitle(publicacion),
           publicacion.descripcion,
@@ -612,13 +718,18 @@ export default function Dashboard() {
           publicacion.correo,
           getPublicationPrice(publicacion),
         ]),
-      ),
-    [dashboardFilter, publicaciones],
+      );
+    },
+    [associationFilter, dashboardFilter, publicaciones, usuarioFiltroAsociacion],
   );
 
   const historiasFiltradas = useMemo(
-    () =>
-      historias.filter((historia) =>
+    () => {
+      if (isFiltroAsociacionActivo("historias") && usuarioFiltroAsociacion) {
+        return historias.filter((historia) => isHistoriaAsociadaUsuario(historia, usuarioFiltroAsociacion));
+      }
+
+      return historias.filter((historia) =>
         matchesFilter([
           historia.titulo,
           historia.mensaje,
@@ -627,13 +738,18 @@ export default function Dashboard() {
           formatDate(historia.fechaCreacion),
           "historia",
         ]),
-      ),
-    [dashboardFilter, historias],
+      );
+    },
+    [associationFilter, dashboardFilter, historias, usuarioFiltroAsociacion],
   );
 
   const hogaresFiltrados = useMemo(
-    () =>
-      hogares.filter((hogar) =>
+    () => {
+      if (isFiltroAsociacionActivo("hogares") && usuarioFiltroAsociacion) {
+        return hogares.filter((hogar) => isHogarAsociadoUsuario(hogar, usuarioFiltroAsociacion));
+      }
+
+      return hogares.filter((hogar) =>
         matchesFilter([
           hogar.id,
           hogar.nombre,
@@ -644,19 +760,25 @@ export default function Dashboard() {
           ...getUsuarioSearchValues(hogar.usuarioCreadorId),
           ...getUsuarioSearchValues(hogar.usuarioAdministradorId),
           ...(hogar.integrantesIds || []).flatMap((usuarioId) => getUsuarioSearchValues(usuarioId)),
+          ...(hogar.solicitudesPendientesIds || []).flatMap((usuarioId) => getUsuarioSearchValues(usuarioId)),
           `integrantes ${hogar.integrantesIds?.length ?? 0}`,
           (hogar.solicitudesPendientesIds?.length ?? 0) > 0 ? "con solicitudes" : "sin solicitudes",
           `solicitudes ${hogar.solicitudesPendientesIds?.length ?? 0}`,
           `tareas ${hogar.tareasIds?.length ?? 0}`,
           formatDate(hogar.fechaCreacion),
         ]),
-      ),
-    [dashboardFilter, hogares, usuariosById],
+      );
+    },
+    [associationFilter, dashboardFilter, hogares, usuariosById, usuarioFiltroAsociacion],
   );
 
   const tareasFiltradas = useMemo(
-    () =>
-      tareas.filter((tarea) => {
+    () => {
+      if (isFiltroAsociacionActivo("tareas") && usuarioFiltroAsociacion) {
+        return tareas.filter((tarea) => isTareaAsociadaUsuario(tarea, usuarioFiltroAsociacion));
+      }
+
+      return tareas.filter((tarea) => {
         const hogar = getHogarDeTarea(tarea.id);
         return matchesFilter([
           tarea.id,
@@ -668,8 +790,9 @@ export default function Dashboard() {
           tarea.completada ? "completada" : "pendiente",
           formatDate(tarea.fecha),
         ]);
-      }),
-    [dashboardFilter, tareas, hogares],
+      });
+    },
+    [associationFilter, dashboardFilter, tareas, hogares, usuarioFiltroAsociacion],
   );
 
   const usuariosFiltrados = useMemo(
@@ -748,14 +871,14 @@ export default function Dashboard() {
       </header>
 
       <section className="dashboard-welcome">
-        <h1>Dashboard de administracion</h1>
+        <h1>Dashboard de administración</h1>
         <p>
-          Hola, {user?.nombre || user?.usuario || "usuario"}. Revisa metricas, gestiona publicaciones y modera
+          Hola, {user?.nombre || user?.usuario || "usuario"}. Revisa métricas, gestiona publicaciones y modera
           contenido de la plataforma.
         </p>
       </section>
 
-      {message && <p className="api-message">{message}</p>}
+      {message && <p className="api-message" ref={messageRef}>{message}</p>}
 
       <section className="dashboard-stats">
         <article className="dashboard-card">
@@ -795,19 +918,27 @@ export default function Dashboard() {
             type="search"
             placeholder="Ej: franco, casa amoblada, pendiente, Santiago"
             value={dashboardFilter}
-            onChange={(event) => setDashboardFilter(event.target.value)}
+            onChange={(event) => {
+              setAssociationFilter(null);
+              setDashboardFilter(event.target.value);
+            }}
           />
           <button
             className="btn btn-outline-success"
             type="button"
-            onClick={() => setDashboardFilter("")}
-            disabled={!hasActiveFilter}
+            onClick={() => {
+              setAssociationFilter(null);
+              setDashboardFilter("");
+            }}
+            disabled={!hasActiveFilter && !associationFilter}
           >
             Limpiar
           </button>
         </div>
         <span className="dashboard-filter-summary">
-          {hasActiveFilter
+          {associationFilter && usuarioFiltroAsociacion
+            ? `Mostrando ${associationFilter.label} asociados a ${usuarioFiltroAsociacion.nombre || usuarioFiltroAsociacion.usuario}`
+            : hasActiveFilter
             ? `Mostrando ${filteredTotal} resultados para "${dashboardFilter.trim()}"`
             : `Mostrando ${totalRegistros} registros reales`}
         </span>
@@ -827,7 +958,10 @@ export default function Dashboard() {
         ))}
       </section>
 
-      <section className={`dashboard-content dashboard-content-primary ${activeSection === "publicaciones" ? "" : "dashboard-hidden-section"}`}>
+      <section
+        className={`dashboard-content dashboard-content-primary ${activeSection === "publicaciones" ? "" : "dashboard-hidden-section"}`}
+        id="dashboard-section-publicaciones"
+      >
         <div className="dashboard-activity">
           <div className="section-heading-row">
             <h4>Publicaciones registradas</h4>
@@ -880,7 +1014,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className={`dashboard-content dashboard-content-wide ${activeSection === "historias" ? "" : "dashboard-hidden-section"}`}>
+      <section
+        className={`dashboard-content dashboard-content-wide ${activeSection === "historias" ? "" : "dashboard-hidden-section"}`}
+        id="dashboard-section-historias"
+      >
         <div className="dashboard-activity">
           <div className="section-heading-row">
             <div>
@@ -982,7 +1119,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className={`dashboard-content dashboard-single-switch ${activeSection === "hogares" || activeSection === "tareas" ? "" : "dashboard-hidden-section"}`}>
+      <section
+        className={`dashboard-content dashboard-single-switch ${activeSection === "hogares" || activeSection === "tareas" ? "" : "dashboard-hidden-section"}`}
+        id={activeSection === "tareas" ? "dashboard-section-tareas" : "dashboard-section-hogares"}
+      >
         <div className={`dashboard-activity ${activeSection === "hogares" ? "" : "dashboard-hidden-section"}`}>
           <div className="section-heading-row">
             <div>
@@ -1123,7 +1263,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className={`dashboard-content dashboard-content-wide ${activeSection === "usuarios" ? "" : "dashboard-hidden-section"}`}>
+      <section
+        className={`dashboard-content dashboard-content-wide ${activeSection === "usuarios" ? "" : "dashboard-hidden-section"}`}
+        id="dashboard-section-usuarios"
+      >
         <div className="dashboard-activity">
           <div className="section-heading-row">
             <div>
@@ -1253,6 +1396,7 @@ export default function Dashboard() {
               <aside className="admin-user-detail">
                 {selectedUsuario ? (() => {
                   const datosAsociados = getDatosAsociadosUsuario(selectedUsuario);
+                  const bloqueosEliminar = getBloqueosEliminarUsuario(selectedUsuario);
                   const usuarioActivo = isUsuarioActivo(selectedUsuario);
                   const isCurrentAdmin = selectedUsuario.id === user?.id;
                   const isAdminAccount = getUsuarioRole(selectedUsuario) === "ADMIN";
@@ -1300,6 +1444,31 @@ export default function Dashboard() {
                           <p>No se detectaron datos asociados desde los registros cargados en el dashboard.</p>
                         )}
                       </div>
+
+                      {bloqueosEliminar.length > 0 && (
+                        <div className="admin-user-blockers" aria-label="Bloqueos para eliminar usuario">
+                          <div>
+                            <h5>Bloqueos para eliminar</h5>
+                            <p>
+                              Este usuario tiene información asociada. Revisa o gestiona estos datos antes de eliminar la cuenta.
+                            </p>
+                          </div>
+                          <ul>
+                            {bloqueosEliminar.map((bloqueo) => (
+                              <li key={bloqueo.key}>
+                                <span>{bloqueo.text}</span>
+                                <button
+                                  className="btn btn-outline-success btn-sm"
+                                  type="button"
+                                  onClick={() => irABloqueoUsuario(bloqueo.key, selectedUsuario, bloqueo.label)}
+                                >
+                                  {bloqueo.action}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       <div className="admin-user-actions">
                         {usuarioActivo ? (

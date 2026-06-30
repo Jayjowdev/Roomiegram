@@ -52,7 +52,7 @@ public class AdminUserService {
             throw new IllegalArgumentException("No se puede suspender una cuenta con rol ADMIN desde esta acción");
         }
 
-        usuario.setCuentaSuspendida(true);
+        usuario.setCuentaActiva(false);
         return toAdminUser(registerRepository.save(usuario));
     }
 
@@ -61,7 +61,7 @@ public class AdminUserService {
         validarAdmin(adminId, rolSolicitante);
 
         Register usuario = buscarUsuario(id);
-        usuario.setCuentaSuspendida(false);
+        usuario.setCuentaActiva(true);
         return toAdminUser(registerRepository.save(usuario));
     }
 
@@ -115,7 +115,7 @@ public class AdminUserService {
         if (loginAdmin.getRole() != Role.ADMIN) {
             throw new IllegalArgumentException("Solo una cuenta ADMIN puede realizar esta acción");
         }
-        if (Boolean.TRUE.equals(admin.getCuentaSuspendida())) {
+        if (!admin.isCuentaActiva()) {
             throw new IllegalArgumentException("La cuenta administrativa no está activa");
         }
     }
@@ -148,8 +148,8 @@ public class AdminUserService {
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
                 Map.entry("rol", obtenerRol(usuario).name()),
-                Map.entry("cuentaActiva", !Boolean.TRUE.equals(usuario.getCuentaSuspendida())),
-                Map.entry("estadoCuenta", Boolean.TRUE.equals(usuario.getCuentaSuspendida()) ? "Suspendida" : "Activa"),
+                Map.entry("cuentaActiva", usuario.isCuentaActiva()),
+                Map.entry("estadoCuenta", usuario.isCuentaActiva() ? "Activa" : "Suspendida"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
                 Map.entry("descripcion", usuario.getDescripcion() == null ? "" : usuario.getDescripcion()),
                 Map.entry("estaEnCasa", usuario.isEstaEnCasa()),

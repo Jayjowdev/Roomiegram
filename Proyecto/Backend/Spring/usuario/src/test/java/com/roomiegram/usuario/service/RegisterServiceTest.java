@@ -3,6 +3,7 @@ package com.roomiegram.usuario.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +44,7 @@ class RegisterServiceTest {
 
         assertNotNull(resultado);
         assertEquals("juan123", resultado.getUsuario());
+        assertTrue(register.isCuentaActiva());
         verify(registerRepository).save(any(Register.class));
         verify(loginRepository).save(any(Login.class));
     }

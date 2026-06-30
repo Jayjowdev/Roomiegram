@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +54,27 @@ class AdminUserServiceTest {
         Map<String, Object> resultado = adminUserService.suspenderUsuario(2L, 1L, "ADMIN");
 
         assertFalse((Boolean) resultado.get("cuentaActiva"));
+        assertFalse(cliente.isCuentaActiva());
         assertEquals("Suspendida", resultado.get("estadoCuenta"));
+        verify(registerRepository).save(cliente);
+    }
+
+    @Test
+    void reactivarUsuarioDebeMarcarCuentaActiva() {
+        Register admin = crearRegister(1L, "admin");
+        Register cliente = crearRegister(2L, "franco");
+        cliente.setCuentaActiva(false);
+
+        when(registerRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(registerRepository.findById(2L)).thenReturn(Optional.of(cliente));
+        when(loginRepository.findByUsuario("admin")).thenReturn(Optional.of(crearLogin("admin", Role.ADMIN)));
+        when(registerRepository.save(cliente)).thenReturn(cliente);
+
+        Map<String, Object> resultado = adminUserService.reactivarUsuario(2L, 1L, "ADMIN");
+
+        assertTrue((Boolean) resultado.get("cuentaActiva"));
+        assertTrue(cliente.isCuentaActiva());
+        assertEquals("Activa", resultado.get("estadoCuenta"));
         verify(registerRepository).save(cliente);
     }
 
@@ -98,7 +119,7 @@ class AdminUserServiceTest {
         register.setCorreo(usuario + "@roomiegram.cl");
         register.setTelefono("900000000");
         register.setContrasena("anterior123");
-        register.setCuentaSuspendida(false);
+        register.setCuentaActiva(true);
         return register;
     }
 

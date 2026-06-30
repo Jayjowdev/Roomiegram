@@ -34,6 +34,7 @@ export default function Register() {
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [localError, setLocalError] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [role, setRole] = useState<"CLIENTE" | "COLABORADOR" | "">("");
 
   const confirmacionIniciada = confirmPassword.length > 0;
   const contrasenasCoinciden = confirmacionIniciada && contrasena === confirmPassword;
@@ -50,6 +51,11 @@ export default function Register() {
     e.preventDefault();
     setLocalError("");
     clearError();
+
+    if (role !== "CLIENTE" && role !== "COLABORADOR") {
+      setLocalError("Selecciona si te registras como usuario-cliente o colaborador.");
+      return;
+    }
 
     if (nombre.trim().length < 3) {
       setLocalError("Ingresa un nombre valido.");
@@ -82,8 +88,8 @@ export default function Register() {
     }
 
     try {
-      await register({ nombre: nombre.trim(), correo: correo.trim(), usuario: usuario.trim(), telefono: telefono.trim(), contrasena });
-      navigate("/preferencias");
+      await register({ nombre: nombre.trim(), correo: correo.trim(), usuario: usuario.trim(), telefono: telefono.trim(), contrasena, role });
+      navigate(role === "COLABORADOR" ? "/login" : "/preferencias");
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Error en registro");
     }
@@ -106,6 +112,26 @@ export default function Register() {
         {(error || localError) && <div className="form-error">{error || localError}</div>}
 
         <form onSubmit={handleSubmit} className="register-form">
+          <label className="role-label" htmlFor="role">Tipo de cuenta</label>
+          <select
+            id="role"
+            className="form-control"
+            value={role}
+            onChange={(e) => setRole(e.target.value as "CLIENTE" | "COLABORADOR" | "")}
+            disabled={isLoading}
+            required
+          >
+            <option value="">Selecciona una opcion</option>
+            <option value="CLIENTE">Usuario-cliente</option>
+            <option value="COLABORADOR">Colaborador (moderador)</option>
+          </select>
+
+          {role === "COLABORADOR" && (
+            <p className="role-info">
+              Los colaboradores pueden moderar publicaciones y usuarios. Tu solicitud debe ser aprobada por un administrador antes de poder iniciar sesion.
+            </p>
+          )}
+
           <input type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
           <input type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />

@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import type { UserSession } from "../types/auth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  requireModerator?: boolean;
 }
 
-export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+const MODERATOR_ROLES: UserSession["role"][] = ["ADMIN", "COLABORADOR"];
+
+export const ProtectedRoute = ({ children, requireAdmin = false, requireModerator = false }: ProtectedRouteProps) => {
   const { isAuthenticated, isAuthReady, isLoading, user } = useAuth();
 
   if (!isAuthReady || isLoading) {
@@ -23,6 +27,10 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
   }
 
   if (requireAdmin && user?.role !== "ADMIN") {
+    return <Navigate to="/home" replace />;
+  }
+
+  if (requireModerator && user?.role && !MODERATOR_ROLES.includes(user.role)) {
     return <Navigate to="/home" replace />;
   }
 

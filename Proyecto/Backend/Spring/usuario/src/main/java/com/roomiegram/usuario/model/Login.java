@@ -32,4 +32,7 @@ public class Login {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Column(nullable = false)
+    private boolean aprobado = true;
+
 }

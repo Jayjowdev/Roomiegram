@@ -9,6 +9,7 @@ export type RegisterRequest = {
   telefono: string
   contrasena: string
   usuario: string
+  role?: UserSession["role"]
 }
 
 export type PreferenciasCompatibilidad = {
@@ -26,7 +27,7 @@ export type UserSession = {
   nombre: string
   correo: string
   telefono: string
-  role: "ADMIN" | "CLIENTE"
+  role: "ADMIN" | "CLIENTE" | "COLABORADOR"
   fotoPerfil?: string
   descripcion?: string
   intereses?: string[]

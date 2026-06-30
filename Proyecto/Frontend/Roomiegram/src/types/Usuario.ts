@@ -1,4 +1,4 @@
-export type UsuarioRole = "ADMIN" | "CLIENTE"
+export type UsuarioRole = "ADMIN" | "CLIENTE" | "COLABORADOR"
 
 export type UsuarioAuth = {
   id: number
@@ -49,6 +49,7 @@ export type RegisterPayload = {
   telefono: string
   contrasena: string
   usuario: string
+  role?: UsuarioRole
 }
 
 export type RegisterResponse = {
@@ -57,6 +58,7 @@ export type RegisterResponse = {
   correo: string
   usuario: string
   telefono: string
+  role?: UsuarioRole
   fotoPerfil?: string
   descripcion?: string
   intereses?: string[]

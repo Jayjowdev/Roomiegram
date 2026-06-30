@@ -31,6 +31,33 @@ export async function recoverPassword(correo: string) {
   }
 }
 
+export async function listarColaboradoresPendientes() {
+  try {
+    const { data } = await usuarioApi.get<UsuarioAuth[]>("/auth/colaboradores/pendientes")
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function aprobarColaborador(loginId: number) {
+  try {
+    const { data } = await usuarioApi.put<{ mensaje: string }>(`/auth/colaboradores/${loginId}/aprobar`, {})
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function rechazarColaborador(loginId: number) {
+  try {
+    const { data } = await usuarioApi.put<{ mensaje: string }>(`/auth/colaboradores/${loginId}/rechazar`, {})
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function changePassword(
   userId: number,
   payload: { contrasenaActual: string; nuevaContrasena: string; confirmarContrasena: string },
@@ -76,7 +103,8 @@ function safeParseJson(value: string) {
 }
 
 function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
-  const role = "role" in data && String(data.role).toUpperCase() === "ADMIN" ? "ADMIN" : "CLIENTE"
+  const rawRole = "role" in data && data.role ? String(data.role).toUpperCase() : "CLIENTE"
+  const role: UserSession["role"] = rawRole === "ADMIN" || rawRole === "COLABORADOR" ? rawRole : "CLIENTE"
 
   return {
     id: data.id,
@@ -114,6 +142,18 @@ export const authService = {
 
   async recoverPassword(correo: string) {
     return recoverPassword(correo)
+  },
+
+  async listarColaboradoresPendientes() {
+    return listarColaboradoresPendientes()
+  },
+
+  async aprobarColaborador(loginId: number) {
+    return aprobarColaborador(loginId)
+  },
+
+  async rechazarColaborador(loginId: number) {
+    return rechazarColaborador(loginId)
   },
 
   async changePassword(

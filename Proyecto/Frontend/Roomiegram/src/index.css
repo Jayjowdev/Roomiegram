@@ -491,12 +491,30 @@ p {
   flex-direction: column;
 }
 
-.register-form input {
+.register-form input,
+.register-form select {
   margin-bottom: 15px;
   border-radius: 8px;
   padding: 12px;
   border: 1px solid #ddd;
   background-color: #f8f8f8;
+}
+
+.role-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.role-info {
+  font-size: 13px;
+  color: #1f7a63;
+  background-color: #e8f5f0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: -8px 0 15px;
+  line-height: 1.4;
 }
 
 .register-date-row {

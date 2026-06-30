@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.roomiegram.usuario.enums.Role;
 import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.LoginRepository;
@@ -72,6 +73,10 @@ public class LoginService {
 
         if (!passwordEncoder.matches(contrasena, login.getContrasena())) {
             throw new IllegalArgumentException("Usuario o contraseña incorrectos");
+        }
+
+        if (login.getRole() == Role.COLABORADOR && !login.isAprobado()) {
+            throw new IllegalArgumentException("Tu cuenta de colaborador aun no ha sido aprobada por un administrador");
         }
         
         return login;

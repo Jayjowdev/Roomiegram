@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
@@ -20,7 +21,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.roomiegram.usuario.DTO.RegisterRequest;
+import com.roomiegram.usuario.enums.Role;
+import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
+import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import com.roomiegram.usuario.service.RegisterService;
 
@@ -37,6 +41,9 @@ class RegisterControllerTest {
     @Mock
     private RegisterRepository registerRepository;
 
+    @Mock
+    private LoginRepository loginRepository;
+
     @InjectMocks
     private RegisterController registerController;
 
@@ -47,9 +54,9 @@ class RegisterControllerTest {
 
     @Test
     void registrarDebeRetornar201() throws Exception {
-        RegisterRequest request = new RegisterRequest("Juan", "juan@example.com", "912345678", "contrasena123", "juan123");
+        RegisterRequest request = new RegisterRequest("Juan", "juan@example.com", "912345678", "contrasena123", "juan123", null);
         Register response = crearRegister(1L);
-        when(registerService.registrarUsuario(any(Register.class))).thenReturn(response);
+        when(registerService.registrarUsuario(any(Register.class), eq(Role.CLIENTE))).thenReturn(response);
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,8 +68,8 @@ class RegisterControllerTest {
 
     @Test
     void registrarDebeRetornar400CuandoServiceFalla() throws Exception {
-        RegisterRequest request = new RegisterRequest("", "juan@example.com", "912345678", "contrasena123", "juan123");
-        when(registerService.registrarUsuario(any(Register.class)))
+        RegisterRequest request = new RegisterRequest("", "juan@example.com", "912345678", "contrasena123", "juan123", null);
+        when(registerService.registrarUsuario(any(Register.class), eq(Role.CLIENTE)))
                 .thenThrow(new IllegalArgumentException("El nombre no puede estar vacío"));
 
         mockMvc.perform(post("/auth/register")
@@ -73,8 +80,8 @@ class RegisterControllerTest {
 
     @Test
     void registrarDebeRetornar400CuandoUsuarioDuplicado() throws Exception {
-        RegisterRequest request = new RegisterRequest("Juan", "juan@example.com", "912345678", "contrasena123", "juan123");
-        when(registerService.registrarUsuario(any(Register.class)))
+        RegisterRequest request = new RegisterRequest("Juan", "juan@example.com", "912345678", "contrasena123", "juan123", null);
+        when(registerService.registrarUsuario(any(Register.class), eq(Role.CLIENTE)))
                 .thenThrow(new IllegalArgumentException("El usuario ya está registrado"));
 
         mockMvc.perform(post("/auth/register")
@@ -88,6 +95,7 @@ class RegisterControllerTest {
         Register usuario = crearRegister(1L);
         when(registerRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(registerRepository.save(any(Register.class))).thenReturn(usuario);
+        when(loginRepository.findByUsuario("juan123")).thenReturn(Optional.of(crearLoginCliente()));
 
         String body = objectMapper.writeValueAsString(java.util.Map.of("fotoPerfil", "data:image/png;base64,abc123"));
 
@@ -135,5 +143,15 @@ class RegisterControllerTest {
         register.setContrasena("contrasenaEncriptada");
         register.setTelefono("912345678");
         return register;
+    }
+
+    private Login crearLoginCliente() {
+        Login login = new Login();
+        login.setId(1L);
+        login.setUsuario("juan123");
+        login.setContrasena("contrasenaEncriptada");
+        login.setRole(Role.CLIENTE);
+        login.setAprobado(true);
+        return login;
     }
 }

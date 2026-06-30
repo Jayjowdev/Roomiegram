@@ -2,6 +2,7 @@ package com.roomiegram.usuario.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -20,7 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.usuario.DTO.CreateAdminRequest;
 import com.roomiegram.usuario.DTO.RegisterRequest;
+import com.roomiegram.usuario.enums.Role;
+import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
+import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import com.roomiegram.usuario.service.RegisterService;
 
@@ -36,6 +40,9 @@ public class RegisterController {
 
     @Autowired
     private RegisterRepository registerRepository;
+
+    @Autowired
+    private LoginRepository loginRepository;
 
     @GetMapping("/usuarios")
     public ResponseEntity<?> listarUsuarios() {
@@ -64,10 +71,23 @@ public class RegisterController {
             register.setUsuario(request.usuario());
             register.setContrasena(request.contrasena());
             register.setTelefono(request.telefono());
-    
-            
-            Register resultado = registerService.registrarUsuario(register);
-            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+
+            Role role = parseRole(request.role());
+            Register resultado = registerService.registrarUsuario(register, role);
+
+            boolean requiereAprobacion = role == Role.COLABORADOR;
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "id", resultado.getId(),
+                    "usuario", resultado.getUsuario(),
+                    "nombre", resultado.getNombre(),
+                    "correo", resultado.getCorreo(),
+                    "telefono", resultado.getTelefono() == null ? "" : resultado.getTelefono(),
+                    "role", role.name(),
+                    "requiereAprobacion", requiereAprobacion,
+                    "mensaje", requiereAprobacion
+                            ? "Solicitud de colaborador registrada. Espera la aprobacion de un administrador."
+                            : "Usuario registrado correctamente"
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -139,6 +159,63 @@ public class RegisterController {
         }
     }
 
+    @GetMapping("/colaboradores/pendientes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> listarColaboradoresPendientes() {
+        List<Login> pendientes = loginRepository.findAll().stream()
+                .filter(login -> login.getRole() == Role.COLABORADOR && !login.isAprobado())
+                .toList();
+
+        List<Map<String, Object>> resultado = pendientes.stream()
+                .map(login -> registerRepository.findByUsuario(login.getUsuario())
+                        .map(register -> {
+                            Map<String, Object> datos = new java.util.HashMap<>(toPublicUser(register));
+                            datos.put("loginId", login.getId());
+                            datos.put("aprobado", login.isAprobado());
+                            return datos;
+                        })
+                        .orElse(null))
+                .filter(item -> item != null)
+                .toList();
+
+        return ResponseEntity.ok(resultado);
+    }
+
+    @PutMapping("/colaboradores/{id}/aprobar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> aprobarColaborador(@PathVariable Long id) {
+        Optional<Login> loginOpt = loginRepository.findById(id);
+        if (loginOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", "Colaborador no encontrado"));
+        }
+
+        Login login = loginOpt.get();
+        if (login.getRole() != Role.COLABORADOR) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", "El usuario no es un colaborador"));
+        }
+
+        login.setAprobado(true);
+        loginRepository.save(login);
+        return ResponseEntity.ok(Map.of("mensaje", "Colaborador aprobado correctamente"));
+    }
+
+    @PutMapping("/colaboradores/{id}/rechazar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> rechazarColaborador(@PathVariable Long id) {
+        Optional<Login> loginOpt = loginRepository.findById(id);
+        if (loginOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", "Colaborador no encontrado"));
+        }
+
+        Login login = loginOpt.get();
+        if (login.getRole() != Role.COLABORADOR) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", "El usuario no es un colaborador"));
+        }
+
+        loginRepository.delete(login);
+        return ResponseEntity.ok(Map.of("mensaje", "Solicitud de colaborador rechazada"));
+    }
+
     private Map<String, Object> toPublicUser(Register usuario) {
         return Map.ofEntries(
                 Map.entry("id", usuario.getId()),
@@ -156,13 +233,16 @@ public class RegisterController {
     }
 
     private Map<String, Object> toSessionUser(Register usuario) {
+        String role = loginRepository.findByUsuario(usuario.getUsuario())
+                .map(login -> login.getRole().name())
+                .orElse("CLIENTE");
         return Map.ofEntries(
                 Map.entry("id", usuario.getId()),
                 Map.entry("usuario", usuario.getUsuario()),
                 Map.entry("nombre", usuario.getNombre()),
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
-                Map.entry("role", "CLIENTE"),
+                Map.entry("role", role),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
                 Map.entry("descripcion", usuario.getDescripcion() == null ? "" : usuario.getDescripcion()),
                 Map.entry("intereses", usuario.getIntereses() == null ? List.of() : usuario.getIntereses()),
@@ -191,5 +271,16 @@ public class RegisterController {
 
         String text = value.toString().trim();
         return text.isEmpty() ? null : text;
+    }
+
+    private Role parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            return Role.CLIENTE;
+        }
+        try {
+            return Role.valueOf(role.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Role.CLIENTE;
+        }
     }
 }

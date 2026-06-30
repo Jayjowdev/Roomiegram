@@ -101,9 +101,10 @@ public class PublicacionService {
     private boolean puedeEliminar(Publicacion publicacion, String usuarioSolicitante, String rolSolicitante) {
         boolean esCreador = publicacion.getUsuarioCreador() != null
                 && publicacion.getUsuarioCreador().equalsIgnoreCase(usuarioSolicitante.trim());
-        boolean esAdmin = "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
+        String rol = rolSolicitante == null ? "" : rolSolicitante.trim().toUpperCase();
+        boolean esModerador = "ADMIN".equals(rol) || "COLABORADOR".equals(rol);
 
-        return esCreador || esAdmin;
+        return esCreador || esModerador;
     }
 
     @SuppressWarnings("unchecked")

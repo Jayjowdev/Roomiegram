@@ -24,8 +24,13 @@ public class RegisterService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // Metodo para registrar un nuevo usuario
+    // Metodo para registrar un nuevo usuario (compatibilidad hacia atras)
     public Register registrarUsuario(Register register) {
+        return registrarUsuario(register, Role.CLIENTE);
+    }
+
+    // Metodo para registrar un nuevo usuario con rol especifico
+    public Register registrarUsuario(Register register, Role role) {
         normalizarCampos(register);
 
         //Validaciones
@@ -54,6 +59,8 @@ public class RegisterService {
             throw new IllegalArgumentException("El correo ya está registrado");
         }
 
+        Role rolFinal = role != null ? role : Role.CLIENTE;
+
         // Encriptar la contraseña antes de guardarla
         String contrasenaEncriptada = passwordEncoder.encode(register.getContrasena());
         register.setContrasena(contrasenaEncriptada);
@@ -61,11 +68,12 @@ public class RegisterService {
         //Guardar en Register
         Register registroGuardado = registerRepository.save(register);
 
-        //Crear entrada en Login con rol CLIENTE por defecto
+        //Crear entrada en Login con el rol solicitado
         Login login = new Login();
         login.setUsuario(register.getUsuario());
         login.setContrasena(contrasenaEncriptada);
-        login.setRole(Role.CLIENTE);
+        login.setRole(rolFinal);
+        login.setAprobado(rolFinal != Role.COLABORADOR);
         loginRepository.save(login);
 
         if (notificationEmailService != null) {

@@ -1,6 +1,6 @@
 import { getApiErrorMessage, usuarioApi } from "../config/api"
-import type { AuthResponse, LoginRequest, RegisterRequest, UserSession } from "../types/auth"
-import type { LoginPayload, RegisterPayload, RegisterResponse, UsuarioAuth } from "../types/Usuario"
+import type { LoginRequest, RegisterRequest, StoredSession, UserSession } from "../types/auth"
+import type { ColaboradorPendiente, LoginPayload, RegisterPayload, RegisterResponse, UsuarioAuth } from "../types/Usuario"
 
 const AUTH_STORAGE_KEY = "roomiegram.session"
 
@@ -33,7 +33,7 @@ export async function recoverPassword(correo: string) {
 
 export async function listarColaboradoresPendientes() {
   try {
-    const { data } = await usuarioApi.get<UsuarioAuth[]>("/auth/colaboradores/pendientes")
+    const { data } = await usuarioApi.get<ColaboradorPendiente[]>("/auth/colaboradores/pendientes")
     return data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
@@ -122,22 +122,26 @@ function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
   }
 }
 
-function createSession(user: UserSession): AuthResponse {
+function createSession(user: UserSession, credentials?: { usuario: string; contrasena: string }): StoredSession {
   return {
     sessionId: `roomiegram-${user.id}-${Date.now()}`,
     user,
+    credentials,
   }
 }
 
 export const authService = {
   async login(credentials: LoginRequest) {
     const user = await login(credentials)
-    return createSession(normalizeUser(user))
+    return createSession(normalizeUser(user), credentials)
   },
 
   async register(userData: RegisterRequest) {
     const user = await register(userData)
-    return createSession(normalizeUser(user))
+    return createSession(normalizeUser(user), {
+      usuario: userData.usuario,
+      contrasena: userData.contrasena,
+    })
   },
 
   async recoverPassword(correo: string) {
@@ -173,11 +177,11 @@ export const authService = {
     return normalizeUser(data)
   },
 
-  saveSession(sessionId: string, user: UserSession) {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ sessionId, user }))
+  saveSession(sessionId: string, user: UserSession, credentials?: StoredSession["credentials"]) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ sessionId, user, credentials }))
   },
 
-  getSession(): AuthResponse | null {
+  getSession(): StoredSession | null {
     const savedSession = localStorage.getItem(AUTH_STORAGE_KEY)
 
     if (!savedSession) {
@@ -185,11 +189,15 @@ export const authService = {
     }
 
     try {
-      return JSON.parse(savedSession) as AuthResponse
+      return JSON.parse(savedSession) as StoredSession
     } catch {
       localStorage.removeItem(AUTH_STORAGE_KEY)
       return null
     }
+  },
+
+  getCredentials(): StoredSession["credentials"] | null {
+    return this.getSession()?.credentials ?? null
   },
 
   removeSession() {

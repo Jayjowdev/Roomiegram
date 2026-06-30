@@ -1,0 +1,12 @@
+.env
+
+# Docker volumes
+docker-volumes/
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

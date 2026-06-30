@@ -8,6 +8,7 @@ import home3 from "../assets/home3.svg";
 import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { membresiaService, type Suscripcion } from "../services/membresiaService";
 import { publicacionService } from "../services/publicacionService";
 import type { UserSession } from "../types/auth";
 import type { PublicacionRequest } from "../types/Backend";
@@ -143,6 +144,8 @@ export default function CrearPublicacion() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPublicaciones, setIsLoadingPublicaciones] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
+  const [isLoadingSuscripcion, setIsLoadingSuscripcion] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -171,6 +174,41 @@ export default function CrearPublicacion() {
       isMounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (user?.id) {
+      setIsLoadingSuscripcion(true);
+      membresiaService
+        .obtenerActiva(user.id)
+        .then((data) => {
+          if (isMounted) setSuscripcion(data);
+        })
+        .catch(() => {
+          if (isMounted && user?.id) {
+            setSuscripcion({
+              usuarioId: user.id,
+              plan: "GRATIS",
+              estado: "ACTIVA",
+              fechaInicio: new Date().toISOString().slice(0, 10),
+              fechaFin: null,
+              renovacionAutomatica: false,
+            });
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsLoadingSuscripcion(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  const esPlanGratis = suscripcion?.plan === "GRATIS";
+  const puedeCrearHogar = !esPlanGratis;
 
   const misPublicaciones = useMemo(() => {
     const usuarioActual = normalizarTexto(user?.usuario);
@@ -369,7 +407,12 @@ export default function CrearPublicacion() {
       navigate("/home");
     } catch (error) {
       if (tipoPublicacion === "ofrezco_casa") {
-        setMessage(error instanceof Error ? error.message : "No se pudo crear la publicación y el hogar vinculado.");
+        const errorMessage = error instanceof Error ? error.message : "No se pudo crear la publicación y el hogar vinculado.";
+        if (errorMessage.toLowerCase().includes("plan gratuito") || errorMessage.toLowerCase().includes("grupos de hogar")) {
+          setMessage("Los usuarios con plan gratuito no pueden crear grupos de hogar. Actualiza tu suscripcion en la seccion de planes.");
+        } else {
+          setMessage(errorMessage);
+        }
         return;
       }
 
@@ -443,6 +486,21 @@ export default function CrearPublicacion() {
                 ? "Esta publicacion se enviara al servicio de publicaciones de hogares."
                 : "Esta publicacion se guardara en el servicio de publicaciones para mantenerla persistente."}
             </p>
+            {tipoPublicacion === "ofrezco_casa" && esPlanGratis && (
+              <div className="api-message" style={{ marginTop: "1rem" }}>
+                Los usuarios con plan gratuito no pueden crear grupos de hogar.
+                {" "}
+                <button
+                  type="button"
+                  className="btn btn-link p-0"
+                  onClick={() => navigate("/planes")}
+                  style={{ verticalAlign: "baseline" }}
+                >
+                  Actualiza tu suscripcion
+                </button>
+                {" "}para publicar un hogar.
+              </div>
+            )}
           </div>
 
           <div className="create-section">
@@ -508,7 +566,13 @@ export default function CrearPublicacion() {
 
           <div className="create-actions">
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mi-perfil")}>Volver a mi perfil</button>
-            <button className="btn btn-success" disabled={isSaving}>{isSaving ? "Publicando..." : "Publicar"}</button>
+            <button
+              className="btn btn-success"
+              disabled={isSaving || (tipoPublicacion === "ofrezco_casa" && !puedeCrearHogar) || isLoadingSuscripcion}
+              title={tipoPublicacion === "ofrezco_casa" && !puedeCrearHogar ? "Actualiza tu suscripcion para publicar un hogar" : undefined}
+            >
+              {isSaving ? "Publicando..." : "Publicar"}
+            </button>
           </div>
         </form>
 

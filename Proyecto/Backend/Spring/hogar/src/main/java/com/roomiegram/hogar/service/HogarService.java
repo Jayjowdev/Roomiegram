@@ -1,8 +1,13 @@
 package com.roomiegram.hogar.service;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.roomiegram.hogar.dto.AdminActionRequest;
 import com.roomiegram.hogar.dto.CreateHogarRequest;
@@ -16,14 +21,21 @@ public class HogarService {
 
     private final HogarRepository hogarRepository;
     private final NotificationPublisher notificationPublisher;
+    private final RestTemplate restTemplate;
 
-    public HogarService(HogarRepository hogarRepository, NotificationPublisher notificationPublisher) {
+    @Value("${usuario.service.url}")
+    private String usuarioServiceUrl;
+
+    public HogarService(HogarRepository hogarRepository, NotificationPublisher notificationPublisher,
+            RestTemplate restTemplate) {
         this.hogarRepository = hogarRepository;
         this.notificationPublisher = notificationPublisher;
+        this.restTemplate = restTemplate;
     }
 
     public Hogar crearHogar(CreateHogarRequest request) {
         validarCreacion(request);
+        validarSuscripcionParaCrearHogar(request.usuarioCreadorId());
 
         Hogar hogar = new Hogar();
         hogar.setNombre(request.nombre().trim());
@@ -168,6 +180,29 @@ public class HogarService {
             throw new IllegalArgumentException("El nombre del hogar es obligatorio");
         }
         validarId(request.usuarioCreadorId(), "El usuario creador es obligatorio");
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarSuscripcionParaCrearHogar(Long usuarioId) {
+        if (usuarioId == null || usuarioId <= 0) {
+            throw new IllegalArgumentException("El usuario creador es obligatorio");
+        }
+
+        String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
+            }
+
+            Object plan = response.getBody().get("plan");
+            if (plan == null || "GRATIS".equalsIgnoreCase(plan.toString())) {
+                throw new IllegalArgumentException(
+                        "Los usuarios con plan gratuito no pueden crear grupos de hogar. Actualiza tu suscripcion.");
+            }
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario: " + e.getMessage());
+        }
     }
 
     private void validarUsuarioRequest(UsuarioRequest request) {

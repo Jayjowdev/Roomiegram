@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import logo from "../assets/Logo-removebg-preview.png"
 import { LogoutButton } from "../components/LogoutButton"
 import { useAuth } from "../context/AuthContext"
@@ -19,6 +19,7 @@ const PLAN_COLOR_CLASS: Record<PlanId, string> = {
 
 export default function Planes() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const [planes, setPlanes] = useState<PlanInfo[]>([])
   const [suscripcionActiva, setSuscripcionActiva] = useState<Suscripcion | null>(null)
@@ -47,6 +48,42 @@ export default function Planes() {
     }
   }, [user?.id])
 
+  useEffect(() => {
+    const estadoPago = searchParams.get("pago")
+    const externalReference = searchParams.get("external_reference")
+
+    if (!estadoPago) return
+
+    if (estadoPago === "exitoso" && externalReference && user?.id) {
+      setMensaje("Verificando tu pago...")
+      membresiaService
+        .verificarPago(externalReference)
+        .then((resultado) => {
+          if (resultado.aprobado) {
+            setMensaje("¡Pago confirmado! Tu suscripcion premium esta activa.")
+            return membresiaService.obtenerActiva(user.id)
+          }
+          setMensaje("Tu pago aun no aparece como aprobado. En unos minutos se actualizara automaticamente.")
+          return null
+        })
+        .then((nuevaSuscripcion) => {
+          if (nuevaSuscripcion) setSuscripcionActiva(nuevaSuscripcion)
+        })
+        .catch(() => {
+          setMensaje("No se pudo verificar el pago. Si ya pagaste, tu suscripcion se activara en breve.")
+        })
+        .finally(() => {
+          setSearchParams({}, { replace: true })
+        })
+    } else if (estadoPago === "pendiente") {
+      setMensaje("Tu pago esta pendiente. En cuanto se acredite, tu suscripcion se activara automaticamente.")
+      setSearchParams({}, { replace: true })
+    } else if (estadoPago === "error") {
+      setMensaje("El pago no se pudo completar. Puedes intentarlo nuevamente.")
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, user?.id])
+
   const handleSuscribir = async (planId: PlanId) => {
     if (!user?.id) {
       setMensaje("Debes iniciar sesion para suscribirte.")
@@ -61,15 +98,17 @@ export default function Planes() {
     setMensaje("")
 
     try {
-      const nueva = await membresiaService.suscribir(user.id, planId, planId !== "GRATIS")
-      setSuscripcionActiva(nueva)
-      setMensaje(
-        planId === "GRATIS"
-          ? "Has vuelto al plan gratuito."
-          : `Suscripcion a ${PLAN_LABELS[planId]} activada correctamente.`,
-      )
+      if (planId === "GRATIS") {
+        const nueva = await membresiaService.suscribir(user.id, planId, false)
+        setSuscripcionActiva(nueva)
+        setMensaje("Has vuelto al plan gratuito.")
+        return
+      }
+
+      const preferencia = await membresiaService.crearPreferenciaPago(user.id, planId)
+      window.location.href = preferencia.initPoint
     } catch (error) {
-      setMensaje(error instanceof Error ? error.message : "No se pudo procesar la suscripcion.")
+      setMensaje(error instanceof Error ? error.message : "No se pudo iniciar el pago.")
     } finally {
       setProcesando(null)
     }
@@ -140,7 +179,13 @@ export default function Planes() {
                   onClick={() => handleSuscribir(plan.id)}
                   disabled={procesando !== null || esActual}
                 >
-                  {procesando === plan.id ? "Procesando..." : esActual ? "Plan actual" : plan.precio === 0 ? "Volver a gratuito" : "Suscribirme"}
+                  {procesando === plan.id
+                    ? "Procesando..."
+                    : esActual
+                      ? "Plan actual"
+                      : plan.precio === 0
+                        ? "Volver a gratuito"
+                        : "Pagar con Mercado Pago"}
                 </button>
               </article>
             )

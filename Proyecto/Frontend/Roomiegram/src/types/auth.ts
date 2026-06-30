@@ -40,3 +40,10 @@ export type AuthResponse = {
   sessionId: string
   user: UserSession
 }
+
+export type StoredSession = AuthResponse & {
+  credentials?: {
+    usuario: string
+    contrasena: string
+  }
+}

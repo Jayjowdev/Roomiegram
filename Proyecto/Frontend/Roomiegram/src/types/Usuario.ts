@@ -78,3 +78,26 @@ export type LoginPayload = {
   usuario: string
   contrasena: string
 }
+
+export type ColaboradorPendiente = {
+  id: number
+  usuario: string
+  nombre: string
+  correo: string
+  telefono: string
+  fotoPerfil?: string
+  descripcion?: string
+  intereses?: string[]
+  estaEnCasa?: boolean
+  hogarActual?: string
+  preferenciasCompatibilidad?: {
+    limpieza: string
+    ambiente: string
+    horario: string
+    mascotas: string
+    fumar: string
+    presupuesto: string
+  }
+  loginId: number
+  aprobado: boolean
+}

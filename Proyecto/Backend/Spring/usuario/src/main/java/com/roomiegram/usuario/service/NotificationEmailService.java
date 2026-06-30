@@ -177,6 +177,30 @@ public class NotificationEmailService {
                 usuario.getId());
     }
 
+    public boolean enviarCorreoColaboradorResuelta(Register colaborador, String adminNombre, boolean aceptada) {
+        if (colaborador == null || colaborador.getCorreo() == null || colaborador.getCorreo().isBlank()) {
+            return false;
+        }
+
+        String nombreColaborador = valueOrDefault(colaborador.getNombre(), colaborador.getUsuario());
+        String admin = valueOrDefault(adminNombre, "El administrador");
+        String estado = aceptada ? "aprobada" : "rechazada";
+        String accion = aceptada
+                ? "Ya puedes iniciar sesion en Roomiegram como colaborador."
+                : "Si crees que fue un error, contacta al equipo de Roomiegram.";
+
+        return enviarCorreo(
+                colaborador.getCorreo(),
+                "Tu solicitud de colaborador fue " + estado,
+                "Hola " + nombreColaborador + ",\n\n"
+                        + admin + " ha " + estado + " tu solicitud para ser colaborador en Roomiegram.\n\n"
+                        + accion + "\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "colaborador " + estado,
+                colaborador.getId());
+    }
+
     private boolean enviarCorreo(String destino, String asunto, String cuerpo, String contexto, Long usuarioId) {
         if (mailSender == null) {
             logger.warn("No se envio correo de {} al usuario {} porque SMTP no esta configurado.", contexto, usuarioId);

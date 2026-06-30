@@ -57,12 +57,41 @@ const API_URLS = {
   notificacion: resolveServiceUrl(import.meta.env.VITE_NOTIFICACION_API_URL, SERVICE_PORTS.notificacion),
 }
 
+function getBasicAuthHeader(): string | undefined {
+  try {
+    const session = localStorage.getItem("roomiegram.session")
+    if (!session) return undefined
+    const parsed = JSON.parse(session) as { credentials?: { usuario: string; contrasena: string } }
+    if (!parsed.credentials) return undefined
+    const { usuario, contrasena } = parsed.credentials
+    return `Basic ${btoa(`${usuario}:${contrasena}`)}`
+  } catch {
+    return undefined
+  }
+}
+
 function createApi(baseURL: string) {
-  return axios.create({
+  const api = axios.create({
     baseURL,
     headers: DEFAULT_HEADERS,
     timeout: 10000,
   })
+
+  api.interceptors.request.use((config) => {
+    const url = config.url || ""
+    const isProtectedAuthEndpoint =
+      url.startsWith("/auth/colaboradores") || url.startsWith("/auth/admin/")
+
+    if (isProtectedAuthEndpoint) {
+      const authHeader = getBasicAuthHeader()
+      if (authHeader) {
+        config.headers.Authorization = authHeader
+      }
+    }
+    return config
+  })
+
+  return api
 }
 
 export const usuarioApi = createApi(API_URLS.usuario)

@@ -155,7 +155,7 @@ export default function Home() {
           <NotificationBell className="me-2" />
           {/* <button className="btn btn-outline-success me-2" onClick={() => navigate("/compatibilidad")}>Buscar compatibilidad</button> */}
           {user?.role === "ADMIN" && (
-            <button className="btn btn-success" onClick={() => navigate("/dashboard")}>Admin</button>
+            <button className="btn btn-success" onClick={() => navigate("/dashboard")}>Dashboard</button>
           )}
           <LogoutButton />
         </div>

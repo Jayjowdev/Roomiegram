@@ -9,6 +9,13 @@ export interface PlanInfo {
   precio: number
   descripcion: string
   beneficios: string[]
+  linkPago?: string
+}
+
+export interface PreferenciaPago {
+  initPoint: string
+  externalReference: string
+  publicKey: string
 }
 
 export interface Suscripcion {
@@ -103,6 +110,30 @@ export const membresiaService = {
         plan,
         renovacionAutomatica,
       })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async crearPreferenciaPago(usuarioId: number, plan: PlanId): Promise<PreferenciaPago> {
+    try {
+      const { data } = await usuarioApi.post<PreferenciaPago>("/auth/membresias/crear-preferencia", {
+        usuarioId,
+        plan,
+      })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async verificarPago(externalReference: string): Promise<{ aprobado: boolean; mensaje: string }> {
+    try {
+      const { data } = await usuarioApi.get<{ aprobado: boolean; mensaje: string }>(
+        "/auth/membresias/verificar-pago",
+        { params: { externalReference } },
+      )
       return data
     } catch (error) {
       throw new Error(getApiErrorMessage(error))

@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +28,7 @@ import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.LoginRepository;
 import com.roomiegram.usuario.repository.RegisterRepository;
+import com.roomiegram.usuario.service.NotificationEmailService;
 import com.roomiegram.usuario.service.RegisterService;
 
 @RestController
@@ -43,6 +46,9 @@ public class RegisterController {
 
     @Autowired
     private LoginRepository loginRepository;
+
+    @Autowired
+    private NotificationEmailService notificationEmailService;
 
     @GetMapping("/usuarios")
     public ResponseEntity<?> listarUsuarios() {
@@ -196,6 +202,11 @@ public class RegisterController {
 
         login.setAprobado(true);
         loginRepository.save(login);
+
+        registerRepository.findByUsuario(login.getUsuario())
+                .ifPresent(colaborador -> notificationEmailService.enviarCorreoColaboradorResuelta(
+                        colaborador, getAdminName(), true));
+
         return ResponseEntity.ok(Map.of("mensaje", "Colaborador aprobado correctamente"));
     }
 
@@ -212,7 +223,12 @@ public class RegisterController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", "El usuario no es un colaborador"));
         }
 
+        Optional<Register> colaboradorOpt = registerRepository.findByUsuario(login.getUsuario());
         loginRepository.delete(login);
+
+        colaboradorOpt.ifPresent(colaborador -> notificationEmailService.enviarCorreoColaboradorResuelta(
+                colaborador, getAdminName(), false));
+
         return ResponseEntity.ok(Map.of("mensaje", "Solicitud de colaborador rechazada"));
     }
 
@@ -282,5 +298,22 @@ public class RegisterController {
         } catch (IllegalArgumentException e) {
             return Role.CLIENTE;
         }
+    }
+
+    private String getAdminName() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return "El administrador";
+        }
+
+        String username = authentication.getName();
+        return registerRepository.findByUsuario(username)
+                .map(admin -> valueOrDefault(admin.getNombre(), admin.getUsuario()))
+                .orElse("El administrador");
+    }
+
+    private String valueOrDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 }

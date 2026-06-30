@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { authService } from "../services/authService";
-import type { LoginRequest, RegisterRequest, UserSession } from "../types/auth";
+import type { LoginRequest, RegisterRequest, StoredSession, UserSession } from "../types/auth";
 
 interface AuthContextType {
   user: UserSession | null;
@@ -26,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserSession | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<StoredSession["credentials"]>(undefined);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (savedSession) {
       setSessionId(savedSession.sessionId);
       setUser(savedSession.user);
+      setCredentials(savedSession.credentials);
     }
     setIsAuthReady(true);
   }, []);
@@ -45,9 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const response = await authService.login(credentials);
-      authService.saveSession(response.sessionId, response.user);
+      authService.saveSession(response.sessionId, response.user, response.credentials);
       setSessionId(response.sessionId);
       setUser(response.user);
+      setCredentials(response.credentials);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error en login";
       setError(errorMessage);
@@ -63,9 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const response = await authService.register(userData);
-      authService.saveSession(response.sessionId, response.user);
+      authService.saveSession(response.sessionId, response.user, response.credentials);
       setSessionId(response.sessionId);
       setUser(response.user);
+      setCredentials(response.credentials);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error en registro";
       setError(errorMessage);
@@ -79,6 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     authService.removeSession();
     setSessionId(null);
     setUser(null);
+    setCredentials(undefined);
     setError(null);
   };
 
@@ -86,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser((current) => {
       if (!current || !sessionId) return current;
       const updated = { ...current, ...changes };
-      authService.saveSession(sessionId, updated);
+      authService.saveSession(sessionId, updated, credentials);
       return updated;
     });
   };
@@ -96,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const updated = await authService.updateProfilePhoto(user.id, fotoPerfil);
-      authService.saveSession(sessionId, updated);
+      authService.saveSession(sessionId, updated, credentials);
       setUser(updated);
     } catch {
       updateUser({ fotoPerfil });
@@ -109,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updated = await authService.updateProfile(user.id, changes);
       const merged = { ...updated, ...changes };
-      authService.saveSession(sessionId, merged);
+      authService.saveSession(sessionId, merged, credentials ?? undefined);
       setUser(merged);
     } catch {
       updateUser(changes);
@@ -118,9 +123,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginDemo = () => {
     const response = authService.createDemoSession();
-    authService.saveSession(response.sessionId, response.user);
+    authService.saveSession(response.sessionId, response.user, response.credentials);
     setSessionId(response.sessionId);
     setUser(response.user);
+    setCredentials(response.credentials);
     setError(null);
   };
 

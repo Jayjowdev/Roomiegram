@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { authService } from "../services/authService";
 import { hogarService } from "../services/hogarService";
 import { publicacionService } from "../services/publicacionService";
 import { tareaService } from "../services/tareaService";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
 import type { Tarea } from "../types/Tarea";
+import type { ColaboradorPendiente } from "../types/Usuario";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
 
 type DashboardStats = {
@@ -34,6 +36,10 @@ export default function Dashboard() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardFilter, setDashboardFilter] = useState("");
+  const [colaboradores, setColaboradores] = useState<ColaboradorPendiente[]>([]);
+  const [isLoadingColaboradores, setIsLoadingColaboradores] = useState(false);
+  const [processingColaboradorId, setProcessingColaboradorId] = useState<number | null>(null);
+  const [selectedColaborador, setSelectedColaborador] = useState<ColaboradorPendiente | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,6 +91,69 @@ export default function Dashboard() {
     };
   }, []);
 
+  const cargarColaboradores = async () => {
+    if (!user?.usuario || user.role !== "ADMIN") return;
+
+    setIsLoadingColaboradores(true);
+    try {
+      const data = await authService.listarColaboradoresPendientes();
+      setColaboradores(data);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudieron cargar las solicitudes de colaboradores.");
+    } finally {
+      setIsLoadingColaboradores(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarColaboradores();
+  }, [user?.role, user?.usuario]);
+
+  const aprobarColaborador = async (loginId: number) => {
+    if (!user?.usuario || user.role !== "ADMIN") {
+      setMessage("Solo un administrador puede aprobar colaboradores.");
+      return;
+    }
+
+    setProcessingColaboradorId(loginId);
+    setMessage("");
+
+    try {
+      await authService.aprobarColaborador(loginId);
+      setColaboradores((current) => current.filter((c) => c.loginId !== loginId));
+      setSelectedColaborador(null);
+      setMessage("Colaborador aprobado correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo aprobar al colaborador.");
+    } finally {
+      setProcessingColaboradorId(null);
+    }
+  };
+
+  const rechazarColaborador = async (loginId: number) => {
+    if (!user?.usuario || user.role !== "ADMIN") {
+      setMessage("Solo un administrador puede rechazar colaboradores.");
+      return;
+    }
+
+    const confirmar = window.confirm("¿Rechazar y eliminar esta solicitud de colaborador?");
+    if (!confirmar) return;
+
+    setProcessingColaboradorId(loginId);
+    setMessage("");
+
+    try {
+      await authService.rechazarColaborador(loginId);
+      setColaboradores((current) => current.filter((c) => c.loginId !== loginId));
+      setSelectedColaborador(null);
+      setMessage("Solicitud de colaborador rechazada.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo rechazar la solicitud.");
+    } finally {
+      setProcessingColaboradorId(null);
+    }
+  };
+
   const eliminarPublicacion = async (publicacion: Publicacion) => {
     if (!user?.usuario || user.role !== "ADMIN") {
       setMessage("Solo un administrador puede moderar publicaciones.");
@@ -125,6 +194,13 @@ export default function Dashboard() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("es-CL");
+  };
+
+  const formatPreferences = (preferencias?: ColaboradorPendiente["preferenciasCompatibilidad"]) => {
+    if (!preferencias) return "No informadas";
+    const entries = Object.entries(preferencias).filter(([, value]) => value);
+    if (entries.length === 0) return "No informadas";
+    return entries.map(([key, value]) => `${key}: ${value}`).join(", ");
   };
 
   const getPublicationTitle = (publicacion: Publicacion) =>
@@ -242,9 +318,77 @@ export default function Dashboard() {
           <h2>{isLoading ? "..." : stats.tareas}</h2>
         </article>
         <article className="dashboard-card">
-          <h5>Solicitudes pendientes</h5>
+          <h5>Solicitudes de hogares</h5>
           <h2>{isLoading ? "..." : stats.solicitudesPendientes}</h2>
         </article>
+      </section>
+
+      <section className="dashboard-content">
+        <div className="dashboard-activity">
+          <div className="section-heading-row">
+            <h4>Solicitudes de colaboradores</h4>
+            <span className="status-pill">{colaboradores.length} pendientes</span>
+          </div>
+          {isLoadingColaboradores ? (
+            <div className="sin-resultados"><p>Cargando solicitudes...</p></div>
+          ) : colaboradores.length === 0 ? (
+            <div className="sin-resultados"><p>No hay solicitudes de colaboradores pendientes.</p></div>
+          ) : (
+            <div className="module-list">
+              {colaboradores.map((colaborador) => (
+                <article className="module-item" key={colaborador.loginId}>
+                  <div className="section-heading-row">
+                    <h4>{colaborador.nombre || colaborador.usuario}</h4>
+                    <span className="status-pill">Colaborador</span>
+                  </div>
+                  <p>{colaborador.descripcion || "Sin descripcion"}</p>
+                  <span>{colaborador.correo} · {colaborador.telefono || "Sin telefono"}</span>
+                  <div className="item-actions">
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      type="button"
+                      onClick={() => setSelectedColaborador(colaborador)}
+                    >
+                      Ver detalle
+                    </button>
+                    <button
+                      className="btn btn-success btn-sm"
+                      type="button"
+                      onClick={() => aprobarColaborador(colaborador.loginId)}
+                      disabled={processingColaboradorId === colaborador.loginId}
+                    >
+                      {processingColaboradorId === colaborador.loginId ? "Procesando..." : "Aprobar"}
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      type="button"
+                      onClick={() => rechazarColaborador(colaborador.loginId)}
+                      disabled={processingColaboradorId === colaborador.loginId}
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="dashboard-profile">
+          <h4>Gestion de colaboradores</h4>
+          <p>
+            Revisa las solicitudes de quienes quieren ser colaboradores de Roomiegram.
+            Al aprobarlos podran iniciar sesion con su cuenta.
+          </p>
+          <button
+            className="btn btn-outline-success"
+            type="button"
+            onClick={cargarColaboradores}
+            disabled={isLoadingColaboradores}
+          >
+            {isLoadingColaboradores ? "Cargando..." : "Actualizar solicitudes"}
+          </button>
+        </div>
       </section>
 
       <section className="dashboard-filter-panel">
@@ -394,6 +538,81 @@ export default function Dashboard() {
           )}
         </div>
       </section>
+
+      {selectedColaborador && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+          onClick={() => setSelectedColaborador(null)}
+          role="presentation"
+        >
+          <div
+            className="modal-content card"
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "0.5rem",
+              maxWidth: "32rem",
+              width: "100%",
+              maxHeight: "90vh",
+              overflow: "auto",
+              padding: "1.5rem",
+            }}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="colaborador-detalle-titulo"
+          >
+            <div className="section-heading-row">
+              <h4 id="colaborador-detalle-titulo">Detalle del colaborador</h4>
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                type="button"
+                onClick={() => setSelectedColaborador(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div style={{ marginTop: "1rem", lineHeight: 1.6 }}>
+              <p><strong>Nombre:</strong> {selectedColaborador.nombre || "No informado"}</p>
+              <p><strong>Usuario:</strong> {selectedColaborador.usuario}</p>
+              <p><strong>Correo:</strong> {selectedColaborador.correo}</p>
+              <p><strong>Telefono:</strong> {selectedColaborador.telefono || "No informado"}</p>
+              <p><strong>Descripcion:</strong> {selectedColaborador.descripcion || "Sin descripcion"}</p>
+              <p><strong>Intereses:</strong> {selectedColaborador.intereses?.join(", ") || "No informados"}</p>
+              <p><strong>Preferencias:</strong> {formatPreferences(selectedColaborador.preferenciasCompatibilidad)}</p>
+            </div>
+
+            <div className="item-actions" style={{ marginTop: "1.5rem" }}>
+              <button
+                className="btn btn-success"
+                type="button"
+                onClick={() => aprobarColaborador(selectedColaborador.loginId)}
+                disabled={processingColaboradorId === selectedColaborador.loginId}
+              >
+                {processingColaboradorId === selectedColaborador.loginId ? "Procesando..." : "Aprobar"}
+              </button>
+              <button
+                className="btn btn-outline-danger"
+                type="button"
+                onClick={() => rechazarColaborador(selectedColaborador.loginId)}
+                disabled={processingColaboradorId === selectedColaborador.loginId}
+              >
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

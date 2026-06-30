@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.roomiegram.publicacion.model.Publicacion;
@@ -25,6 +26,9 @@ public class PublicacionService {
 
     @Value("${hogar.service.url}")
     private String hogarServiceUrl;
+
+    @Value("${usuario.service.url}")
+    private String usuarioServiceUrl;
 
     // Metodos para guardar y obtener publicaciones
     public Publicacion guardarPublicacion(Publicacion publicacion) {
@@ -109,6 +113,11 @@ public class PublicacionService {
 
     @SuppressWarnings("unchecked")
     public PublicacionConHogarResponse guardarPublicacionConHogar(PublicacionConHogarRequest req) {
+        if (req.getUsuarioId() == null || req.getUsuarioId() <= 0) {
+            throw new IllegalArgumentException("El usuario creador es obligatorio");
+        }
+        validarSuscripcionParaCrearHogar(req.getUsuarioId());
+
         // 1. Create and persist the publication
         Publicacion pub = new Publicacion();
         pub.setUsuarioCreador(req.getUsuarioCreador());
@@ -154,5 +163,24 @@ public class PublicacionService {
         }
 
         return new PublicacionConHogarResponse(creada, hogarId);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarSuscripcionParaCrearHogar(Long usuarioId) {
+        String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
+            }
+
+            Object plan = response.getBody().get("plan");
+            if (plan == null || "GRATIS".equalsIgnoreCase(plan.toString())) {
+                throw new IllegalArgumentException(
+                        "Los usuarios con plan gratuito no pueden crear grupos de hogar. Actualiza tu suscripcion.");
+            }
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario: " + e.getMessage());
+        }
     }
 }

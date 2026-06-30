@@ -1493,6 +1493,27 @@ p {
   margin-bottom: 12px;
 }
 
+.contact-info-panel {
+  background: #f8fcfa;
+  border: 1px solid #d9eee6;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.contact-info-panel h4 {
+  color: #1f7a63;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.contact-info-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.compact-contact {
+  margin: 14px 0;
+}
+
 .perfil-tags {
   display: flex;
   flex-wrap: wrap;
@@ -2488,6 +2509,12 @@ p {
   margin-top: 10px;
 }
 
+.match-contact {
+  color: #375046;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
 .vertical-actions {
   align-items: stretch;
   display: grid;
@@ -2497,6 +2524,20 @@ p {
 .notification-context-card {
   border: 1px solid #d3ebe5;
   background: #ffffff;
+}
+
+.notification-interest-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%);
+  border: 1px solid #cde9df;
+}
+
+.notification-interest-card h4 {
+  color: #1f7a63;
+  margin-bottom: 6px;
+}
+
+.notification-interest-card .notification-context-grid {
+  margin-top: 14px;
 }
 
 .notification-context-head {

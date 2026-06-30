@@ -33,11 +33,20 @@ function normalize(value?: string | number) {
 }
 
 function formatLabel(value: string) {
+  if (value === "INTERES_ROOMIE") return "Interés roomie";
+  if (value === "INVITACION_HOGAR") return "Invitación hogar";
+  if (value === "TAREA_HOGAR") return "Tarea hogar";
+
   return value
     .toLowerCase()
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function getTelefonoContacto(telefono?: string) {
+  const value = telefono?.trim();
+  return value || "Teléfono no informado";
 }
 
 export default function Notificaciones() {
@@ -88,6 +97,12 @@ export default function Notificaciones() {
     );
   }, [misNotificaciones]);
 
+  const interesesPendientes = useMemo(() => {
+    return misNotificaciones.filter((notificacion) =>
+      notificacion.tipo === "INTERES_ROOMIE" && notificacion.estado === "PENDIENTE",
+    );
+  }, [misNotificaciones]);
+
   const getHogarNotificacion = (notificacion: Notificacion) => {
     return hogares.find((hogar) => hogar.id === notificacion.hogarId);
   };
@@ -128,6 +143,19 @@ export default function Notificaciones() {
     };
   };
 
+  const buildInterestParams = (notificacion: Notificacion) => {
+    const params = new URLSearchParams({
+      from: "notificaciones",
+      tipoAccion: "interes",
+      usuarioId: String(notificacion.usuarioEmisorId),
+    });
+
+    if (notificacion.id) params.set("notificacionId", String(notificacion.id));
+    if (notificacion.referenciaId) params.set("referenciaId", String(notificacion.referenciaId));
+
+    return params.toString();
+  };
+
   const buildNotificationParams = (notificacion: Notificacion, publicacion?: Publicacion, esSolicitud?: boolean) => {
     const params = new URLSearchParams({
       from: "notificaciones",
@@ -158,7 +186,7 @@ export default function Notificaciones() {
     return misNotificaciones.filter((notificacion) => {
       const yaEstaDestacada =
         notificacion.estado === "PENDIENTE" &&
-        (notificacion.tipo === "INVITACION_HOGAR" || notificacion.tipo === "TAREA_HOGAR");
+        (notificacion.tipo === "INVITACION_HOGAR" || notificacion.tipo === "TAREA_HOGAR" || notificacion.tipo === "INTERES_ROOMIE");
 
       if (yaEstaDestacada) return false;
 
@@ -260,6 +288,21 @@ export default function Notificaciones() {
       setMessage("Notificacion marcada como leida.");
     } catch {
       setMessage("No se pudo actualizar la notificacion de tarea.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const descartarNotificacion = async (notificacion: Notificacion) => {
+    if (!notificacion.id) return;
+
+    try {
+      setProcessingId(notificacion.id);
+      await notificacionService.eliminar(notificacion.id);
+      setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
+      setMessage("Notificación descartada.");
+    } catch {
+      setMessage("No se pudo completar la acción. Intenta nuevamente.");
     } finally {
       setProcessingId(null);
     }
@@ -377,6 +420,56 @@ export default function Notificaciones() {
         )}
       </section>
 
+      {interesesPendientes.length > 0 && (
+        <section className="module-list mb-4">
+          <h3>Intereses recibidos</h3>
+          {interesesPendientes.map((notificacion) => {
+            const emisor = getUsuario(notificacion.usuarioEmisorId);
+            const nombreEmisor = emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`;
+
+            return (
+              <article className="module-item notification-interest-card" key={notificacion.id || notificacion.titulo}>
+                <div className="notification-context-head">
+                  <div className="notification-avatar">
+                    {nombreEmisor.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div>
+                    <span className="eyebrow">Interés recibido</span>
+                    <h4>Esta notificación pertenece a una función que ya no está activa.</h4>
+                    <p>{nombreEmisor} mostró interés en conectar contigo. Puedes revisar su perfil o descartar este aviso.</p>
+                  </div>
+                </div>
+
+                <div className="notification-context-grid">
+                  <span><strong>Persona:</strong> {nombreEmisor}</span>
+                  <span><strong>Teléfono:</strong> {getTelefonoContacto(emisor?.telefono)}</span>
+                  <span><strong>Fecha:</strong> {formatDate(notificacion.fechaCreacion)}</span>
+                  <span><strong>Estado:</strong> {formatLabel(notificacion.estado)}</span>
+                </div>
+
+                <div className="dashboard-actions mt-3">
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    type="button"
+                    onClick={() => navigate(`/perfil-publico/${notificacion.usuarioEmisorId}?${buildInterestParams(notificacion)}`)}
+                  >
+                    Ver perfil
+                  </button>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => descartarNotificacion(notificacion)}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
+
       <section className="module-list">
         <h3>Mis avisos</h3>
         <div className="notification-filters">
@@ -424,13 +517,55 @@ export default function Notificaciones() {
           <div className="sin-resultados"><p>No tienes notificaciones por ahora.</p></div>
         ) : notificacionesFiltradas.length === 0 ? (
           <div className="sin-resultados"><p>No se encontraron avisos con esos filtros.</p></div>
-        ) : notificacionesFiltradas.map((notificacion) => (
-          <article className="module-item" key={notificacion.id || notificacion.titulo}>
-            <h4>{notificacion.titulo}</h4>
-            <p>{notificacion.mensaje}</p>
-            <span>{formatLabel(notificacion.tipo)} - {formatLabel(notificacion.estado)} - {formatDate(notificacion.fechaCreacion)}</span>
-          </article>
-        ))}
+        ) : notificacionesFiltradas.map((notificacion) => {
+          const esInteres = notificacion.tipo === "INTERES_ROOMIE";
+          const emisor = esInteres ? getUsuario(notificacion.usuarioEmisorId) : undefined;
+
+          return (
+            <article className="module-item" key={notificacion.id || notificacion.titulo}>
+              <h4>{notificacion.titulo}</h4>
+              <p>{notificacion.mensaje}</p>
+              {esInteres && (
+                <div className="notification-context-grid mt-2">
+                  <span><strong>Persona:</strong> {emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`}</span>
+                  <span><strong>Teléfono:</strong> {getTelefonoContacto(emisor?.telefono)}</span>
+                </div>
+              )}
+              <span>{formatLabel(notificacion.tipo)} - {formatLabel(notificacion.estado)} - {formatDate(notificacion.fechaCreacion)}</span>
+              {esInteres && (
+                <div className="dashboard-actions mt-3">
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    type="button"
+                    onClick={() => navigate(`/perfil-publico/${notificacion.usuarioEmisorId}?${buildInterestParams(notificacion)}`)}
+                  >
+                    Ver perfil
+                  </button>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => descartarNotificacion(notificacion)}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              )}
+              {!esInteres && (
+                <div className="dashboard-actions mt-3">
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => descartarNotificacion(notificacion)}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              )}
+            </article>
+          );
+        })}
       </section>
     </div>
   );

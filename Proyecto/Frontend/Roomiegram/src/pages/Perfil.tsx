@@ -36,6 +36,18 @@ function normalizeText(value?: string) {
   return value?.trim().toLowerCase() || "";
 }
 
+function getTelefonoContacto(telefono?: string) {
+  const value = telefono?.trim();
+  return value || "Teléfono no informado";
+}
+
+function getPublicacionCasaDelHogar(hogar: Hogar | null, publicaciones: Publicacion[]) {
+  if (!hogar?.publicacionIds?.length) return undefined;
+  return hogar.publicacionIds
+    .map((publicacionId) => publicaciones.find((publicacion) => publicacion.id === publicacionId))
+    .find((publicacion): publicacion is Publicacion => !!publicacion && publicacion.tipo !== "busco_roomie");
+}
+
 function scorePerfil(usuario?: UsuarioResumen, currentUser?: { preferenciasCompatibilidad?: UsuarioResumen["preferenciasCompatibilidad"] }) {
   const preferencias = currentUser?.preferenciasCompatibilidad;
   const candidato = usuario?.preferenciasCompatibilidad;
@@ -238,6 +250,10 @@ export default function Perfil() {
     : perfil?.tipo === "busco_roomie"
       ? "Busca casa"
       : "Perfil compatible";
+  const publicacionCasaDelPerfil = useMemo(
+    () => getPublicacionCasaDelHogar(hogarDelPerfil, publicaciones),
+    [hogarDelPerfil, publicaciones],
+  );
 
   const solicitarIngreso = async () => {
     if (!user?.id || !hogarDelPerfil?.id) return;
@@ -308,29 +324,6 @@ export default function Perfil() {
       setMessage("Invitacion enviada correctamente.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo enviar la invitacion.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const mostrarInteres = async () => {
-    if (!user?.id || !perfilUsuarioId) return;
-
-    try {
-      setIsSending(true);
-      await notificacionService.crear({
-        usuarioEmisorId: user.id,
-        usuarioReceptorId: perfilUsuarioId,
-        hogarId: hogarDelPerfil?.id || miHogar?.id || 0,
-        referenciaId: perfilUsuarioId,
-        tipo: "INTERES_ROOMIE",
-        estado: "PENDIENTE",
-        titulo: "Nuevo interes de compatibilidad",
-        mensaje: `${user.nombre || user.usuario} mostro interes en conectar contigo por compatibilidad.`,
-      });
-      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
-    } catch {
-      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
     } finally {
       setIsSending(false);
     }
@@ -476,9 +469,28 @@ export default function Perfil() {
               </p>
             </div>
 
+            <div className="perfil-section contact-info-panel">
+              <h3>Contacto</h3>
+              <p><strong>Teléfono:</strong> {getTelefonoContacto(usuarioPerfil?.telefono || perfil.telefono)}</p>
+            </div>
+
+            {publicacionCasaDelPerfil && (
+              <div className="perfil-section contact-info-panel">
+                <h3>Hogar / publicación de casa</h3>
+                <p>Esta persona pertenece a un hogar con una publicación disponible.</p>
+                <button
+                  className="btn btn-outline-success"
+                  type="button"
+                  onClick={() => navigate(`/detalle-publicacion/${publicacionCasaDelPerfil.id}`)}
+                >
+                  Ver publicación de casa
+                </button>
+              </div>
+            )}
+
             <div className="perfil-section profile-action-panel">
               <h3>Acciones segun contexto</h3>
-              <p className="form-helper">El contacto directo se mantiene privado hasta que exista solicitud, invitacion o interes confirmado.</p>
+              <p className="form-helper">Elige una acción real según el contexto de esta persona.</p>
               {hogarDelPerfil ? (
                 <p>Grupo actual: <strong>{hogarDelPerfil.nombre}</strong></p>
               ) : (
@@ -512,9 +524,7 @@ export default function Perfil() {
               ) : miHogar ? (
                 <p>Tu grupo existe, pero solo el administrador puede invitar integrantes.</p>
               ) : (
-                <button className="btn btn-outline-success" disabled={isSending} onClick={mostrarInteres}>
-                  {isSending ? "Registrando..." : "Mostrar interes"}
-                </button>
+                <p className="form-helper">Puedes revisar su teléfono y perfil para contactar directamente.</p>
               )}
             </div>
 

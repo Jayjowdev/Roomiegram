@@ -28,6 +28,11 @@ function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
 }
 
+function getTelefonoContacto(telefono?: string) {
+  const value = telefono?.trim();
+  return value || "Teléfono no informado";
+}
+
 function buildGallery(images: Array<string | undefined>) {
   return [...new Set(images.filter((image): image is string => Boolean(image?.trim())))];
 }
@@ -73,6 +78,7 @@ export default function DetallePublicacion() {
   const [publicacion, setPublicacion] = useState<Publicacion | null>(
     getLocalPublicaciones().find((pub) => String(pub.id) === id) || null,
   );
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [message, setMessage] = useState("");
@@ -88,7 +94,9 @@ export default function DetallePublicacion() {
     publicacionService
       .listar()
       .then((data) => {
-        const encontrada = data.map(mapBackendPublicacion).find((pub) => String(pub.id) === id);
+        const publicacionesMapeadas = data.map(mapBackendPublicacion);
+        setPublicaciones(publicacionesMapeadas);
+        const encontrada = publicacionesMapeadas.find((pub) => String(pub.id) === id);
         if (encontrada) {
           setPublicacion(encontrada);
           setSelectedImage(encontrada.imagen || encontrada.galeria?.[0] || "");
@@ -139,6 +147,33 @@ export default function DetallePublicacion() {
   }, [hogarVinculado, hogares, searchParams]);
 
   const esOfertaCasa = publicacion?.tipo !== "busco_roomie";
+
+  const usuarioPublicacion = useMemo(() => {
+    if (!publicacion) return undefined;
+    if (publicacion.usuarioId) {
+      return usuarios.find((usuario) => usuario.id === publicacion.usuarioId);
+    }
+    const creador = normalizarTexto(publicacion.usuarioCreador);
+    return usuarios.find((usuario) => normalizarTexto(usuario.usuario) === creador);
+  }, [publicacion, usuarios]);
+
+  const hogarDelAutor = useMemo(() => {
+    if (!usuarioPublicacion?.id) return null;
+    return hogares.find((hogar) =>
+      hogar.usuarioCreadorId === usuarioPublicacion.id
+      || hogar.usuarioAdministradorId === usuarioPublicacion.id
+      || hogar.integrantesIds?.includes(usuarioPublicacion.id),
+    ) || null;
+  }, [hogares, usuarioPublicacion?.id]);
+
+  const publicacionCasaDelAutor = useMemo(() => {
+    if (!hogarDelAutor?.publicacionIds?.length) return undefined;
+    return hogarDelAutor.publicacionIds
+      .map((publicacionId) => publicaciones.find((item) => item.id === publicacionId))
+      .find((item): item is Publicacion => !!item && item.tipo !== "busco_roomie");
+  }, [hogarDelAutor, publicaciones]);
+
+  const telefonoContacto = publicacion?.telefono || usuarioPublicacion?.telefono;
 
   const misHogaresAdministrables = useMemo(() => {
     if (!user?.id) return [];
@@ -193,31 +228,6 @@ export default function DetallePublicacion() {
     if (!publicacion) return;
     const usuarioPerfilId = publicacion.usuarioId || publicacion.id;
     navigate(`/perfil-publico/${usuarioPerfilId}`);
-  };
-
-  const mostrarInteres = async () => {
-    if (!user?.id || !publicacion) return;
-
-    try {
-      setIsRequesting(true);
-      if (publicacion.usuarioId && publicacion.usuarioId !== user.id) {
-        await notificacionService.crear({
-          usuarioEmisorId: user.id,
-          usuarioReceptorId: publicacion.usuarioId,
-          hogarId: 0,
-          referenciaId: publicacion.id,
-          tipo: "INTERES_ROOMIE",
-          estado: "PENDIENTE",
-          titulo: "Nuevo interes por tu perfil",
-          mensaje: `${user.nombre || user.usuario || "Un usuario"} mostro interes en tu publicacion de busqueda roomie.`,
-        });
-      }
-      setContactMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
-    } catch {
-      setContactMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
-    } finally {
-      setIsRequesting(false);
-    }
   };
 
   const invitarAMiHogar = async () => {
@@ -493,9 +503,26 @@ export default function DetallePublicacion() {
             <h3>Datos del anfitrion</h3>
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
             <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitacion/casa" : "Busqueda de roomie"}</p>
+            <div className="contact-info-panel compact-contact">
+              <h4>Contacto</h4>
+              <p><strong>Teléfono:</strong> {getTelefonoContacto(telefonoContacto)}</p>
+            </div>
             {!esOfertaCasa ? (
               <div className="mt-3 profile-action-panel">
                 <p>Esta publicacion es de una persona buscando roomie. No es un hogar al que puedas solicitar ingreso.</p>
+                {publicacionCasaDelAutor && (
+                  <div className="contact-info-panel compact-contact">
+                    <h4>Hogar / publicación de casa</h4>
+                    <p>Esta persona pertenece a un hogar con una publicación disponible.</p>
+                    <button
+                      className="btn btn-outline-success w-100"
+                      type="button"
+                      onClick={() => navigate(`/detalle-publicacion/${publicacionCasaDelAutor.id}`)}
+                    >
+                      Ver publicación de casa
+                    </button>
+                  </div>
+                )}
                 {misHogaresAdministrables.length > 1 && (
                   <label className="field-label">
                     <span>Hogar para invitar</span>
@@ -519,11 +546,6 @@ export default function DetallePublicacion() {
                       onClick={invitarAMiHogar}
                     >
                       {isRequesting ? "Enviando..." : "Invitar a mi hogar"}
-                    </button>
-                  )}
-                  {publicacion.usuarioId !== user?.id && (
-                    <button className="btn btn-outline-success w-100" type="button" disabled={isRequesting} onClick={mostrarInteres}>
-                      {isRequesting ? "Registrando..." : "Mostrar interes"}
                     </button>
                   )}
                   <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/home?tipo=ofrezco_casa")}>

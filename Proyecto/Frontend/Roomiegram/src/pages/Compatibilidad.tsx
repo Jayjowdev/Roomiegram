@@ -26,6 +26,7 @@ type MatchCandidate = {
   score: number
   coincidencias: string[]
   diferencias: string[]
+  telefono?: string
   publicacionBuscaRoomie?: Publicacion
   publicacionCasa?: Publicacion
   hogarDisponible?: Hogar
@@ -102,6 +103,18 @@ function normalizarTexto(valor?: string) {
   return valor?.trim().toLowerCase() || "";
 }
 
+function getTelefonoContacto(telefono?: string) {
+  const value = telefono?.trim();
+  return value || "Teléfono no informado";
+}
+
+function getPublicacionCasaDelHogar(hogar: Hogar | undefined, publicaciones: Publicacion[]) {
+  if (!hogar?.publicacionIds?.length) return undefined;
+  return hogar.publicacionIds
+    .map((publicacionId) => publicaciones.find((publicacion) => publicacion.id === publicacionId))
+    .find((publicacion): publicacion is Publicacion => !!publicacion && publicacion.tipo !== "busco_roomie");
+}
+
 function getEstadoCandidato(candidato: MatchCandidate) {
   if (candidato.publicacionCasa && candidato.hogarDisponible) return "Ofrece casa";
   if (candidato.publicacionBuscaRoomie) return "Busca casa";
@@ -160,15 +173,17 @@ export default function Compatibilidad() {
           publicacion.usuarioId === usuarioData.id || normalizarTexto(publicacion.usuarioCreador) === usuarioNormalizado,
         );
         const publicacionBuscaRoomie = publicacionesUsuario.find((publicacion) => publicacion.tipo === "busco_roomie");
-        const publicacionCasa = publicacionesUsuario.find((publicacion) => publicacion.tipo !== "busco_roomie");
-        const hogarDisponible = publicacionCasa
-          ? hogares.find((hogar) => hogar.publicacionIds?.includes(publicacionCasa.id))
-          : undefined;
         const perteneceAHogar = hogares.find((hogar) =>
           hogar.usuarioAdministradorId === usuarioData.id
           || hogar.usuarioCreadorId === usuarioData.id
           || hogar.integrantesIds?.includes(usuarioData.id),
         );
+        const publicacionCasaPropia = publicacionesUsuario.find((publicacion) => publicacion.tipo !== "busco_roomie");
+        const publicacionCasaDelHogar = getPublicacionCasaDelHogar(perteneceAHogar, publicaciones);
+        const publicacionCasa = publicacionCasaPropia || publicacionCasaDelHogar;
+        const hogarDisponible = publicacionCasa
+          ? hogares.find((hogar) => hogar.publicacionIds?.includes(publicacionCasa.id))
+          : undefined;
         const { coincidencias, diferencias } = evaluarCoincidencias(compatibilidad, preferencias);
 
         return {
@@ -180,6 +195,7 @@ export default function Compatibilidad() {
           imagen: usuarioData.fotoPerfil || publicacionBuscaRoomie?.imagen || avatar4,
           preferencias,
           intereses: usuarioData.intereses || [],
+          telefono: usuarioData.telefono,
           score: scoreMatch(compatibilidad, preferencias),
           coincidencias,
           diferencias,
@@ -213,29 +229,6 @@ export default function Compatibilidad() {
       setMessage("No se pudieron guardar las preferencias.");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const mostrarInteres = async (candidato: MatchCandidate) => {
-    if (!user?.id) return;
-
-    setProcessingId(candidato.id);
-    try {
-      await notificacionService.crear({
-        usuarioEmisorId: user.id,
-        usuarioReceptorId: candidato.id,
-        hogarId: candidato.perteneceAHogar?.id || 0,
-        referenciaId: candidato.id,
-        tipo: "INTERES_ROOMIE",
-        estado: "PENDIENTE",
-        titulo: "Nuevo interes de compatibilidad",
-        mensaje: `${user.nombre || user.usuario} mostro interes en conectar contigo por compatibilidad.`,
-      });
-      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
-    } catch {
-      setMessage("Interes registrado. Podras continuar el contacto cuando ambos usuarios confirmen interes.");
-    } finally {
-      setProcessingId(null);
     }
   };
 
@@ -383,9 +376,11 @@ export default function Compatibilidad() {
                     <div className="match-context-row">
                       <span className="status-pill success">{estado}</span>
                       {candidato.hogarDisponible && <span className="status-pill">Hogar: {candidato.hogarDisponible.nombre}</span>}
+                      {candidato.publicacionCasa && <span className="status-pill">Casa publicada</span>}
                     </div>
 
                     <p className="match-description">{candidato.descripcion}</p>
+                    <p className="match-contact"><strong>Teléfono:</strong> {getTelefonoContacto(candidato.telefono)}</p>
 
                     <div className="match-insights">
                       <div>
@@ -409,6 +404,15 @@ export default function Compatibilidad() {
                       <button className="btn btn-outline-success btn-sm" type="button" onClick={() => navigate(`/perfil-publico/${candidato.id}`)}>
                         Ver perfil
                       </button>
+                      {candidato.publicacionCasa && (
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          type="button"
+                          onClick={() => navigate(`/detalle-publicacion/${candidato.publicacionCasa!.id}`)}
+                        >
+                          Ver publicación de casa
+                        </button>
+                      )}
                       {puedeSolicitarIngreso && (
                         <button
                           className="btn btn-success btn-sm"
@@ -427,16 +431,6 @@ export default function Compatibilidad() {
                           onClick={() => invitarAMiHogar(candidato)}
                         >
                           {processingId === candidato.id ? "Invitando..." : "Invitar a mi hogar"}
-                        </button>
-                      )}
-                      {!puedeSolicitarIngreso && !puedeInvitar && (
-                        <button
-                          className="btn btn-outline-success btn-sm"
-                          type="button"
-                          disabled={processingId === candidato.id}
-                          onClick={() => mostrarInteres(candidato)}
-                        >
-                          {processingId === candidato.id ? "Registrando..." : "Mostrar interés"}
                         </button>
                       )}
                     </div>

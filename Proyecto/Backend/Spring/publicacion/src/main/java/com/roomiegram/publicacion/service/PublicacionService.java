@@ -1,5 +1,6 @@
 package com.roomiegram.publicacion.service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.roomiegram.publicacion.model.ModeracionRequest;
 import com.roomiegram.publicacion.model.Publicacion;
 import com.roomiegram.publicacion.model.PublicacionConHogarRequest;
 import com.roomiegram.publicacion.model.PublicacionConHogarResponse;
@@ -26,6 +28,9 @@ public class PublicacionService {
 
     @Value("${hogar.service.url}")
     private String hogarServiceUrl;
+
+    @Value("${usuario.service.url}")
+    private String usuarioServiceUrl;
 
     // Metodos para guardar y obtener publicaciones
     public Publicacion guardarPublicacion(Publicacion publicacion) {
@@ -71,9 +76,39 @@ public class PublicacionService {
         return publicacionRepository.save(publicacion);
     }
 
-    //metodo para listar todas las publicaciones
+    //metodo para listar publicaciones visibles
     public List<Publicacion> listarPublicaciones() {
+        return publicacionRepository.findAll().stream()
+                .filter(publicacion -> !publicacion.estaOcultaPorModeracion())
+                .toList();
+    }
+
+    public List<Publicacion> listarPublicacionesModeracion() {
         return publicacionRepository.findAll();
+    }
+
+    public Publicacion ocultarPublicacion(Long id, ModeracionRequest request) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id de la publicacion es obligatorio");
+        }
+        if (request == null || request.moderadorId() == null) {
+            throw new IllegalArgumentException("El moderador es obligatorio");
+        }
+        if (request.motivo() == null || request.motivo().trim().length() < 5) {
+            throw new IllegalArgumentException("El motivo de moderacion es obligatorio");
+        }
+
+        validarModerador(request.moderadorId());
+
+        Publicacion publicacion = publicacionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La publicacion no existe"));
+
+        publicacion.setEstadoModeracion("OCULTA_MODERACION");
+        publicacion.setMotivoModeracion(request.motivo().trim());
+        publicacion.setModeradoPorId(request.moderadorId());
+        publicacion.setFechaModeracion(LocalDateTime.now());
+
+        return publicacionRepository.save(publicacion);
     }
 
     public Publicacion actualizarPublicacion(Long id, Publicacion datos, String usuarioSolicitante, String rolSolicitante) {
@@ -146,6 +181,23 @@ public class PublicacionService {
         boolean esAdmin = "ADMIN".equalsIgnoreCase(rolSolicitante.trim());
 
         return esCreador || esAdmin;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarModerador(Long moderadorId) {
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(
+                    usuarioServiceUrl + "/auth/usuarios/" + moderadorId + "/moderador-valido",
+                    Map.class);
+            Map<String, Object> body = response.getBody();
+            if (body == null || !Boolean.TRUE.equals(body.get("puedeModerar"))) {
+                throw new SecurityException("No tienes permisos para moderar publicaciones");
+            }
+        } catch (SecurityException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SecurityException("No se pudo validar el permiso de moderacion");
+        }
     }
 
     @SuppressWarnings("unchecked")

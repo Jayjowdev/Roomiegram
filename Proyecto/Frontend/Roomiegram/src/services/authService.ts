@@ -76,7 +76,8 @@ function safeParseJson(value: string) {
 }
 
 function normalizeUser(data: UsuarioAuth | RegisterResponse): UserSession {
-  const role = "role" in data && String(data.role).toUpperCase() === "ADMIN" ? "ADMIN" : "CLIENTE"
+  const rawRole = "role" in data && data.role ? String(data.role).toUpperCase() : "CLIENTE"
+  const role: UserSession["role"] = rawRole === "ADMIN" || rawRole === "COLABORADOR" ? rawRole : "CLIENTE"
 
   return {
     id: data.id,
@@ -109,7 +110,11 @@ export const authService = {
 
   async register(userData: RegisterRequest) {
     const user = await register(userData)
-    return createSession(normalizeUser(user))
+    return {
+      ...createSession(normalizeUser(user)),
+      requiereAprobacion: user.requiereAprobacion,
+      mensaje: user.mensaje,
+    }
   },
 
   async recoverPassword(correo: string) {

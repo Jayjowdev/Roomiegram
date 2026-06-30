@@ -27,6 +27,15 @@ export async function listarPublicaciones() {
   }
 }
 
+export async function listarPublicacionesModeracion() {
+  try {
+    const { data } = await publicacionApi.get<Publicacion[]>("/publicaciones/moderacion")
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function guardarPublicacion(payload: CreatePublicacionPayload) {
   try {
     const { data } = await publicacionApi.post<Publicacion>("/publicaciones/guardar", payload)
@@ -56,6 +65,15 @@ export async function eliminarPublicacion(id: number, usuarioSolicitante: string
         rolSolicitante,
       },
     })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function ocultarPublicacion(id: number, payload: { moderadorId: number; motivo: string }) {
+  try {
+    const { data } = await publicacionApi.patch<Publicacion>(`/publicaciones/${id}/moderacion/ocultar`, payload)
+    return data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }
@@ -132,10 +150,12 @@ export async function eliminarHistoria(id: number, usuarioSolicitante: string, r
 
 export const publicacionService = {
   listar: listarPublicaciones,
+  listarModeracion: listarPublicacionesModeracion,
   crear: guardarPublicacion,
   crearConHogar: guardarPublicacionConHogar,
   actualizar: actualizarPublicacion,
   eliminar: eliminarPublicacion,
+  ocultar: ocultarPublicacion,
   listarHistorias,
   crearHistoria,
   actualizarHistoria,

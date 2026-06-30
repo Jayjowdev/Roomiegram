@@ -39,6 +39,41 @@ public class AdminUserController {
         }
     }
 
+    @GetMapping("/colaboradores/pendientes")
+    public ResponseEntity<?> listarColaboradoresPendientes(
+            @RequestParam Long adminId,
+            @RequestParam String rolSolicitante) {
+        try {
+            return ResponseEntity.ok(adminUserService.listarColaboradoresPendientes(adminId, rolSolicitante));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/colaboradores/{id}/aprobar")
+    public ResponseEntity<?> aprobarColaborador(
+            @PathVariable Long id,
+            @RequestParam Long adminId,
+            @RequestParam String rolSolicitante) {
+        try {
+            return ResponseEntity.ok(adminUserService.aprobarColaborador(id, adminId, rolSolicitante));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/colaboradores/{id}/rechazar")
+    public ResponseEntity<?> rechazarColaborador(
+            @PathVariable Long id,
+            @RequestParam Long adminId,
+            @RequestParam String rolSolicitante) {
+        try {
+            return ResponseEntity.ok(adminUserService.rechazarColaborador(id, adminId, rolSolicitante));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", e.getMessage()));
+        }
+    }
+
     @PatchMapping("/{id}/suspender")
     public ResponseEntity<?> suspenderUsuario(
             @PathVariable Long id,

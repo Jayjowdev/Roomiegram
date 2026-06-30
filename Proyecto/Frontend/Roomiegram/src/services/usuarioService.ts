@@ -28,6 +28,39 @@ export async function obtenerUsuario(id: number) {
   }
 }
 
+export async function listarColaboradoresPendientes(adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.get<UsuarioResumen[]>("/auth/admin/usuarios/colaboradores/pendientes", {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function aprobarColaborador(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.patch<UsuarioResumen>(`/auth/admin/usuarios/colaboradores/${id}/aprobar`, null, {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function rechazarColaborador(id: number, adminId: number, rolSolicitante: string) {
+  try {
+    const { data } = await usuarioApi.patch<UsuarioResumen>(`/auth/admin/usuarios/colaboradores/${id}/rechazar`, null, {
+      params: { adminId, rolSolicitante },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function suspenderUsuario(id: number, adminId: number, rolSolicitante: string) {
   try {
     const { data } = await usuarioApi.patch<UsuarioResumen>(`/auth/admin/usuarios/${id}/suspender`, null, {
@@ -155,6 +188,9 @@ export const usuarioService = {
   listar: listarUsuarios,
   listarAdmin: listarUsuariosAdmin,
   obtener: obtenerUsuario,
+  listarColaboradoresPendientes,
+  aprobarColaborador,
+  rechazarColaborador,
   suspender: suspenderUsuario,
   reactivar: reactivarUsuario,
   restablecerContrasena: restablecerContrasenaUsuario,

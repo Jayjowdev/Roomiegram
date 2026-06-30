@@ -24,6 +24,10 @@ export type Publicacion = {
   imagen?: string
   galeria?: string[]
   origen?: "backend" | "local"
+  estadoModeracion?: "ACTIVA" | "OCULTA_MODERACION" | string
+  motivoModeracion?: string
+  moderadoPorId?: number
+  fechaModeracion?: string
 }
 
 export type CreatePublicacionPayload = {

@@ -61,6 +61,30 @@ public class RegisterController {
                 )));
     }
 
+    @GetMapping("/usuarios/{id}/moderador-valido")
+    public ResponseEntity<?> validarModerador(@PathVariable Long id) {
+        return registerRepository.findById(id)
+                .<ResponseEntity<?>>map(usuario -> {
+                    Role role = getRole(usuario);
+                    boolean aprobado = isAprobado(usuario);
+                    boolean puedeModerar = usuario.isCuentaActiva()
+                            && (role == Role.ADMIN || (role == Role.COLABORADOR && aprobado));
+
+                    return ResponseEntity.ok(Map.of(
+                            "id", usuario.getId(),
+                            "usuario", usuario.getUsuario(),
+                            "role", role.name(),
+                            "cuentaActiva", usuario.isCuentaActiva(),
+                            "aprobado", aprobado,
+                            "puedeModerar", puedeModerar
+                    ));
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "mensaje", "Usuario no encontrado",
+                        "puedeModerar", false
+                )));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> registrarUsuario(@RequestBody RegisterRequest request){
         try{
@@ -70,10 +94,24 @@ public class RegisterController {
             register.setUsuario(request.usuario());
             register.setContrasena(request.contrasena());
             register.setTelefono(request.telefono());
-    
-            
-            Register resultado = registerService.registrarUsuario(register);
-            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+
+            Role role = parseRole(request.role());
+            Register resultado = registerService.registrarUsuario(register, role);
+            boolean requiereAprobacion = role == Role.COLABORADOR;
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.ofEntries(
+                    Map.entry("id", resultado.getId()),
+                    Map.entry("usuario", resultado.getUsuario()),
+                    Map.entry("nombre", resultado.getNombre()),
+                    Map.entry("correo", resultado.getCorreo()),
+                    Map.entry("telefono", resultado.getTelefono() == null ? "" : resultado.getTelefono()),
+                    Map.entry("role", role.name()),
+                    Map.entry("cuentaActiva", resultado.isCuentaActiva()),
+                    Map.entry("requiereAprobacion", requiereAprobacion),
+                    Map.entry("mensaje", requiereAprobacion
+                            ? "Tu solicitud de colaborador fue enviada. Un administrador debe aprobarla antes de que puedas ingresar."
+                            : "Usuario registrado correctamente")
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -153,6 +191,7 @@ public class RegisterController {
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
                 Map.entry("rol", getRole(usuario).name()),
+                Map.entry("aprobado", isAprobado(usuario)),
                 Map.entry("cuentaActiva", usuario.isCuentaActiva()),
                 Map.entry("estadoCuenta", usuario.isCuentaActiva() ? "Activa" : "Suspendida"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
@@ -172,6 +211,7 @@ public class RegisterController {
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
                 Map.entry("role", getRole(usuario).name()),
+                Map.entry("aprobado", isAprobado(usuario)),
                 Map.entry("cuentaActiva", usuario.isCuentaActiva()),
                 Map.entry("estadoCuenta", usuario.isCuentaActiva() ? "Activa" : "Suspendida"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),
@@ -208,5 +248,24 @@ public class RegisterController {
         return loginRepository.findByUsuario(usuario.getUsuario())
                 .map(Login::getRole)
                 .orElse(Role.CLIENTE);
+    }
+
+    private boolean isAprobado(Register usuario) {
+        return loginRepository.findByUsuario(usuario.getUsuario())
+                .map(Login::isAprobado)
+                .orElse(true);
+    }
+
+    private Role parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            return Role.CLIENTE;
+        }
+
+        try {
+            Role parsed = Role.valueOf(role.trim().toUpperCase());
+            return parsed == Role.ADMIN ? Role.CLIENTE : parsed;
+        } catch (IllegalArgumentException e) {
+            return Role.CLIENTE;
+        }
     }
 }

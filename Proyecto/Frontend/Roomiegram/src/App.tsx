@@ -15,6 +15,7 @@ import MiPerfil from "./pages/MiPerfil"
 import MisPublicaciones from "./pages/MisPublicaciones"
 import Preferencias from "./pages/Preferencias"
 import Configuracion from "./pages/Configuracion"
+import ColaboradorPanel from "./pages/ColaboradorPanel"
 import DetallePublicacion from "./pages/DetallePublicacion"
 import CrearPublicacion from "./pages/CrearPublicacion"
 import Tareas from "./pages/Tareas"
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/compatibilidad" element={<ProtectedRoute><Compatibilidad /></ProtectedRoute>} />
         <Route path="/convivencia" element={<ProtectedRoute><Convivencia /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute requireAdmin><Dashboard /></ProtectedRoute>} />
+        <Route path="/colaborador" element={<ProtectedRoute allowedRoles={["COLABORADOR", "ADMIN"]}><ColaboradorPanel /></ProtectedRoute>} />
         <Route path="/mi-perfil" element={<ProtectedRoute><MiPerfil /></ProtectedRoute>} />
         <Route path="/mis-publicaciones" element={<ProtectedRoute><MisPublicaciones /></ProtectedRoute>} />
         <Route path="/preferencias" element={<ProtectedRoute><Preferencias /></ProtectedRoute>} />

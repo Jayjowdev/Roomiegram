@@ -1,21 +1,28 @@
 package com.roomiegram.publicacion.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
+import com.roomiegram.publicacion.model.ModeracionRequest;
 import com.roomiegram.publicacion.model.Publicacion;
 import com.roomiegram.publicacion.repository.PublicacionRepository;
 
@@ -25,8 +32,16 @@ class PublicacionServiceTest {
     @Mock
     private PublicacionRepository publicacionRepository;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private PublicacionService publicacionService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(publicacionService, "usuarioServiceUrl", "http://usuario:8088");
+    }
 
     private Publicacion crearPublicacion() {
         Publicacion publicacion = new Publicacion();
@@ -99,6 +114,59 @@ class PublicacionServiceTest {
         Publicacion guardada = publicacionService.guardarPublicacion(publicacion);
 
         assertEquals("ofrezco_casa", guardada.getTipo());
+    }
+
+    @Test
+    void listarPublicacionesNoIncluyeOcultasPorModeracion() {
+        Publicacion activa = crearPublicacion();
+        Publicacion oculta = crearPublicacion();
+        oculta.setId(2L);
+        oculta.setEstadoModeracion("OCULTA_MODERACION");
+        when(publicacionRepository.findAll()).thenReturn(List.of(activa, oculta));
+
+        List<Publicacion> visibles = publicacionService.listarPublicaciones();
+
+        assertEquals(1, visibles.size());
+        assertEquals(1L, visibles.get(0).getId());
+    }
+
+    @Test
+    void listarPublicacionesModeracionIncluyeActivasYOcultas() {
+        Publicacion activa = crearPublicacion();
+        Publicacion oculta = crearPublicacion();
+        oculta.setId(2L);
+        oculta.setEstadoModeracion("OCULTA_MODERACION");
+        when(publicacionRepository.findAll()).thenReturn(List.of(activa, oculta));
+
+        List<Publicacion> moderables = publicacionService.listarPublicacionesModeracion();
+
+        assertEquals(2, moderables.size());
+    }
+
+    @Test
+    void ocultarPublicacionCuandoModeradorEsValido() {
+        Publicacion publicacion = crearPublicacion();
+        when(publicacionRepository.findById(1L)).thenReturn(Optional.of(publicacion));
+        when(restTemplate.getForEntity(eq("http://usuario:8088/auth/usuarios/7/moderador-valido"), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("puedeModerar", true)));
+        when(publicacionRepository.save(any(Publicacion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Publicacion moderada = publicacionService.ocultarPublicacion(1L, new ModeracionRequest(7L, "Contenido inapropiado"));
+
+        assertEquals("OCULTA_MODERACION", moderada.getEstadoModeracion());
+        assertEquals("Contenido inapropiado", moderada.getMotivoModeracion());
+        assertEquals(7L, moderada.getModeradoPorId());
+    }
+
+    @Test
+    void rechazaOcultarPublicacionCuandoModeradorNoEsValido() {
+        when(restTemplate.getForEntity(eq("http://usuario:8088/auth/usuarios/8/moderador-valido"), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("puedeModerar", false)));
+
+        assertThrows(SecurityException.class,
+                () -> publicacionService.ocultarPublicacion(1L, new ModeracionRequest(8L, "Motivo valido")));
+
+        verify(publicacionRepository, never()).save(any(Publicacion.class));
     }
 
     @Test

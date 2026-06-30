@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.roomiegram.usuario.enums.Role;
 import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.LoginRepository;
@@ -79,6 +80,10 @@ public class LoginService {
                 .ifPresent(register -> {
                     throw new IllegalArgumentException("La cuenta se encuentra suspendida. Contacta a un administrador.");
                 });
+
+        if (login.getRole() == Role.COLABORADOR && !login.isAprobado()) {
+            throw new IllegalArgumentException("Tu cuenta de colaborador esta pendiente de aprobacion.");
+        }
         
         return login;
     }

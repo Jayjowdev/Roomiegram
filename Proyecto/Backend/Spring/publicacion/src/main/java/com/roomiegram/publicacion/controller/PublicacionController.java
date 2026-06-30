@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.publicacion.model.Historia;
 import com.roomiegram.publicacion.model.HistoriaRequest;
+import com.roomiegram.publicacion.model.ModeracionRequest;
 import com.roomiegram.publicacion.model.Publicacion;
 import com.roomiegram.publicacion.model.PublicacionConHogarRequest;
 import com.roomiegram.publicacion.model.PublicacionConHogarResponse;
@@ -58,6 +60,25 @@ public class PublicacionController {
     @GetMapping("/listar")
     public ResponseEntity<List<Publicacion>> listarPublicaciones() {
         return ResponseEntity.ok(publicacionService.listarPublicaciones());
+    }
+
+    @GetMapping("/moderacion")
+    public ResponseEntity<List<Publicacion>> listarPublicacionesModeracion() {
+        return ResponseEntity.ok(publicacionService.listarPublicacionesModeracion());
+    }
+
+    @PatchMapping("/{id}/moderacion/ocultar")
+    public ResponseEntity<?> ocultarPublicacion(
+            @PathVariable Long id,
+            @RequestBody ModeracionRequest request) {
+        try {
+            Publicacion resultado = publicacionService.ocultarPublicacion(id, request);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
     }
 
     @GetMapping("/historias")

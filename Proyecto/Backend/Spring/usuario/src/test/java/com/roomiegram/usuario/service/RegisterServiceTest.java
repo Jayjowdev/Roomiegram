@@ -1,12 +1,14 @@
 package com.roomiegram.usuario.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -15,6 +17,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import com.roomiegram.usuario.enums.Role;
 import com.roomiegram.usuario.model.Login;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.LoginRepository;
@@ -33,32 +36,39 @@ class RegisterServiceTest {
     private RegisterService registerService;
 
     @Test
-    void registrarUsuarioDebeGuardarConDatosValidos() {
+    void registrarUsuarioDebeGuardarClienteAprobadoConDatosValidos() {
         Register register = crearRegister();
         when(registerRepository.existsByUsuario("juan123")).thenReturn(false);
         when(registerRepository.existsByCorreo("juan@example.com")).thenReturn(false);
         when(registerRepository.save(any(Register.class))).thenReturn(register);
-        when(loginRepository.save(any(Login.class))).thenReturn(new Login());
 
         Register resultado = registerService.registrarUsuario(register);
+
+        ArgumentCaptor<Login> loginCaptor = ArgumentCaptor.forClass(Login.class);
+        verify(loginRepository).save(loginCaptor.capture());
 
         assertNotNull(resultado);
         assertEquals("juan123", resultado.getUsuario());
         assertTrue(register.isCuentaActiva());
-        verify(registerRepository).save(any(Register.class));
-        verify(loginRepository).save(any(Login.class));
+        assertEquals(Role.CLIENTE, loginCaptor.getValue().getRole());
+        assertTrue(loginCaptor.getValue().isAprobado());
     }
 
     @Test
-    void registrarUsuarioDebeAsignarRolCliente() {
+    void registrarColaboradorDebeGuardarPendienteDeAprobacion() {
         Register register = crearRegister();
         when(registerRepository.existsByUsuario("juan123")).thenReturn(false);
         when(registerRepository.existsByCorreo("juan@example.com")).thenReturn(false);
         when(registerRepository.save(any(Register.class))).thenReturn(register);
 
-        registerService.registrarUsuario(register);
+        registerService.registrarUsuario(register, Role.COLABORADOR);
 
-        verify(loginRepository).save(any(Login.class));
+        ArgumentCaptor<Login> loginCaptor = ArgumentCaptor.forClass(Login.class);
+        verify(loginRepository).save(loginCaptor.capture());
+
+        assertEquals(Role.COLABORADOR, loginCaptor.getValue().getRole());
+        assertFalse(loginCaptor.getValue().isAprobado());
+        assertTrue(register.isCuentaActiva());
     }
 
     @Test
@@ -68,13 +78,11 @@ class RegisterServiceTest {
         when(registerRepository.existsByUsuario("juan123")).thenReturn(false);
         when(registerRepository.existsByCorreo("juan@example.com")).thenReturn(false);
         when(registerRepository.save(any(Register.class))).thenReturn(register);
-        when(loginRepository.save(any(Login.class))).thenReturn(new Login());
 
         registerService.registrarUsuario(register);
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        // Password should be BCrypt encoded after registering
-        assert(encoder.matches(contrasenaOriginal, register.getContrasena()));
+        assertTrue(encoder.matches(contrasenaOriginal, register.getContrasena()));
     }
 
     @Test
@@ -85,7 +93,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El nombre no puede estar vacío", exception.getMessage());
+        assertEquals("El nombre no puede estar vacio", exception.getMessage());
         verify(registerRepository, never()).save(any());
     }
 
@@ -97,7 +105,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El usuario no puede estar vacío", exception.getMessage());
+        assertEquals("El usuario no puede estar vacio", exception.getMessage());
     }
 
     @Test
@@ -108,7 +116,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El correo no puede estar vacío", exception.getMessage());
+        assertEquals("El correo no puede estar vacio", exception.getMessage());
     }
 
     @Test
@@ -119,7 +127,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El telefono no puede estar vacío", exception.getMessage());
+        assertEquals("El telefono no puede estar vacio", exception.getMessage());
     }
 
     @Test
@@ -130,7 +138,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("La contraseña no puede estar vacía", exception.getMessage());
+        assertEquals("La contrasena no puede estar vacia", exception.getMessage());
     }
 
     @Test
@@ -141,7 +149,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El usuario ya está registrado", exception.getMessage());
+        assertEquals("El usuario ya esta registrado", exception.getMessage());
         verify(registerRepository, never()).save(any());
     }
 
@@ -154,12 +162,12 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.registrarUsuario(register));
 
-        assertEquals("El correo ya está registrado", exception.getMessage());
+        assertEquals("El correo ya esta registrado", exception.getMessage());
         verify(registerRepository, never()).save(any());
     }
 
     @Test
-    void crearAdminDebeAsignarRolAdmin() {
+    void crearAdminDebeAsignarRolAdminAprobado() {
         Register register = crearRegister();
         when(registerRepository.existsByUsuario("juan123")).thenReturn(false);
         when(registerRepository.existsByCorreo("juan@example.com")).thenReturn(false);
@@ -167,7 +175,10 @@ class RegisterServiceTest {
 
         registerService.crearAdmin(register);
 
-        verify(loginRepository).save(any(Login.class));
+        ArgumentCaptor<Login> loginCaptor = ArgumentCaptor.forClass(Login.class);
+        verify(loginRepository).save(loginCaptor.capture());
+        assertEquals(Role.ADMIN, loginCaptor.getValue().getRole());
+        assertTrue(loginCaptor.getValue().isAprobado());
     }
 
     @Test
@@ -178,7 +189,7 @@ class RegisterServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> registerService.crearAdmin(register));
 
-        assertEquals("El usuario ya está registrado", exception.getMessage());
+        assertEquals("El usuario ya esta registrado", exception.getMessage());
     }
 
     private Register crearRegister() {

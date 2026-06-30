@@ -1,5 +1,6 @@
 package com.roomiegram.publicacion.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,4 +64,21 @@ public class Publicacion {
     @Column(columnDefinition = "LONGTEXT")
     private List<String> galeria = new ArrayList<>();
 
+    @Column(length = 40)
+    private String estadoModeracion;
+
+    @Column(length = 600)
+    private String motivoModeracion;
+
+    private Long moderadoPorId;
+
+    private LocalDateTime fechaModeracion;
+
+    public String getEstadoModeracion() {
+        return estadoModeracion == null || estadoModeracion.isBlank() ? "ACTIVA" : estadoModeracion;
+    }
+
+    public boolean estaOcultaPorModeracion() {
+        return "OCULTA_MODERACION".equalsIgnoreCase(getEstadoModeracion());
+    }
 }

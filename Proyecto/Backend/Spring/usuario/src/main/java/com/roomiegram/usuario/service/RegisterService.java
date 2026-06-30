@@ -3,6 +3,7 @@ package com.roomiegram.usuario.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.roomiegram.usuario.enums.Role;
 import com.roomiegram.usuario.model.Login;
@@ -24,49 +25,29 @@ public class RegisterService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // Metodo para registrar un nuevo usuario
+    @Transactional
     public Register registrarUsuario(Register register) {
+        return registrarUsuario(register, Role.CLIENTE);
+    }
+
+    @Transactional
+    public Register registrarUsuario(Register register, Role role) {
         normalizarCampos(register);
+        validarDatosRegistro(register);
+        validarDuplicados(register);
 
-        //Validaciones
-        if (register.getNombre() == null || register.getNombre().isEmpty()) {
-            throw new IllegalArgumentException("El nombre no puede estar vacío");
-        }
-        if (register.getUsuario() == null || register.getUsuario().isEmpty()) {
-            throw new IllegalArgumentException("El usuario no puede estar vacío");
-        }
-        if (register.getCorreo() == null || register.getCorreo().isEmpty()) {
-            throw new IllegalArgumentException("El correo no puede estar vacío");
-        }
-        if (register.getTelefono() == null || register.getTelefono().isEmpty()) {
-            throw new IllegalArgumentException("El telefono no puede estar vacío");
-        }
-        if (register.getContrasena() == null || register.getContrasena().isEmpty()) {
-            throw new IllegalArgumentException("La contraseña no puede estar vacía");
-        }
-        
-        // Verificar si el usuario ya existe
-        if (registerRepository.existsByUsuario(register.getUsuario())) {
-            throw new IllegalArgumentException("El usuario ya está registrado");
-        }
-        // Verificar si el correo ya existe
-        if (registerRepository.existsByCorreo(register.getCorreo())) {
-            throw new IllegalArgumentException("El correo ya está registrado");
-        }
-
-        // Encriptar la contraseña antes de guardarla
+        Role rolFinal = role == null ? Role.CLIENTE : role;
         String contrasenaEncriptada = passwordEncoder.encode(register.getContrasena());
         register.setContrasena(contrasenaEncriptada);
         register.setCuentaActiva(true);
 
-        //Guardar en Register
         Register registroGuardado = registerRepository.save(register);
 
-        //Crear entrada en Login con rol CLIENTE por defecto
         Login login = new Login();
         login.setUsuario(register.getUsuario());
         login.setContrasena(contrasenaEncriptada);
-        login.setRole(Role.CLIENTE);
+        login.setRole(rolFinal);
+        login.setAprobado(rolFinal != Role.COLABORADOR);
         loginRepository.save(login);
 
         if (notificationEmailService != null) {
@@ -76,52 +57,53 @@ public class RegisterService {
         return registroGuardado;
     }
 
-    // Metodo para crear un administrador 
+    @Transactional
     public Register crearAdmin(Register register) {
         normalizarCampos(register);
+        validarDatosRegistro(register);
+        validarDuplicados(register);
 
-        //Validaciones
-        if (register.getNombre() == null || register.getNombre().isEmpty()) {
-            throw new IllegalArgumentException("El nombre no puede estar vacío");
-        }
-        if (register.getUsuario() == null || register.getUsuario().isEmpty()) {
-            throw new IllegalArgumentException("El usuario no puede estar vacío");
-        }
-        if (register.getCorreo() == null || register.getCorreo().isEmpty()) {
-            throw new IllegalArgumentException("El correo no puede estar vacío");
-        }
-        if (register.getTelefono() == null || register.getTelefono().isEmpty()) {
-            throw new IllegalArgumentException("El telefono no puede estar vacío");
-        }
-        if (register.getContrasena() == null || register.getContrasena().isEmpty()) {
-            throw new IllegalArgumentException("La contraseña no puede estar vacía");
-        }
-        
-        // Verificar si el usuario ya existe
-        if (registerRepository.existsByUsuario(register.getUsuario())) {
-            throw new IllegalArgumentException("El usuario ya está registrado");
-        }
-        // Verificar si el correo ya existe
-        if (registerRepository.existsByCorreo(register.getCorreo())) {
-            throw new IllegalArgumentException("El correo ya está registrado");
-        }
-
-        // Encriptar la contraseña antes de guardarla
         String contrasenaEncriptada = passwordEncoder.encode(register.getContrasena());
         register.setContrasena(contrasenaEncriptada);
         register.setCuentaActiva(true);
 
-        //Guardar en Register
         Register registroGuardado = registerRepository.save(register);
 
-        //Crear entrada en Login con rol ADMIN por defecto
         Login login = new Login();
         login.setUsuario(register.getUsuario());
         login.setContrasena(contrasenaEncriptada);
         login.setRole(Role.ADMIN);
+        login.setAprobado(true);
         loginRepository.save(login);
 
         return registroGuardado;
+    }
+
+    private void validarDatosRegistro(Register register) {
+        if (register.getNombre() == null || register.getNombre().isEmpty()) {
+            throw new IllegalArgumentException("El nombre no puede estar vacio");
+        }
+        if (register.getUsuario() == null || register.getUsuario().isEmpty()) {
+            throw new IllegalArgumentException("El usuario no puede estar vacio");
+        }
+        if (register.getCorreo() == null || register.getCorreo().isEmpty()) {
+            throw new IllegalArgumentException("El correo no puede estar vacio");
+        }
+        if (register.getTelefono() == null || register.getTelefono().isEmpty()) {
+            throw new IllegalArgumentException("El telefono no puede estar vacio");
+        }
+        if (register.getContrasena() == null || register.getContrasena().isEmpty()) {
+            throw new IllegalArgumentException("La contrasena no puede estar vacia");
+        }
+    }
+
+    private void validarDuplicados(Register register) {
+        if (registerRepository.existsByUsuario(register.getUsuario())) {
+            throw new IllegalArgumentException("El usuario ya esta registrado");
+        }
+        if (registerRepository.existsByCorreo(register.getCorreo())) {
+            throw new IllegalArgumentException("El correo ya esta registrado");
+        }
     }
 
     private void normalizarCampos(Register register) {

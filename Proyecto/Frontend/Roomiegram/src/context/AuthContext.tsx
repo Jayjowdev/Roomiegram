@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { authService } from "../services/authService";
-import type { LoginRequest, RegisterRequest, UserSession } from "../types/auth";
+import type { AuthResponse, LoginRequest, RegisterRequest, UserSession } from "../types/auth";
 
 interface AuthContextType {
   user: UserSession | null;
@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<void>;
-  register: (userData: RegisterRequest) => Promise<void>;
+  register: (userData: RegisterRequest) => Promise<AuthResponse>;
   loginDemo: () => void;
   updateUser: (changes: Partial<UserSession>) => void;
   updateProfilePhoto: (fotoPerfil: string) => Promise<void>;
@@ -63,9 +63,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const response = await authService.register(userData);
+      if (response.requiereAprobacion) {
+        return response;
+      }
       authService.saveSession(response.sessionId, response.user);
       setSessionId(response.sessionId);
       setUser(response.user);
+      return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error en registro";
       setError(errorMessage);

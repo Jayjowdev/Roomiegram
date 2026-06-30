@@ -30,6 +30,18 @@ public class Login {
     String contrasena;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 30, columnDefinition = "VARCHAR(30)")
     private Role role;
+
+    @Column(name = "aprobado", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean aprobado = true;
+
+    public boolean isAprobado() {
+        return aprobado == null ? true : aprobado;
+    }
+
+    public void setAprobado(Boolean aprobado) {
+        this.aprobado = aprobado;
+    }
 
 }

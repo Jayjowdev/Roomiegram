@@ -31,8 +31,10 @@ export default function Register() {
   const [contrasena, setContrasena] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
+  const [localSuccess, setLocalSuccess] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [tipoCuenta, setTipoCuenta] = useState<"CLIENTE" | "COLABORADOR">("CLIENTE");
 
   const nombreRef = useRef<HTMLInputElement>(null);
   const correoRef = useRef<HTMLInputElement>(null);
@@ -51,6 +53,7 @@ export default function Register() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLocalError("");
+    setLocalSuccess("");
     clearError();
 
     if (nombre.trim().length < 3) {
@@ -90,7 +93,25 @@ export default function Register() {
     }
 
     try {
-      await register({ nombre: nombre.trim(), correo: correo.trim(), usuario: usuario.trim(), telefono: telefono.trim(), contrasena });
+      const response = await register({
+        nombre: nombre.trim(),
+        correo: correo.trim(),
+        usuario: usuario.trim(),
+        telefono: telefono.trim(),
+        contrasena,
+        role: tipoCuenta,
+      });
+
+      if (response.requiereAprobacion) {
+        setLocalSuccess(
+          response.mensaje ||
+            "Tu solicitud de colaborador fue enviada. Un administrador debe aprobarla antes de que puedas ingresar.",
+        );
+        setContrasena("");
+        setConfirmPassword("");
+        return;
+      }
+
       navigate("/preferencias");
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Error en registro");
@@ -112,8 +133,26 @@ export default function Register() {
       <div className="register-box">
         <h2>Crear cuenta</h2>
         {(error || localError) && <div className="form-error">{error || localError}</div>}
+        {localSuccess && <div className="form-success">{localSuccess}</div>}
 
         <form onSubmit={handleSubmit} className="register-form" noValidate>
+          <label className="role-label" htmlFor="tipo-cuenta">Tipo de cuenta</label>
+          <select
+            id="tipo-cuenta"
+            className="form-control"
+            value={tipoCuenta}
+            onChange={(e) => setTipoCuenta(e.target.value as "CLIENTE" | "COLABORADOR")}
+            disabled={isLoading}
+          >
+            <option value="CLIENTE">Cliente</option>
+            <option value="COLABORADOR">Colaborador</option>
+          </select>
+          {tipoCuenta === "COLABORADOR" && (
+            <p className="role-info">
+              Los colaboradores deben ser aprobados por un administrador antes de iniciar sesion.
+            </p>
+          )}
+
           <input ref={nombreRef} type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
           <input ref={correoRef} type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input ref={usuarioRef} type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />

@@ -116,6 +116,23 @@ class LoginServiceTest {
     }
 
     @Test
+    void autenticarUsuarioDebeFallarCuandoColaboradorEstaPendiente() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String contrasenaEncriptada = encoder.encode("contrasena123");
+
+        Login login = crearLogin("colaborador", contrasenaEncriptada, Role.COLABORADOR);
+        login.setAprobado(false);
+
+        when(loginRepository.findByUsuario("colaborador")).thenReturn(Optional.of(login));
+        when(registerRepository.findByUsuario("colaborador")).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> loginService.autenticarUsuario("colaborador", "contrasena123"));
+
+        assertEquals("Tu cuenta de colaborador esta pendiente de aprobacion.", exception.getMessage());
+    }
+
+    @Test
     void autenticarUsuarioDebeFallarCuandoUsuarioNoExiste() {
         when(loginRepository.findByUsuario("noExiste")).thenReturn(Optional.empty());
         when(registerRepository.findByCorreo("noExiste")).thenReturn(Optional.empty());

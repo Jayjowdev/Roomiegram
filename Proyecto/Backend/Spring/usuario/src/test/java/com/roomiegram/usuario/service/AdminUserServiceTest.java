@@ -79,6 +79,50 @@ class AdminUserServiceTest {
     }
 
     @Test
+    void aprobarColaboradorDebeMarcarAprobadoYActivo() {
+        Register admin = crearRegister(1L, "admin");
+        Register colaborador = crearRegister(2L, "colaborador");
+        Login loginColaborador = crearLogin("colaborador", Role.COLABORADOR);
+        loginColaborador.setAprobado(false);
+        colaborador.setCuentaActiva(false);
+
+        when(registerRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(registerRepository.findById(2L)).thenReturn(Optional.of(colaborador));
+        when(loginRepository.findByUsuario("admin")).thenReturn(Optional.of(crearLogin("admin", Role.ADMIN)));
+        when(loginRepository.findByUsuario("colaborador")).thenReturn(Optional.of(loginColaborador));
+        when(registerRepository.save(colaborador)).thenReturn(colaborador);
+
+        Map<String, Object> resultado = adminUserService.aprobarColaborador(2L, 1L, "ADMIN");
+
+        assertTrue(loginColaborador.isAprobado());
+        assertTrue(colaborador.isCuentaActiva());
+        assertEquals(true, resultado.get("aprobado"));
+        verify(loginRepository).save(loginColaborador);
+        verify(registerRepository).save(colaborador);
+    }
+
+    @Test
+    void rechazarColaboradorDebeMantenerPendienteYSuspenderCuenta() {
+        Register admin = crearRegister(1L, "admin");
+        Register colaborador = crearRegister(2L, "colaborador");
+        Login loginColaborador = crearLogin("colaborador", Role.COLABORADOR);
+
+        when(registerRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(registerRepository.findById(2L)).thenReturn(Optional.of(colaborador));
+        when(loginRepository.findByUsuario("admin")).thenReturn(Optional.of(crearLogin("admin", Role.ADMIN)));
+        when(loginRepository.findByUsuario("colaborador")).thenReturn(Optional.of(loginColaborador));
+        when(registerRepository.save(colaborador)).thenReturn(colaborador);
+
+        Map<String, Object> resultado = adminUserService.rechazarColaborador(2L, 1L, "ADMIN");
+
+        assertFalse(loginColaborador.isAprobado());
+        assertFalse(colaborador.isCuentaActiva());
+        assertEquals(false, resultado.get("aprobado"));
+        verify(loginRepository).save(loginColaborador);
+        verify(registerRepository).save(colaborador);
+    }
+
+    @Test
     void restablecerContrasenaDebeActualizarRegisterYLogin() {
         Register admin = crearRegister(1L, "admin");
         Register cliente = crearRegister(2L, "franco");

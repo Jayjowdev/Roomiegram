@@ -19,12 +19,13 @@ type DashboardStats = {
   hogares: number;
   tareas: number;
   usuarios: number;
+  colaboradoresPendientes: number;
   solicitudesPendientes: number;
 };
 
-type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas" | "usuarios";
+type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas" | "usuarios" | "colaboradores";
 type UsuarioFiltro = "todos" | "sin-datos" | "suspendidos" | "clientes";
-type BloqueoSection = Exclude<DashboardSection, "usuarios">;
+type BloqueoSection = Exclude<DashboardSection, "usuarios" | "colaboradores">;
 type BloqueoEliminarUsuario = {
   key: BloqueoSection;
   text: string;
@@ -47,6 +48,7 @@ export default function Dashboard() {
     hogares: 0,
     tareas: 0,
     usuarios: 0,
+    colaboradoresPendientes: 0,
     solicitudesPendientes: 0,
   });
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
@@ -54,6 +56,7 @@ export default function Dashboard() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [colaboradoresPendientes, setColaboradoresPendientes] = useState<UsuarioResumen[]>([]);
   const [deletingPublicationId, setDeletingPublicationId] = useState<number | null>(null);
   const [deletingHistoriaId, setDeletingHistoriaId] = useState<number | null>(null);
   const [deletingTareaId, setDeletingTareaId] = useState<number | null>(null);
@@ -87,8 +90,11 @@ export default function Dashboard() {
       hogarService.listar(),
       tareaService.listar(),
       usuarioService.listarAdmin(),
+      user?.id && user.role === "ADMIN"
+        ? usuarioService.listarColaboradoresPendientes(user.id, user.role)
+        : Promise.resolve([]),
     ])
-      .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult]) => {
+      .then(([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult, colaboradoresResult]) => {
         if (!isMounted) return;
 
         const backendPublicaciones = publicacionesResult.status === "fulfilled" ? publicacionesResult.value : [];
@@ -103,6 +109,7 @@ export default function Dashboard() {
         const hogaresData = hogaresResult.status === "fulfilled" ? hogaresResult.value : [];
         const tareasData = tareasResult.status === "fulfilled" ? tareasResult.value : [];
         const usuariosData = usuariosResult.status === "fulfilled" ? usuariosResult.value : [];
+        const colaboradoresData = colaboradoresResult.status === "fulfilled" ? colaboradoresResult.value : [];
         const solicitudesPendientes = hogaresData.reduce(
           (total, hogar) => total + (hogar.solicitudesPendientesIds?.length ?? 0),
           0,
@@ -114,6 +121,7 @@ export default function Dashboard() {
           hogares: hogaresData.length,
           tareas: tareasData.length,
           usuarios: usuariosData.length,
+          colaboradoresPendientes: colaboradoresData.length,
           solicitudesPendientes,
         });
         setPublicaciones(publicacionesData);
@@ -121,8 +129,9 @@ export default function Dashboard() {
         setHogares(hogaresData);
         setTareas(tareasData);
         setUsuarios(usuariosData);
+        setColaboradoresPendientes(colaboradoresData);
 
-        if ([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult].some((result) => result.status === "rejected")) {
+        if ([publicacionesResult, historiasResult, hogaresResult, tareasResult, usuariosResult, colaboradoresResult].some((result) => result.status === "rejected")) {
           setMessage("Algunos datos reales no se pudieron cargar. Intenta nuevamente.");
         }
       })
@@ -133,7 +142,7 @@ export default function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.id, user?.role]);
 
   const eliminarPublicacion = async (publicacion: Publicacion) => {
     if (!user?.usuario || user.role !== "ADMIN") {
@@ -445,6 +454,9 @@ export default function Dashboard() {
 
   const reemplazarUsuario = (usuarioActualizado: UsuarioResumen) => {
     setUsuarios((current) => current.map((item) => (item.id === usuarioActualizado.id ? usuarioActualizado : item)));
+    setColaboradoresPendientes((current) =>
+      current.map((item) => (item.id === usuarioActualizado.id ? usuarioActualizado : item)),
+    );
   };
 
   const suspenderUsuarioAdmin = async (usuarioObjetivo: UsuarioResumen) => {
@@ -695,6 +707,55 @@ export default function Dashboard() {
     return [usuarioId, `usuario ${usuarioId}`, usuario?.nombre, usuario?.usuario, usuario?.correo];
   };
 
+  const aprobarColaboradorAdmin = async (colaborador: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede aprobar colaboradores.");
+      return;
+    }
+
+    try {
+      setUsuarioActionId(colaborador.id);
+      const actualizado = await usuarioService.aprobarColaborador(colaborador.id, user.id, user.role);
+      reemplazarUsuario(actualizado);
+      setColaboradoresPendientes((current) => current.filter((item) => item.id !== colaborador.id));
+      setStats((current) => ({
+        ...current,
+        colaboradoresPendientes: Math.max(0, current.colaboradoresPendientes - 1),
+      }));
+      setMessage("Colaborador aprobado correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo aprobar el colaborador.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
+  const rechazarColaboradorAdmin = async (colaborador: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede rechazar colaboradores.");
+      return;
+    }
+
+    const confirmar = window.confirm(`Rechazar la solicitud de colaborador de ${colaborador.usuario}?`);
+    if (!confirmar) return;
+
+    try {
+      setUsuarioActionId(colaborador.id);
+      const actualizado = await usuarioService.rechazarColaborador(colaborador.id, user.id, user.role);
+      reemplazarUsuario(actualizado);
+      setColaboradoresPendientes((current) => current.filter((item) => item.id !== colaborador.id));
+      setStats((current) => ({
+        ...current,
+        colaboradoresPendientes: Math.max(0, current.colaboradoresPendientes - 1),
+      }));
+      setMessage("Solicitud de colaborador rechazada.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo rechazar el colaborador.");
+    } finally {
+      setUsuarioActionId(null);
+    }
+  };
+
   const usuarioFiltroAsociacion = associationFilter ? usuariosById.get(associationFilter.usuarioId) : undefined;
 
   const isFiltroAsociacionActivo = (section: BloqueoSection) =>
@@ -824,6 +885,22 @@ export default function Dashboard() {
     [dashboardFilter, usuarioFiltro, usuarios, publicaciones, historias, hogares, tareas, user?.id],
   );
 
+  const colaboradoresFiltrados = useMemo(
+    () =>
+      colaboradoresPendientes.filter((colaborador) =>
+        matchesFilter([
+          colaborador.id,
+          colaborador.nombre,
+          colaborador.usuario,
+          colaborador.telefono,
+          colaborador.rol || colaborador.role,
+          "colaborador",
+          "pendiente",
+        ]),
+      ),
+    [dashboardFilter, colaboradoresPendientes],
+  );
+
   const selectedUsuario = useMemo(
     () => usuarios.find((usuarioItem) => usuarioItem.id === selectedUsuarioId) || usuariosFiltrados[0] || null,
     [selectedUsuarioId, usuarios, usuariosFiltrados],
@@ -846,14 +923,22 @@ export default function Dashboard() {
     hogaresFiltrados.length +
     tareasFiltradas.length +
     historiasFiltradas.length +
-    usuariosFiltrados.length;
-  const totalRegistros = stats.publicaciones + stats.historias + stats.hogares + stats.tareas + stats.usuarios;
+    usuariosFiltrados.length +
+    colaboradoresFiltrados.length;
+  const totalRegistros =
+    stats.publicaciones +
+    stats.historias +
+    stats.hogares +
+    stats.tareas +
+    stats.usuarios +
+    stats.colaboradoresPendientes;
   const dashboardTabs = [
     { id: "publicaciones" as const, label: "Publicaciones", count: publicacionesFiltradas.length },
     { id: "historias" as const, label: "Historias", count: historiasFiltradas.length },
     { id: "hogares" as const, label: "Hogares", count: hogaresFiltrados.length },
     { id: "tareas" as const, label: "Tareas", count: tareasFiltradas.length },
     { id: "usuarios" as const, label: "Usuarios", count: usuariosFiltrados.length },
+    { id: "colaboradores" as const, label: "Colaboradores", count: colaboradoresFiltrados.length },
   ];
 
   return (
@@ -901,13 +986,17 @@ export default function Dashboard() {
           <h5>Usuarios</h5>
           <h2>{isLoading ? "..." : stats.usuarios}</h2>
         </article>
+        <article className="dashboard-card">
+          <h5>Colaboradores pendientes</h5>
+          <h2>{isLoading ? "..." : stats.colaboradoresPendientes}</h2>
+        </article>
       </section>
 
       <section className="dashboard-filter-panel">
         <div>
           <label htmlFor="dashboard-filter">Buscar actividad</label>
           <p>
-            Filtra publicaciones, historias, hogares, tareas y usuarios por nombre, correo, tipo, hogar,
+            Filtra publicaciones, historias, hogares, tareas, usuarios y colaboradores por nombre, correo, tipo, hogar,
             encargado o estado.
           </p>
         </div>
@@ -1258,6 +1347,71 @@ export default function Dashboard() {
                   </article>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section
+        className={`dashboard-content dashboard-content-wide ${activeSection === "colaboradores" ? "" : "dashboard-hidden-section"}`}
+        id="dashboard-section-colaboradores"
+      >
+        <div className="dashboard-activity">
+          <div className="section-heading-row">
+            <div>
+              <h4>Solicitudes de colaboradores</h4>
+              <p className="dashboard-section-help">
+                Revisa cuentas que pidieron registrarse como colaborador antes de permitir su acceso.
+              </p>
+            </div>
+            <span className="status-pill">{colaboradoresFiltrados.length} pendientes</span>
+          </div>
+
+          {isLoading ? (
+            <div className="sin-resultados"><p>Cargando colaboradores...</p></div>
+          ) : colaboradoresPendientes.length === 0 ? (
+            <div className="sin-resultados"><p>No hay solicitudes de colaboradores pendientes.</p></div>
+          ) : colaboradoresFiltrados.length === 0 ? (
+            <div className="sin-resultados"><p>No hay resultados para este filtro.</p></div>
+          ) : (
+            <div className="module-list admin-collaborator-list">
+              {colaboradoresFiltrados.map((colaborador) => (
+                <article className="module-item admin-collaborator-item" key={colaborador.id}>
+                  <div className="section-heading-row">
+                    <div>
+                      <h4>{colaborador.nombre || colaborador.usuario}</h4>
+                      <span>{colaborador.usuario} - ID #{colaborador.id}</span>
+                    </div>
+                    <span className="status-pill warning">Pendiente</span>
+                  </div>
+                  <div className="admin-record-meta">
+                    <span>Telefono: {colaborador.telefono || "No informado"}</span>
+                    <span>Rol solicitado: {getUsuarioRole(colaborador)}</span>
+                    <span>Estado: {colaborador.estadoCuenta || "Activa"}</span>
+                  </div>
+                  <p>
+                    Esta cuenta no puede iniciar sesion como colaborador hasta que una cuenta ADMIN apruebe la solicitud.
+                  </p>
+                  <div className="item-actions">
+                    <button
+                      className="btn btn-success btn-sm"
+                      type="button"
+                      onClick={() => aprobarColaboradorAdmin(colaborador)}
+                      disabled={usuarioActionId === colaborador.id}
+                    >
+                      {usuarioActionId === colaborador.id ? "Procesando..." : "Aprobar"}
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      type="button"
+                      onClick={() => rechazarColaboradorAdmin(colaborador)}
+                      disabled={usuarioActionId === colaborador.id}
+                    >
+                      {usuarioActionId === colaborador.id ? "Procesando..." : "Rechazar"}
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </div>

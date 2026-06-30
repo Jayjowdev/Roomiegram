@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.roomiegram.publicacion.model.ModeracionRequest;
 import com.roomiegram.publicacion.model.Publicacion;
 import com.roomiegram.publicacion.service.PublicacionService;
 
@@ -87,6 +89,43 @@ class PublicacionControllerTest {
         mockMvc.perform(get("/publicaciones/listar"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void listarModeracionDebeRetornarActivasYOcultas() throws Exception {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setEstadoModeracion("OCULTA_MODERACION");
+        when(publicacionService.listarPublicacionesModeracion()).thenReturn(List.of(publicacion));
+
+        mockMvc.perform(get("/publicaciones/moderacion"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].estadoModeracion").value("OCULTA_MODERACION"));
+    }
+
+    @Test
+    void ocultarDebeRetornar200() throws Exception {
+        Publicacion publicacion = crearPublicacion();
+        publicacion.setEstadoModeracion("OCULTA_MODERACION");
+        publicacion.setMotivoModeracion("Contenido inapropiado");
+        when(publicacionService.ocultarPublicacion(eq(1L), any(ModeracionRequest.class))).thenReturn(publicacion);
+
+        mockMvc.perform(patch("/publicaciones/1/moderacion/ocultar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ModeracionRequest(7L, "Contenido inapropiado"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoModeracion").value("OCULTA_MODERACION"))
+                .andExpect(jsonPath("$.motivoModeracion").value("Contenido inapropiado"));
+    }
+
+    @Test
+    void ocultarDebeRetornar403CuandoNoPuedeModerar() throws Exception {
+        doThrow(new SecurityException("No tienes permisos para moderar publicaciones"))
+                .when(publicacionService).ocultarPublicacion(eq(1L), any(ModeracionRequest.class));
+
+        mockMvc.perform(patch("/publicaciones/1/moderacion/ocultar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ModeracionRequest(8L, "Motivo valido"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

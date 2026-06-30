@@ -42,6 +42,18 @@ public class AdminUserService {
         return toAdminUser(usuario);
     }
 
+    public List<Map<String, Object>> listarColaboradoresPendientes(Long adminId, String rolSolicitante) {
+        validarAdmin(adminId, rolSolicitante);
+
+        return loginRepository.findAll().stream()
+                .filter(login -> login.getRole() == Role.COLABORADOR && !login.isAprobado())
+                .map(login -> registerRepository.findByUsuario(login.getUsuario())
+                        .map(this::toAdminUser)
+                        .orElse(null))
+                .filter(item -> item != null)
+                .toList();
+    }
+
     @Transactional
     public Map<String, Object> suspenderUsuario(Long id, Long adminId, String rolSolicitante) {
         validarAdmin(adminId, rolSolicitante);
@@ -63,6 +75,42 @@ public class AdminUserService {
         Register usuario = buscarUsuario(id);
         usuario.setCuentaActiva(true);
         return toAdminUser(registerRepository.save(usuario));
+    }
+
+    @Transactional
+    public Map<String, Object> aprobarColaborador(Long id, Long adminId, String rolSolicitante) {
+        validarAdmin(adminId, rolSolicitante);
+
+        Register colaborador = buscarUsuario(id);
+        Login login = buscarLogin(colaborador);
+
+        if (login.getRole() != Role.COLABORADOR) {
+            throw new IllegalArgumentException("El usuario no es un colaborador");
+        }
+
+        login.setAprobado(true);
+        colaborador.setCuentaActiva(true);
+
+        loginRepository.save(login);
+        return toAdminUser(registerRepository.save(colaborador));
+    }
+
+    @Transactional
+    public Map<String, Object> rechazarColaborador(Long id, Long adminId, String rolSolicitante) {
+        validarAdmin(adminId, rolSolicitante);
+
+        Register colaborador = buscarUsuario(id);
+        Login login = buscarLogin(colaborador);
+
+        if (login.getRole() != Role.COLABORADOR) {
+            throw new IllegalArgumentException("El usuario no es un colaborador");
+        }
+
+        login.setAprobado(false);
+        colaborador.setCuentaActiva(false);
+
+        loginRepository.save(login);
+        return toAdminUser(registerRepository.save(colaborador));
     }
 
     @Transactional
@@ -140,6 +188,17 @@ public class AdminUserService {
                 .orElse(Role.CLIENTE);
     }
 
+    private boolean obtenerAprobado(Register usuario) {
+        return loginRepository.findByUsuario(usuario.getUsuario())
+                .map(Login::isAprobado)
+                .orElse(true);
+    }
+
+    private Login buscarLogin(Register usuario) {
+        return loginRepository.findByUsuario(usuario.getUsuario())
+                .orElseThrow(() -> new IllegalArgumentException("No se encontro la cuenta de acceso asociada"));
+    }
+
     private Map<String, Object> toAdminUser(Register usuario) {
         return Map.ofEntries(
                 Map.entry("id", usuario.getId()),
@@ -148,6 +207,7 @@ public class AdminUserService {
                 Map.entry("correo", usuario.getCorreo()),
                 Map.entry("telefono", usuario.getTelefono() == null ? "" : usuario.getTelefono()),
                 Map.entry("rol", obtenerRol(usuario).name()),
+                Map.entry("aprobado", obtenerAprobado(usuario)),
                 Map.entry("cuentaActiva", usuario.isCuentaActiva()),
                 Map.entry("estadoCuenta", usuario.isCuentaActiva() ? "Activa" : "Suspendida"),
                 Map.entry("fotoPerfil", usuario.getFotoPerfil() == null ? "" : usuario.getFotoPerfil()),

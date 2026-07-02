@@ -1,6 +1,8 @@
 .planes-page {
   min-height: 100vh;
-  background: #f8fdf9;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(31, 122, 99, 0.08), transparent 28%),
+    linear-gradient(180deg, #f6faf8 0%, #fbfefd 58%, #eef7f3 100%);
   display: flex;
   flex-direction: column;
   padding: 24px;
@@ -9,14 +11,18 @@
 .planes-hero {
   text-align: center;
   padding: 48px 24px 32px;
-  background: #1f7a63;
-  color: #fff;
-  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(230, 244, 241, 0.96) 0%, rgba(255, 255, 255, 0.98) 56%, rgba(248, 252, 250, 0.98) 100%);
+  border: 1px solid #dcebe5;
+  box-shadow: 0 24px 54px rgba(27, 76, 62, 0.14);
+  color: #1f2f2a;
+  border-radius: 18px;
 }
 
 .planes-kicker {
   display: inline-block;
   margin-bottom: 10px;
+  color: #1f7a63;
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -27,6 +33,7 @@
 }
 
 .planes-hero p {
+  color: #5d6f68;
   max-width: 620px;
   margin: 0 auto 16px;
 }
@@ -34,8 +41,10 @@
 .plan-activo-badge {
   display: inline-block;
   padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
+  background: rgba(31, 122, 99, 0.1);
+  border: 1px solid rgba(31, 122, 99, 0.18);
+  border-radius: 999px;
+  color: #1f7a63;
   font-weight: 600;
 }
 
@@ -63,41 +72,44 @@
   flex-direction: column;
   gap: 12px;
   min-height: 100%;
-  background: #fff;
-  border: 1px solid #e2e8e5;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #dcebe5;
+  border-radius: 18px;
   padding: 24px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 14px 34px rgba(31, 122, 99, 0.1);
 }
 
 .plan-card-premium,
 .plan-card-hogar {
-  border-color: #1f7a63;
+  border-color: #c2ddd3;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%);
 }
 
 .plan-card-activo {
-  background: #eef8f5;
+  background: linear-gradient(180deg, #eef8f4 0%, #ffffff 100%);
+  border-color: #1f7a63;
+  box-shadow: 0 18px 38px rgba(31, 122, 99, 0.18);
 }
 
 .plan-popular-badge {
   position: absolute;
   top: -12px;
   left: 24px;
-  background: #1f7a63;
+  background: linear-gradient(135deg, #1f7a63 0%, #17614f 100%);
   color: #fff;
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
 }
 
 .plan-card-nombre {
-  color: #222;
+  color: #1f2f2a;
   margin-bottom: 0;
 }
 
 .plan-card-desc {
-  color: #555;
+  color: #5d6f68;
   min-height: 44px;
 }
 
@@ -115,7 +127,7 @@
 }
 
 .plan-precio-periodo {
-  color: #555;
+  color: #5d6f68;
 }
 
 .plan-beneficios {
@@ -127,7 +139,7 @@
 }
 
 .plan-beneficio-item {
-  color: #333;
+  color: #365149;
   line-height: 1.4;
 }
 
@@ -142,19 +154,38 @@
   width: fit-content;
   margin-bottom: 10px;
   padding: 5px 10px;
-  border-radius: 8px;
+  border: 1px solid rgba(31, 122, 99, 0.16);
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
 }
 
 .plan-badge-gratis {
-  background: #edf2f0;
-  color: #4a5752;
+  background: #f8fcfa;
+  color: #5d6f68;
 }
 
 .plan-badge-premium,
 .plan-badge-hogar {
   background: #e6f4f1;
+  color: #1f7a63;
+}
+
+.planes-benefits-matrix {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: #dcebe5;
+  box-shadow: 0 14px 34px rgba(31, 122, 99, 0.1);
+}
+
+.planes-benefits-matrix .module-item {
+  background: #f8fcfa;
+  border: 1px solid #dcebe5;
+  border-radius: 14px;
+}
+
+.planes-benefits-matrix .notification-context-grid span {
+  background: rgba(31, 122, 99, 0.1);
+  border: 1px solid rgba(31, 122, 99, 0.16);
   color: #1f7a63;
 }
 

@@ -2,6 +2,25 @@
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rg-bg: #f6faf8;
+  --rg-bg-soft: #eef7f3;
+  --rg-surface: #ffffff;
+  --rg-surface-2: #f8fcfa;
+  --rg-surface-3: #eef8f4;
+  --rg-border: #dcebe5;
+  --rg-border-strong: #c2ddd3;
+  --rg-text: #1f2f2a;
+  --rg-text-soft: #365149;
+  --rg-text-muted: #5d6f68;
+  --rg-accent: #1f7a63;
+  --rg-accent-strong: #17614f;
+  --rg-accent-soft: rgba(31, 122, 99, 0.1);
+  --rg-danger: #c83e4d;
+  --rg-danger-soft: rgba(200, 62, 77, 0.1);
+  --rg-warning-soft: #fff7e6;
+  --rg-shadow-sm: 0 8px 18px rgba(31, 122, 99, 0.06);
+  --rg-shadow-md: 0 14px 34px rgba(31, 122, 99, 0.1);
+  --rg-shadow-lg: 0 24px 54px rgba(27, 76, 62, 0.14);
 }
 
 * {
@@ -10,8 +29,8 @@
 
 body {
   margin: 0;
-  background-color: #f5f7f6;
-  color: #242424;
+  background-color: var(--rg-bg);
+  color: var(--rg-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
@@ -1336,25 +1355,26 @@ p {
 /* ---------- FILTROS HOME ---------- */
 
 .home-filtros {
-  margin-bottom: 32px;
+  margin-bottom: 26px;
   display: flex;
   justify-content: center;
 }
 
 .home-filter-panel {
-  width: min(920px, calc(100% - 32px));
+  width: min(860px, calc(100% - 32px));
   display: grid;
-  gap: 14px;
+  gap: 10px;
   justify-items: center;
 }
 
 .filtros-container {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   background-color: #ffffff;
-  padding: 12px;
+  padding: 8px;
   border-radius: 50px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #dcebe5;
+  box-shadow: 0 8px 18px rgba(31, 122, 99, 0.07);
   animation: softReveal 0.4s ease both;
 }
 
@@ -1381,7 +1401,7 @@ p {
 }
 
 .filtro-btn {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 50px;
   border: none;
   background-color: transparent;
@@ -4958,6 +4978,412 @@ button.compact-row:hover {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- MODO CLARO PULIDO ---------- */
+
+body:not(.theme-dark) {
+  background:
+    radial-gradient(circle at top left, rgba(31, 122, 99, 0.07), transparent 30%),
+    linear-gradient(180deg, var(--rg-bg) 0%, #fbfefd 52%, var(--rg-bg-soft) 100%);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .landing-page,
+body:not(.theme-dark) .login-page,
+body:not(.theme-dark) .register-page,
+body:not(.theme-dark) .home-page,
+body:not(.theme-dark) .perfil-page,
+body:not(.theme-dark) .dashboard-page,
+body:not(.theme-dark) .collaborator-page,
+body:not(.theme-dark) .module-page,
+body:not(.theme-dark) .stories-page,
+body:not(.theme-dark) .support-page {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(31, 122, 99, 0.08), transparent 28%),
+    radial-gradient(circle at 92% 8%, rgba(153, 217, 197, 0.18), transparent 24%),
+    linear-gradient(180deg, var(--rg-bg) 0%, #fbfefd 58%, var(--rg-bg-soft) 100%);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-header,
+body:not(.theme-dark) .perfil-header,
+body:not(.theme-dark) .dashboard-header,
+body:not(.theme-dark) .landing-header,
+body:not(.theme-dark) .support-header,
+body:not(.theme-dark) .module-header {
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-hero,
+body:not(.theme-dark) .planes-hero,
+body:not(.theme-dark) .dashboard-welcome,
+body:not(.theme-dark) .collaborator-hero {
+  background:
+    linear-gradient(135deg, rgba(230, 244, 241, 0.96) 0%, rgba(255, 255, 255, 0.98) 56%, rgba(248, 252, 250, 0.98) 100%);
+  border: 1px solid var(--rg-border);
+  box-shadow: var(--rg-shadow-lg);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-hero h1,
+body:not(.theme-dark) .planes-hero h1,
+body:not(.theme-dark) .dashboard-welcome h1,
+body:not(.theme-dark) .collaborator-hero h1,
+body:not(.theme-dark) .module-title h1,
+body:not(.theme-dark) .mi-perfil-card h1,
+body:not(.theme-dark) .perfil-publication-summary h1,
+body:not(.theme-dark) .detalle-main h1 {
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-hero p,
+body:not(.theme-dark) .planes-hero p,
+body:not(.theme-dark) .dashboard-welcome p,
+body:not(.theme-dark) .collaborator-hero p,
+body:not(.theme-dark) .module-title p,
+body:not(.theme-dark) .mi-perfil-card p,
+body:not(.theme-dark) .perfil-bio,
+body:not(.theme-dark) .detalle-desc {
+  color: var(--rg-text-muted);
+}
+
+body:not(.theme-dark) .landing-demo-card,
+body:not(.theme-dark) .landing-feature-card,
+body:not(.theme-dark) .card,
+body:not(.theme-dark) .modal-content,
+body:not(.theme-dark) .dropdown-menu,
+body:not(.theme-dark) .list-group-item,
+body:not(.theme-dark) .login-box,
+body:not(.theme-dark) .register-box,
+body:not(.theme-dark) .home-card,
+body:not(.theme-dark) .home-info-card,
+body:not(.theme-dark) .home-testimonial-card,
+body:not(.theme-dark) .home-filter-panel,
+body:not(.theme-dark) .home-contact-section,
+body:not(.theme-dark) .home-contact-form,
+body:not(.theme-dark) .home-inline-form,
+body:not(.theme-dark) .filtros-container,
+body:not(.theme-dark) .stories-hero,
+body:not(.theme-dark) .story-card,
+body:not(.theme-dark) .story-form-card,
+body:not(.theme-dark) .support-layout,
+body:not(.theme-dark) .support-form-card,
+body:not(.theme-dark) .support-note,
+body:not(.theme-dark) .collaborator-scope-card,
+body:not(.theme-dark) .collaborator-filter-panel,
+body:not(.theme-dark) .collaborator-tabs,
+body:not(.theme-dark) .collaborator-publication-row,
+body:not(.theme-dark) .mi-perfil-card,
+body:not(.theme-dark) .mi-perfil-summary,
+body:not(.theme-dark) .mi-grupo,
+body:not(.theme-dark) .profile-password-card,
+body:not(.theme-dark) .perfil-publico-container,
+body:not(.theme-dark) .perfil-publico-card,
+body:not(.theme-dark) .perfil-publication-summary,
+body:not(.theme-dark) .perfil-section,
+body:not(.theme-dark) .profile-publications-entry,
+body:not(.theme-dark) .my-publications-hero,
+body:not(.theme-dark) .my-publications-empty,
+body:not(.theme-dark) .my-publication-card,
+body:not(.theme-dark) .dashboard-card,
+body:not(.theme-dark) .dashboard-filter-panel,
+body:not(.theme-dark) .dashboard-section-nav,
+body:not(.theme-dark) .dashboard-activity,
+body:not(.theme-dark) .dashboard-profile,
+body:not(.theme-dark) .admin-user-row,
+body:not(.theme-dark) .admin-user-detail,
+body:not(.theme-dark) .admin-users-toolbar,
+body:not(.theme-dark) .admin-user-profile,
+body:not(.theme-dark) .admin-hogar-card,
+body:not(.theme-dark) .admin-hogar-metric,
+body:not(.theme-dark) .admin-hogar-id-list,
+body:not(.theme-dark) .admin-hogar-request-note,
+body:not(.theme-dark) .admin-hogar-admin,
+body:not(.theme-dark) .admin-hogar-row,
+body:not(.theme-dark) .admin-session-card,
+body:not(.theme-dark) .module-item,
+body:not(.theme-dark) .module-link,
+body:not(.theme-dark) .module-list,
+body:not(.theme-dark) .module-form,
+body:not(.theme-dark) .create-section,
+body:not(.theme-dark) .comprobante-preview,
+body:not(.theme-dark) .image-upload,
+body:not(.theme-dark) .image-preview,
+body:not(.theme-dark) .household-stat,
+body:not(.theme-dark) .household-panel,
+body:not(.theme-dark) .convivencia-main,
+body:not(.theme-dark) .convivencia-side,
+body:not(.theme-dark) .empty-household,
+body:not(.theme-dark) .demo-widget,
+body:not(.theme-dark) .roomie-card,
+body:not(.theme-dark) .hogar-card,
+body:not(.theme-dark) .hogar-current-panel,
+body:not(.theme-dark) .hogares-primary-panel,
+body:not(.theme-dark) .hogares-secondary-panel,
+body:not(.theme-dark) .hogares-path-card,
+body:not(.theme-dark) .hogares-loading-panel,
+body:not(.theme-dark) .settings-card,
+body:not(.theme-dark) .profile-action-panel,
+body:not(.theme-dark) .detalle-main,
+body:not(.theme-dark) .detalle-side,
+body:not(.theme-dark) .detalle-gallery,
+body:not(.theme-dark) .compatibility-form,
+body:not(.theme-dark) .compatibility-results,
+body:not(.theme-dark) .compatibility-match-card,
+body:not(.theme-dark) .notification-context-card,
+body:not(.theme-dark) .notification-interest-card,
+body:not(.theme-dark) .notification-review-panel,
+body:not(.theme-dark) .contact-info-panel,
+body:not(.theme-dark) .modal-card,
+body:not(.theme-dark) .member-picker {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--rg-border);
+  box-shadow: var(--rg-shadow-md);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-card,
+body:not(.theme-dark) .my-publication-card,
+body:not(.theme-dark) .dashboard-card,
+body:not(.theme-dark) .plan-card,
+body:not(.theme-dark) .module-link,
+body:not(.theme-dark) .compatibility-match,
+body:not(.theme-dark) .collaborator-publication-row {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+body:not(.theme-dark) .home-card:hover,
+body:not(.theme-dark) .my-publication-card:hover,
+body:not(.theme-dark) .dashboard-card:hover,
+body:not(.theme-dark) .plan-card:hover,
+body:not(.theme-dark) .module-link:hover,
+body:not(.theme-dark) .compatibility-match:hover,
+body:not(.theme-dark) .collaborator-publication-row:hover {
+  border-color: var(--rg-border-strong);
+  box-shadow: var(--rg-shadow-lg);
+  transform: translateY(-3px);
+}
+
+body:not(.theme-dark) .module-item,
+body:not(.theme-dark) .demo-widget,
+body:not(.theme-dark) .roomie-card,
+body:not(.theme-dark) .mi-roomie-card,
+body:not(.theme-dark) .compact-row,
+body:not(.theme-dark) .hogar-card-mine,
+body:not(.theme-dark) .hogar-meta-grid span,
+body:not(.theme-dark) .hogar-integrantes-admin-list,
+body:not(.theme-dark) .request-list,
+body:not(.theme-dark) .dashboard-activity .module-item,
+body:not(.theme-dark) .admin-hogar-row,
+body:not(.theme-dark) .admin-hogar-metric,
+body:not(.theme-dark) .detalle-info-grid span,
+body:not(.theme-dark) .compatibility-match {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+}
+
+body:not(.theme-dark) .demo-widget.highlight,
+body:not(.theme-dark) .hogares-path-primary,
+body:not(.theme-dark) .admin-hogar-card.has-requests,
+body:not(.theme-dark) .admin-hogar-metric.highlight,
+body:not(.theme-dark) .admin-hogar-request-note.pending,
+body:not(.theme-dark) .collaborator-moderation-note,
+body:not(.theme-dark) .form-helper,
+body:not(.theme-dark) .form-feedback,
+body:not(.theme-dark) .api-message,
+body:not(.theme-dark) .sin-resultados,
+body:not(.theme-dark) .empty-state {
+  background: linear-gradient(135deg, rgba(230, 244, 241, 0.88), rgba(255, 255, 255, 0.92));
+  border-color: var(--rg-border-strong);
+}
+
+body:not(.theme-dark) h1,
+body:not(.theme-dark) h2,
+body:not(.theme-dark) h3,
+body:not(.theme-dark) h4,
+body:not(.theme-dark) h5,
+body:not(.theme-dark) h6,
+body:not(.theme-dark) .section-heading-row h3,
+body:not(.theme-dark) .home-card-top h3,
+body:not(.theme-dark) .home-info-card h3,
+body:not(.theme-dark) .home-testimonial-card h3,
+body:not(.theme-dark) .my-publication-body h3,
+body:not(.theme-dark) .module-item h4,
+body:not(.theme-dark) .module-form h3,
+body:not(.theme-dark) .module-list h3,
+body:not(.theme-dark) .dashboard-card h5,
+body:not(.theme-dark) .admin-hogar-card h4,
+body:not(.theme-dark) .collaborator-publication-title h3 {
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) p,
+body:not(.theme-dark) small,
+body:not(.theme-dark) label,
+body:not(.theme-dark) .home-desc,
+body:not(.theme-dark) .home-ubicacion,
+body:not(.theme-dark) .home-results-count,
+body:not(.theme-dark) .module-item p,
+body:not(.theme-dark) .module-item span,
+body:not(.theme-dark) .section-heading-row p,
+body:not(.theme-dark) .dashboard-section-help,
+body:not(.theme-dark) .dashboard-activity .module-item p,
+body:not(.theme-dark) .dashboard-activity .module-item span,
+body:not(.theme-dark) .dashboard-activity .module-item small,
+body:not(.theme-dark) .collaborator-publication-main p,
+body:not(.theme-dark) .collaborator-publication-title small,
+body:not(.theme-dark) .admin-hogar-description,
+body:not(.theme-dark) .admin-user-summary small,
+body:not(.theme-dark) .form-helper {
+  color: var(--rg-text-muted);
+}
+
+body:not(.theme-dark) .home-section-heading span,
+body:not(.theme-dark) .home-contact-section span,
+body:not(.theme-dark) .demo-kicker,
+body:not(.theme-dark) .planes-kicker,
+body:not(.theme-dark) .compatibility-kicker,
+body:not(.theme-dark) .home-precio,
+body:not(.theme-dark) .dashboard-card h2,
+body:not(.theme-dark) .dashboard-card-action span,
+body:not(.theme-dark) .dashboard-brand,
+body:not(.theme-dark) .login-brand,
+body:not(.theme-dark) .register-brand,
+body:not(.theme-dark) .admin-user-summary strong,
+body:not(.theme-dark) .admin-hogar-metric strong,
+body:not(.theme-dark) .collaborator-publication-meta strong {
+  color: var(--rg-accent);
+}
+
+body:not(.theme-dark) .btn {
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+body:not(.theme-dark) .btn-success {
+  background: linear-gradient(135deg, var(--rg-accent) 0%, var(--rg-accent-strong) 100%);
+  border-color: var(--rg-accent-strong);
+  box-shadow: 0 10px 22px rgba(31, 122, 99, 0.18);
+  color: #ffffff;
+}
+
+body:not(.theme-dark) .btn-success:hover {
+  background: linear-gradient(135deg, #23866d 0%, #145545 100%);
+  box-shadow: 0 14px 28px rgba(31, 122, 99, 0.24);
+}
+
+body:not(.theme-dark) .btn-outline-success {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-accent);
+}
+
+body:not(.theme-dark) .btn-outline-success:hover {
+  background: var(--rg-accent-soft);
+  border-color: var(--rg-accent);
+  color: var(--rg-accent-strong);
+}
+
+body:not(.theme-dark) .btn-outline-dark {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: var(--rg-border);
+  color: var(--rg-text-soft);
+}
+
+body:not(.theme-dark) .btn-outline-dark:hover {
+  background: var(--rg-surface-3);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .btn-outline-danger {
+  background: #fff7f8;
+  border-color: rgba(200, 62, 77, 0.26);
+  color: var(--rg-danger);
+}
+
+body:not(.theme-dark) .btn-outline-danger:hover {
+  background: var(--rg-danger-soft);
+  border-color: rgba(200, 62, 77, 0.44);
+  color: #9f2f3c;
+}
+
+body:not(.theme-dark) input,
+body:not(.theme-dark) select,
+body:not(.theme-dark) textarea,
+body:not(.theme-dark) .form-control,
+body:not(.theme-dark) .form-select,
+body:not(.theme-dark) .search-input {
+  background: #fbfefd;
+  border-color: #d8e7e2;
+  border-radius: 12px;
+  color: var(--rg-text);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+body:not(.theme-dark) input::placeholder,
+body:not(.theme-dark) textarea::placeholder {
+  color: #8aa098;
+}
+
+body:not(.theme-dark) input:focus,
+body:not(.theme-dark) select:focus,
+body:not(.theme-dark) textarea:focus,
+body:not(.theme-dark) .form-control:focus,
+body:not(.theme-dark) .form-select:focus {
+  background: #ffffff;
+  border-color: var(--rg-accent);
+  box-shadow: 0 0 0 0.22rem rgba(31, 122, 99, 0.12);
+  color: var(--rg-text);
+}
+
+body:not(.theme-dark) .home-tag,
+body:not(.theme-dark) .perfil-tag,
+body:not(.theme-dark) .amenidad-tag,
+body:not(.theme-dark) .status-pill,
+body:not(.theme-dark) .plan-badge,
+body:not(.theme-dark) .plan-check,
+body:not(.theme-dark) .notification-context-grid span,
+body:not(.theme-dark) .collaborator-publication-meta span,
+body:not(.theme-dark) .admin-hogar-counts span,
+body:not(.theme-dark) .admin-hogar-integrantes span,
+body:not(.theme-dark) .match-tags em,
+body:not(.theme-dark) .compatibility-results-title strong {
+  background: var(--rg-accent-soft);
+  border: 1px solid rgba(31, 122, 99, 0.16);
+  color: var(--rg-accent);
+}
+
+body:not(.theme-dark) .status-pill.success,
+body:not(.theme-dark) .plan-badge-premium {
+  background: #e6f4f1;
+  border-color: #bfe3d8;
+  color: var(--rg-accent-strong);
+}
+
+body:not(.theme-dark) .status-pill.warning,
+body:not(.theme-dark) .plan-badge-hogar,
+body:not(.theme-dark) .match-tags-muted em {
+  background: var(--rg-warning-soft);
+  border-color: #efd995;
+  color: #8a6416;
+}
+
+body:not(.theme-dark) .notification-bell,
+body:not(.theme-dark) .theme-toggle {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--rg-border);
+  box-shadow: var(--rg-shadow-sm);
+  color: var(--rg-accent);
+}
+
+body:not(.theme-dark) .notification-bell:hover,
+body:not(.theme-dark) .notification-bell.has-notifications,
+body:not(.theme-dark) .theme-toggle:hover {
+  background: var(--rg-surface-3);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-accent-strong);
 }
 
 /* ---------- MODO OSCURO ---------- */

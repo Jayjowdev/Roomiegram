@@ -176,7 +176,6 @@ export default function ColaboradorPanel() {
       <header className="dashboard-header">
         <div className="dashboard-header-left">
           <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
-          <span className="dashboard-brand">RoomieGram</span>
         </div>
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>

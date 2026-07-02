@@ -11,6 +11,25 @@ export interface PlanInfo {
   beneficios: string[]
 }
 
+export interface PreferenciaPago {
+  initPoint: string
+  externalReference: string
+  publicKey: string
+}
+
+export interface ResultadoPago {
+  aprobado: boolean
+  estado: "aprobado" | "pendiente" | "rechazado"
+  mensaje: string
+}
+
+export interface EstadoDemoPagos {
+  habilitado: boolean
+  demoEnabled: boolean
+  entornoLocal: boolean
+  mensaje: string
+}
+
 export interface Suscripcion {
   id?: number
   usuarioId: number
@@ -33,6 +52,26 @@ export const PLAN_BADGE_CLASS: Record<PlanId, string> = {
   PREMIUM_HOGAR: "plan-badge-hogar",
 }
 
+export const PLAN_STATUS_TEXT: Record<PlanId, string> = {
+  GRATIS: "Acceso básico activo",
+  PREMIUM_INDIVIDUAL: "Premium Individual activo",
+  PREMIUM_HOGAR: "Premium Hogar activo",
+}
+
+export const PLAN_ACTIVE_BENEFIT: Record<PlanId, string> = {
+  GRATIS: "Puedes usar funciones básicas; los reportes del hogar y beneficios destacados quedan reservados para Premium.",
+  PREMIUM_INDIVIDUAL: "Beneficio activo: perfil, publicaciones y compatibilidad destacados para encontrar mejores matches.",
+  PREMIUM_HOGAR: "Beneficio activo: reportes del hogar, convivencia, gastos y comprobantes para organizar el grupo.",
+}
+
+export function isPremiumPlan(plan?: PlanId | null) {
+  return plan === "PREMIUM_INDIVIDUAL" || plan === "PREMIUM_HOGAR"
+}
+
+export function isPremiumHogar(plan?: PlanId | null) {
+  return plan === "PREMIUM_HOGAR"
+}
+
 const FALLBACK_PLANS: PlanInfo[] = [
   {
     id: "GRATIS",
@@ -45,15 +84,15 @@ const FALLBACK_PLANS: PlanInfo[] = [
     id: "PREMIUM_INDIVIDUAL",
     nombre: "Premium Individual",
     precio: 4990,
-    descripcion: "Plan demostrativo para quienes buscan roomie con más organización",
-    beneficios: ["Suscripción activa mensual", "Perfil y preferencias", "Solicitudes e invitaciones", "Avisos por correo"],
+    descripcion: "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
+    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Gestión de solicitudes e invitaciones", "Avisos por correo"],
   },
   {
     id: "PREMIUM_HOGAR",
     nombre: "Premium Hogar",
     precio: 8990,
-    descripcion: "Plan demostrativo para grupos que quieren convivir mejor",
-    beneficios: ["Panel de convivencia", "Tareas compartidas", "Gastos y comprobantes", "Solicitudes con correo"],
+    descripcion: "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
+    beneficios: ["Reportes avanzados del hogar", "Resumen de tareas, gastos y deuda", "Seguimiento de comprobantes", "Recomendaciones de convivencia"],
   },
 ]
 
@@ -102,6 +141,58 @@ export const membresiaService = {
         usuarioId,
         plan,
         renovacionAutomatica,
+      })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async crearPreferenciaPago(usuarioId: number, plan: PlanId): Promise<PreferenciaPago> {
+    try {
+      const { data } = await usuarioApi.post<PreferenciaPago>("/auth/membresias/crear-preferencia", {
+        usuarioId,
+        plan,
+      })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async verificarPago(externalReference: string, paymentId?: string | null): Promise<ResultadoPago> {
+    try {
+      const { data } = await usuarioApi.get<ResultadoPago>("/auth/membresias/verificar-pago", {
+        params: {
+          externalReference,
+          paymentId: paymentId || undefined,
+        },
+      })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async obtenerEstadoDemo(): Promise<EstadoDemoPagos> {
+    try {
+      const { data } = await usuarioApi.get<EstadoDemoPagos>("/auth/membresias/demo/estado")
+      return data
+    } catch {
+      return {
+        habilitado: false,
+        demoEnabled: false,
+        entornoLocal: false,
+        mensaje: "Modo demo no disponible. Revisa que el backend de usuario esté activo.",
+      }
+    }
+  },
+
+  async suscribirDemo(usuarioId: number, plan: PlanId): Promise<Suscripcion> {
+    try {
+      const { data } = await usuarioApi.post<Suscripcion>("/auth/membresias/demo/suscribir", {
+        usuarioId,
+        plan,
       })
       return data
     } catch (error) {

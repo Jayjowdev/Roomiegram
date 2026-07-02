@@ -8,7 +8,17 @@ import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
-import { membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
+import {
+  isPremiumHogar,
+  isPremiumPlan,
+  membresiaService,
+  PLAN_ACTIVE_BENEFIT,
+  PLAN_BADGE_CLASS,
+  PLAN_LABELS,
+  PLAN_STATUS_TEXT,
+  type PlanId,
+  type Suscripcion,
+} from "../services/membresiaService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -40,6 +50,7 @@ export default function MiPerfil() {
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
+  const planActual: PlanId = suscripcion?.plan ?? "GRATIS";
 
   useEffect(() => {
     let isMounted = true;
@@ -164,12 +175,9 @@ export default function MiPerfil() {
           <div>
             <span className="demo-kicker">Mi perfil</span>
             <h1>{user?.nombre || "Martina"}</h1>
-            {suscripcion && (
-              <span className={`plan-badge ${PLAN_BADGE_CLASS[suscripcion.plan as PlanId]}`}>
-                {PLAN_LABELS[suscripcion.plan as PlanId]}
-              </span>
-            )}
+            {suscripcion && <span className={`plan-badge ${PLAN_BADGE_CLASS[planActual]}`}>{PLAN_LABELS[planActual]}</span>}
             <p>{user?.descripcion || "Completa tu descripción para que otros usuarios conozcan tu estilo de convivencia."}</p>
+            <p>{PLAN_STATUS_TEXT[planActual]}. {PLAN_ACTIVE_BENEFIT[planActual]}</p>
             {user?.intereses?.length ? (
               <div className="home-tags">
                 {user.intereses.map((interes) => <span className="home-tag" key={interes}>{interes}</span>)}
@@ -205,8 +213,23 @@ export default function MiPerfil() {
             Mis hogares
           </button>
           <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/planes")}>
-            {suscripcion && suscripcion.plan !== "GRATIS" ? "Gestionar mi plan" : "Ver planes Premium"}
+            {isPremiumPlan(planActual) ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>
+          <p className="api-message mt-2">
+            {planActual === "GRATIS"
+              ? "Con el plan gratis no tienes reportes avanzados del hogar ni beneficios destacados de compatibilidad."
+              : PLAN_ACTIVE_BENEFIT[planActual]}
+          </p>
+          {planActual === "PREMIUM_INDIVIDUAL" && (
+            <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/compatibilidad")}>
+              Usar beneficio Premium Individual
+            </button>
+          )}
+          {isPremiumHogar(planActual) && (
+            <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/crear-publicacion")}>
+              Crear publicación para mi hogar
+            </button>
+          )}
           <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />
 
         </aside>

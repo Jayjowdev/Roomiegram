@@ -5,9 +5,10 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
-import type { CuentaDeudor, HogarCuenta } from "../types/Backend";
+import type { Comprobante, CuentaDeudor, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
@@ -33,11 +34,18 @@ function buildDeudores(ids: number[], monto: number): CuentaDeudor[] {
   return ids.map((usuarioId) => ({ usuarioId, montoAdeudado }));
 }
 
+function getEstadoRespaldo(monto: number, respaldado: number) {
+  if (respaldado <= 0) return "Pendiente";
+  if (respaldado < monto) return "Parcial";
+  return "Respaldado";
+}
+
 export default function Gastos() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [gastos, setGastos] = useState<HogarCuenta[]>([]);
+  const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
   const [deudoresIds, setDeudoresIds] = useState<number[]>([]);
@@ -46,12 +54,13 @@ export default function Gastos() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.allSettled([hogarService.listar(), gastoService.listar()])
-      .then(([hogaresResult, gastosResult]) => {
+    Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar()])
+      .then(([hogaresResult, gastosResult, comprobantesResult]) => {
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setGastos(gastosResult.status === "fulfilled" ? gastosResult.value : []);
+        setComprobantes(comprobantesResult.status === "fulfilled" ? comprobantesResult.value : []);
 
-        if (hogaresResult.status === "rejected" || gastosResult.status === "rejected") {
+        if (hogaresResult.status === "rejected" || gastosResult.status === "rejected" || comprobantesResult.status === "rejected") {
           setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios estén activos.");
         }
       })
@@ -71,6 +80,19 @@ export default function Gastos() {
     if (!hogarActual?.hogarCuentaIds?.length) return [];
     return gastos.filter((gasto) => gasto.id && hogarActual.hogarCuentaIds.includes(gasto.id));
   }, [gastos, hogarActual]);
+
+  const gastoIds = useMemo(() => gastosDelHogar.map((gasto) => gasto.id).filter((id): id is number => !!id), [gastosDelHogar]);
+
+  const comprobantesDelHogar = useMemo(() => {
+    return comprobantes.filter((comprobante) => gastoIds.includes(comprobante.hogarCuentaId));
+  }, [comprobantes, gastoIds]);
+
+  const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
+  const totalRespaldado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const deudaUsuario = gastosDelHogar.reduce((total, gasto) => {
+    const deuda = gasto.deudores?.find((deudor) => deudor.usuarioId === user?.id);
+    return total + Number(deuda?.montoAdeudado || 0);
+  }, 0);
 
   const canManage = isHogarAdmin(hogarActual, user?.id);
 
@@ -152,7 +174,27 @@ export default function Gastos() {
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
       ) : (
-        <section className="module-layout">
+        <>
+          <section className="household-summary">
+            <article className="household-stat">
+              <span>Total del hogar</span>
+              <strong>{formatCurrency(totalGastos)}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Tu deuda registrada</span>
+              <strong>{formatCurrency(deudaUsuario)}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Comprobantes asociados</span>
+              <strong>{comprobantesDelHogar.length}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Respaldo registrado</span>
+              <strong>{formatCurrency(totalRespaldado)}</strong>
+            </article>
+          </section>
+
+          <section className="module-layout">
           <form className="module-form" onSubmit={handleSubmit}>
             <h3>Nuevo gasto</h3>
             {!canManage && <p className="form-helper">Solo el administrador del hogar puede registrar gastos asociados al grupo.</p>}
@@ -179,20 +221,33 @@ export default function Gastos() {
             <h3>Gastos de {hogarActual.nombre}</h3>
             {gastosDelHogar.length === 0 ? (
               <div className="sin-resultados"><p>No hay gastos asociados a este hogar.</p></div>
-            ) : gastosDelHogar.map((gasto) => (
-              <article className="module-item" key={gasto.id}>
-                <h4>{gasto.descripcion}</h4>
-                <p>{formatCurrency(gasto.monto)}</p>
-                <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
-                <div className="item-actions">
-                  <button className="btn btn-outline-success btn-sm" onClick={() => navigate(`/comprobantes?gasto=${gasto.id}`)}>
-                    Subir comprobante
-                  </button>
-                </div>
-              </article>
-            ))}
+            ) : gastosDelHogar.map((gasto) => {
+              const respaldado = comprobantesDelHogar
+                .filter((comprobante) => comprobante.hogarCuentaId === gasto.id)
+                .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+              const faltante = Math.max(0, Number(gasto.monto || 0) - respaldado);
+              const estado = getEstadoRespaldo(Number(gasto.monto || 0), respaldado);
+
+              return (
+                <article className="module-item" key={gasto.id}>
+                  <div className="section-heading-row">
+                    <h4>{gasto.descripcion}</h4>
+                    <span className={estado === "Respaldado" ? "status-pill success" : "status-pill"}>{estado}</span>
+                  </div>
+                  <p>{formatCurrency(gasto.monto)}</p>
+                  <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
+                  <span>Respaldado: {formatCurrency(respaldado)} · Faltante: {formatCurrency(faltante)}</span>
+                  <div className="item-actions">
+                    <button className="btn btn-outline-success btn-sm" onClick={() => navigate(`/comprobantes?gasto=${gasto.id}`)}>
+                      Subir comprobante
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        </section>
+          </section>
+        </>
       )}
     </div>
   );

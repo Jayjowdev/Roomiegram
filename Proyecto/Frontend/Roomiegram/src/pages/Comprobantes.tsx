@@ -27,6 +27,12 @@ function formatDate(value?: string) {
   return value ? new Date(value).toLocaleString("es-CL") : "Sin fecha";
 }
 
+function getEstadoRespaldo(monto: number, respaldado: number) {
+  if (respaldado <= 0) return "Pendiente";
+  if (respaldado < monto) return "Parcial";
+  return "Respaldado";
+}
+
 function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -93,6 +99,12 @@ export default function Comprobantes() {
   const canAssociateComprobante = isHogarAdmin(hogarActual, user?.id);
   const selectedGasto = gastosDelHogar.find((gasto) => String(gasto.id) === hogarCuentaId);
   const totalPagado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const comprobantesDelGastoSeleccionado = selectedGasto
+    ? comprobantesDelHogar.filter((comprobante) => comprobante.hogarCuentaId === selectedGasto.id)
+    : [];
+  const totalPagadoSeleccionado = comprobantesDelGastoSeleccionado.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const faltanteSeleccionado = selectedGasto ? Math.max(0, Number(selectedGasto.monto || 0) - totalPagadoSeleccionado) : 0;
+  const estadoSeleccionado = selectedGasto ? getEstadoRespaldo(Number(selectedGasto.monto || 0), totalPagadoSeleccionado) : "";
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -226,9 +238,11 @@ export default function Comprobantes() {
                 ))}
               </select>
               {selectedGasto && (
-                <p className="form-helper">
-                  Gasto seleccionado: {selectedGasto.descripcion} por {formatCurrency(selectedGasto.monto)}
-                </p>
+                <div className="form-helper">
+                  <strong>Resumen del gasto seleccionado</strong>
+                  <span>{selectedGasto.descripcion} · {estadoSeleccionado}</span>
+                  <span>Total: {formatCurrency(selectedGasto.monto)} · Pagado: {formatCurrency(totalPagadoSeleccionado)} · Faltante: {formatCurrency(faltanteSeleccionado)}</span>
+                </div>
               )}
               <input className="form-control" placeholder="Monto pagado" type="number" min="1" value={montoPagado} onChange={(e) => setMontoPagado(e.target.value)} required />
               <label className="image-upload">

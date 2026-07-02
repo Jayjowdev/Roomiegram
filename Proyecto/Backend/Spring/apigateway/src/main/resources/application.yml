@@ -45,6 +45,16 @@ spring:
                     name: usuario-cb
                     fallbackUri: forward:/fallback
 
+            - id: usuario-webhook-service
+              uri: http://${USUARIO_HOST:usuario}:8088
+              predicates:
+                - Path=/webhooks/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: usuario-cb
+                    fallbackUri: forward:/fallback
+
             # ── publicacion ───────────────────────────────────────────
             - id: publicacion-service
               uri: http://${PUBLICACION_HOST:publicacion}:8086

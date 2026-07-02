@@ -6,6 +6,7 @@ import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { isPremiumHogar, membresiaService, PLAN_BADGE_CLASS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
 import { usuarioService } from "../services/usuarioService";
@@ -20,6 +21,12 @@ type LoadState = {
   gastos: HogarCuenta[];
   notificaciones: Notificacion[];
   usuarios: UsuarioResumen[];
+};
+
+type RecomendacionHogar = {
+  titulo: string;
+  detalle: string;
+  ruta?: string;
 };
 
 const emptyState: LoadState = {
@@ -64,6 +71,7 @@ export default function Convivencia() {
   const [data, setData] = useState<LoadState>(emptyState);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,7 +82,8 @@ export default function Convivencia() {
       gastoService.listar(),
       notificacionService.listar(),
       usuarioService.listar(),
-    ]).then(([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult]) => {
+      user?.id ? membresiaService.obtenerActiva(user.id) : Promise.resolve(null),
+    ]).then(([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult, suscripcionResult]) => {
       if (!isMounted) return;
 
       const partialData: LoadState = {
@@ -87,6 +96,9 @@ export default function Convivencia() {
       };
 
       setData(partialData);
+      if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
+        setSuscripcion(suscripcionResult.value as Suscripcion);
+      }
       setIsLoading(false);
 
       if ([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult].some((result) => result.status === "rejected")) {
@@ -99,7 +111,7 @@ export default function Convivencia() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   const hogarActual = useMemo(() => {
     if (!user?.id) return undefined;
@@ -144,12 +156,63 @@ export default function Convivencia() {
     });
   }, [data.notificaciones, hogarActual, user?.id]);
 
+  const tareasActivas = tareasDelHogar.filter((tarea) => tarea.completada !== true).length;
   const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
   const deudaUsuario = gastosDelHogar.reduce((total, gasto) => {
     const deuda = gasto.deudores?.find((deudor) => deudor.usuarioId === user?.id);
     return total + Number(deuda?.montoAdeudado || 0);
   }, 0);
   const pendientes = notificacionesDelHogar.filter((notificacion) => notificacion.estado === "PENDIENTE").length;
+  const comprobantesRegistrados = hogarActual?.comprobanteIds?.length || 0;
+  const planActual: PlanId = suscripcion?.plan ?? "GRATIS";
+  const tienePremiumHogar = isPremiumHogar(planActual);
+
+  const proximasTareas = useMemo(() => {
+    return tareasDelHogar
+      .filter((tarea) => tarea.completada !== true)
+      .sort((a, b) => new Date(a.fecha || "").getTime() - new Date(b.fecha || "").getTime())
+      .slice(0, 3);
+  }, [tareasDelHogar]);
+
+  const avisosPendientes = useMemo(() => {
+    return notificacionesDelHogar
+      .filter((notificacion) => notificacion.estado === "PENDIENTE")
+      .slice(0, 3);
+  }, [notificacionesDelHogar]);
+
+  const recomendaciones = useMemo(() => {
+    const items: RecomendacionHogar[] = [];
+
+    if (deudaUsuario > 0) {
+      items.push({
+        titulo: "Revisar pagos pendientes",
+        detalle: "Hay deuda registrada en el hogar.",
+        ruta: "/gastos",
+      });
+    }
+    if (comprobantesRegistrados === 0) {
+      items.push({
+        titulo: "Subir comprobantes para respaldar gastos",
+        detalle: "Todavía no hay respaldos asociados al hogar.",
+        ruta: "/comprobantes",
+      });
+    }
+    if (tareasActivas === 0) {
+      items.push({
+        titulo: "Asignar tareas para organizar la convivencia",
+        detalle: "Crear tareas ayuda a repartir responsabilidades.",
+        ruta: "/tareas",
+      });
+    }
+    if (pendientes === 0) {
+      items.push({
+        titulo: "No hay avisos pendientes",
+        detalle: "El hogar no tiene notificaciones pendientes por revisar.",
+      });
+    }
+
+    return items;
+  }, [comprobantesRegistrados, deudaUsuario, pendientes, tareasActivas]);
 
   const usuariosById = useMemo(() => {
     return new Map(data.usuarios.map((usuario) => [usuario.id, usuario]));
@@ -206,7 +269,7 @@ export default function Convivencia() {
             </article>
             <article className="household-stat">
               <span>Tareas activas</span>
-              <strong>{tareasDelHogar.length}</strong>
+              <strong>{tareasActivas}</strong>
             </article>
             <article className="household-stat">
               <span>Gastos del hogar</span>
@@ -220,6 +283,63 @@ export default function Convivencia() {
               <span>Avisos pendientes</span>
               <strong>{pendientes}</strong>
             </article>
+          </section>
+
+          <section className="dashboard-content">
+            <div className="dashboard-activity">
+              <div className="section-heading-row">
+                <div>
+                  <h3>Reportes del hogar</h3>
+                  <p>Resumen avanzado de convivencia, gastos, comprobantes y avisos.</p>
+                </div>
+                <span className={`plan-badge ${PLAN_BADGE_CLASS[tienePremiumHogar ? "PREMIUM_HOGAR" : planActual]}`}>
+                  {tienePremiumHogar ? "Premium Hogar activo" : "Premium Hogar"}
+                </span>
+              </div>
+
+              {tienePremiumHogar ? (
+                <>
+                  <p>
+                    Tu hogar tiene {integrantes.length} integrante(s), {tareasActivas} tarea(s) activa(s),{" "}
+                    {formatCurrency(totalGastos)} en gastos y {comprobantesRegistrados} comprobante(s) registrado(s).
+                  </p>
+                  <div className="module-grid">
+                    {recomendaciones.map((recomendacion) => (
+                      recomendacion.ruta ? (
+                        <button className="module-link" key={recomendacion.titulo} onClick={() => navigate(recomendacion.ruta!)}>
+                          <strong>{recomendacion.titulo}</strong>
+                          <span>{recomendacion.detalle}</span>
+                        </button>
+                      ) : (
+                        <article className="module-link" key={recomendacion.titulo}>
+                          <strong>{recomendacion.titulo}</strong>
+                          <span>{recomendacion.detalle}</span>
+                        </article>
+                      )
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="sin-resultados">
+                  <h4>Reportes avanzados bloqueados</h4>
+                  <p>
+                    Los reportes del hogar son un beneficio de Premium Hogar. Puedes seguir usando integrantes,
+                    tareas, gastos, comprobantes y avisos con normalidad.
+                  </p>
+                  <button className="btn btn-success" onClick={() => navigate("/planes")}>
+                    Mejorar a Premium Hogar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="dashboard-profile">
+              <h4>Indicadores incluidos</h4>
+              <p><strong>Integrantes:</strong> {integrantes.length}</p>
+              <p><strong>Tareas activas:</strong> {tareasActivas}</p>
+              <p><strong>Comprobantes:</strong> {comprobantesRegistrados}</p>
+              <p><strong>Avisos pendientes:</strong> {pendientes}</p>
+            </div>
           </section>
 
           <section className="convivencia-grid">
@@ -277,8 +397,8 @@ export default function Convivencia() {
                 <h3>Próximas tareas</h3>
                 <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/tareas")}>Gestionar</button>
               </div>
-              {tareasDelHogar.length ? (
-                tareasDelHogar.slice(0, 3).map((tarea) => (
+              {proximasTareas.length ? (
+                proximasTareas.map((tarea) => (
                   <div className="compact-row" key={tarea.id}>
                     <div>
                       <strong>{tarea.titulo}</strong>
@@ -287,7 +407,7 @@ export default function Convivencia() {
                   </div>
                 ))
               ) : (
-                <p className="empty-state">Todavía no hay tareas asociadas a este hogar.</p>
+                <p className="empty-state">Todavía no hay tareas activas asociadas a este hogar.</p>
               )}
             </article>
 
@@ -315,8 +435,8 @@ export default function Convivencia() {
                 <h3>Avisos del grupo</h3>
                 <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver avisos</button>
               </div>
-              {notificacionesDelHogar.length ? (
-                notificacionesDelHogar.slice(0, 3).map((notificacion) => (
+              {avisosPendientes.length ? (
+                avisosPendientes.map((notificacion) => (
                   <div className="compact-row" key={notificacion.id || notificacion.titulo}>
                     <div>
                       <strong>{notificacion.titulo}</strong>
@@ -325,7 +445,7 @@ export default function Convivencia() {
                   </div>
                 ))
               ) : (
-                <p className="empty-state">No hay notificaciones para este hogar.</p>
+                <p className="empty-state">No hay avisos pendientes para este hogar.</p>
               )}
             </article>
           </section>

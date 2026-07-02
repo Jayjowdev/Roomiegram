@@ -40,7 +40,7 @@ public class MembresiaService {
     public Suscripcion suscribir(Long usuarioId, Plan plan, boolean renovacionAutomatica) {
         validarUsuario(usuarioId);
         if (plan == null) {
-            throw new IllegalArgumentException("Plan no valido");
+            throw new IllegalArgumentException("Plan no válido");
         }
 
         suscripcionRepository.findTopByUsuarioIdOrderByFechaInicioDesc(usuarioId)
@@ -82,33 +82,31 @@ public class MembresiaService {
                         "descripcion", "Para empezar a encontrar tu roomie ideal",
                         "beneficios", List.of(
                                 "Crear publicaciones y perfiles roomie",
-                                "Busqueda por tipo y ubicacion",
+                                "Búsqueda por tipo y ubicación",
                                 "Unirse o crear un hogar compartido",
-                                "Gestion basica de tareas y gastos",
+                                "Gestión básica de tareas y gastos",
                                 "Notificaciones internas y por correo disponibles")),
                 Map.of(
                         "id", "PREMIUM_INDIVIDUAL",
                         "nombre", "Premium Individual",
                         "precio", 4990,
-                        "descripcion", "Plan demostrativo para quienes buscan roomie con mas organizacion",
+                        "descripcion", "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
                         "beneficios", List.of(
-                                "Suscripcion activa con vigencia mensual",
-                                "Gestion de perfil y preferencias",
+                                "Perfil y publicaciones con estado Premium",
+                                "Compatibilidad y preferencias destacadas",
                                 "Acceso a solicitudes e invitaciones del hogar",
-                                "Avisos por correo para solicitudes y tareas",
-                                "Historial de suscripciones")),
+                                "Avisos por correo para solicitudes y tareas")),
                 Map.of(
                         "id", "PREMIUM_HOGAR",
                         "nombre", "Premium Hogar",
                         "precio", 8990,
-                        "descripcion", "Plan demostrativo para grupos que quieren convivir mejor",
+                        "descripcion", "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
                         "beneficios", List.of(
                                 "Todo lo de Premium Individual",
-                                "Panel de convivencia del hogar",
-                                "Organizacion de tareas compartidas",
-                                "Gestion de gastos y comprobantes",
-                                "Solicitudes de ingreso con aviso por correo",
-                                "Suscripcion de hogar con vigencia mensual")));
+                                "Reportes avanzados del hogar",
+                                "Resumen de tareas, gastos y deuda",
+                                "Seguimiento de comprobantes",
+                                "Recomendaciones de convivencia")));
     }
 
     private void validarUsuario(Long usuarioId) {

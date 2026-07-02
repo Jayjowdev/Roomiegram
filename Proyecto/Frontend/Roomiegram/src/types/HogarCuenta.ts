@@ -1,17 +1,11 @@
-export type CuentaDeudor = {
-  id: number
-  usuarioId: number
-  montoAdeudado: number
-}
-
-export type HogarCuenta = {
-  id: number
-  descripcion: string
-  monto: number
-  deudores: CuentaDeudor[]
-}
+export type { CategoriaGasto, CuentaDeudor, EstadoGasto, HogarCuenta } from "./Backend"
 
 export type CreateHogarCuentaPayload = {
   descripcion: string
   monto: number
+  deudores?: import("./Backend").CuentaDeudor[]
+  categoria?: import("./Backend").CategoriaGasto
+  periodo?: string
+  fechaVencimiento?: string
+  estado?: import("./Backend").EstadoGasto
 }

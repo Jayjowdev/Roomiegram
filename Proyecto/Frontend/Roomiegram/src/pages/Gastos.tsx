@@ -8,8 +8,25 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
-import type { Comprobante, CuentaDeudor, HogarCuenta } from "../types/Backend";
+import type { CategoriaGasto, Comprobante, CuentaDeudor, EstadoGasto, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+
+const CATEGORIAS_GASTO: Array<{ id: CategoriaGasto; label: string }> = [
+  { id: "ARRIENDO", label: "Arriendo" },
+  { id: "LUZ", label: "Luz" },
+  { id: "AGUA", label: "Agua" },
+  { id: "GAS", label: "Gas" },
+  { id: "INTERNET", label: "Internet" },
+  { id: "GASTO_COMUN", label: "Gasto común" },
+  { id: "COMIDA", label: "Comida" },
+  { id: "OTRO", label: "Otro" },
+];
+
+const ESTADO_LABELS: Record<EstadoGasto, string> = {
+  PENDIENTE: "Pendiente",
+  PARCIAL: "Parcial",
+  RESPALDADO: "Respaldado",
+};
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
   if (!userId) return false;
@@ -29,15 +46,30 @@ function formatCurrency(value?: number) {
   return `$${Math.round(Number(value || 0)).toLocaleString("es-CL", { maximumFractionDigits: 0 })}`;
 }
 
+function formatDate(value?: string) {
+  if (!value) return "Sin vencimiento";
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function getCurrentPeriod() {
+  const formatter = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric" });
+  const value = formatter.format(new Date());
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getCategoriaLabel(categoria?: CategoriaGasto) {
+  return CATEGORIAS_GASTO.find((item) => item.id === (categoria || "OTRO"))?.label || "Otro";
+}
+
 function buildDeudores(ids: number[], monto: number): CuentaDeudor[] {
   const montoAdeudado = ids.length ? Math.round(monto / ids.length) : 0;
   return ids.map((usuarioId) => ({ usuarioId, montoAdeudado }));
 }
 
-function getEstadoRespaldo(monto: number, respaldado: number) {
-  if (respaldado <= 0) return "Pendiente";
-  if (respaldado < monto) return "Parcial";
-  return "Respaldado";
+function getEstadoRespaldo(monto: number, respaldado: number): EstadoGasto {
+  if (respaldado <= 0) return "PENDIENTE";
+  if (respaldado < monto) return "PARCIAL";
+  return "RESPALDADO";
 }
 
 export default function Gastos() {
@@ -46,7 +78,10 @@ export default function Gastos() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [gastos, setGastos] = useState<HogarCuenta[]>([]);
   const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
+  const [categoria, setCategoria] = useState<CategoriaGasto>("ARRIENDO");
   const [descripcion, setDescripcion] = useState("");
+  const [periodo, setPeriodo] = useState(getCurrentPeriod());
+  const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [monto, setMonto] = useState("");
   const [deudoresIds, setDeudoresIds] = useState<number[]>([]);
   const [message, setMessage] = useState("");
@@ -73,7 +108,9 @@ export default function Gastos() {
 
   const integrantes = useMemo(() => {
     if (!hogarActual) return [];
-    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])];
+    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])].filter(
+      (id): id is number => typeof id === "number" && id > 0
+    );
   }, [hogarActual]);
 
   const gastosDelHogar = useMemo(() => {
@@ -89,6 +126,12 @@ export default function Gastos() {
 
   const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
   const totalRespaldado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const gastosPendientes = gastosDelHogar.filter((gasto) => {
+    const respaldado = comprobantesDelHogar
+      .filter((comprobante) => comprobante.hogarCuentaId === gasto.id)
+      .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+    return getEstadoRespaldo(Number(gasto.monto || 0), respaldado) !== "RESPALDADO";
+  }).length;
   const deudaUsuario = gastosDelHogar.reduce((total, gasto) => {
     const deuda = gasto.deudores?.find((deudor) => deudor.usuarioId === user?.id);
     return total + Number(deuda?.montoAdeudado || 0);
@@ -125,6 +168,10 @@ export default function Gastos() {
         descripcion: descripcion.trim(),
         monto: montoNumerico,
         deudores: buildDeudores(deudoresIds, montoNumerico),
+        categoria,
+        periodo: periodo.trim(),
+        fechaVencimiento: fechaVencimiento || undefined,
+        estado: "PENDIENTE",
       });
 
       const hogarActualizado = await hogarService.agregarCuenta(hogarActual.id, {
@@ -134,7 +181,10 @@ export default function Gastos() {
 
       setGastos((current) => [...current, creado]);
       setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
+      setCategoria("ARRIENDO");
       setDescripcion("");
+      setPeriodo(getCurrentPeriod());
+      setFechaVencimiento("");
       setMonto("");
       setDeudoresIds([]);
       setMessage("Gasto creado y asociado al hogar.");
@@ -159,8 +209,8 @@ export default function Gastos() {
       </header>
 
       <section className="module-title">
-        <h1>Gastos del hogar</h1>
-        <p>Registra cuentas compartidas y divídelas entre integrantes del grupo roomie.</p>
+        <h1>Gastos comunes del hogar</h1>
+        <p>Organiza arriendo, servicios, comida y otros pagos compartidos entre integrantes del grupo roomie.</p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -177,7 +227,7 @@ export default function Gastos() {
         <>
           <section className="household-summary">
             <article className="household-stat">
-              <span>Total del hogar</span>
+              <span>Total del periodo</span>
               <strong>{formatCurrency(totalGastos)}</strong>
             </article>
             <article className="household-stat">
@@ -185,8 +235,8 @@ export default function Gastos() {
               <strong>{formatCurrency(deudaUsuario)}</strong>
             </article>
             <article className="household-stat">
-              <span>Comprobantes asociados</span>
-              <strong>{comprobantesDelHogar.length}</strong>
+              <span>Gastos por resolver</span>
+              <strong>{gastosPendientes}</strong>
             </article>
             <article className="household-stat">
               <span>Respaldo registrado</span>
@@ -198,7 +248,14 @@ export default function Gastos() {
           <form className="module-form" onSubmit={handleSubmit}>
             <h3>Nuevo gasto</h3>
             {!canManage && <p className="form-helper">Solo el administrador del hogar puede registrar gastos asociados al grupo.</p>}
+            <select className="form-control" value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaGasto)} disabled={!canManage}>
+              {CATEGORIAS_GASTO.map((item) => (
+                <option key={item.id} value={item.id}>{item.label}</option>
+              ))}
+            </select>
             <input className="form-control" placeholder="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required disabled={!canManage} />
+            <input className="form-control" placeholder="Periodo, por ejemplo Julio 2026" value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!canManage} />
+            <input className="form-control" type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} disabled={!canManage} />
             <input className="form-control" placeholder="Monto" type="number" min="1" value={monto} onChange={(e) => setMonto(e.target.value)} required disabled={!canManage} />
 
             <div className="member-picker">
@@ -227,19 +284,31 @@ export default function Gastos() {
                 .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
               const faltante = Math.max(0, Number(gasto.monto || 0) - respaldado);
               const estado = getEstadoRespaldo(Number(gasto.monto || 0), respaldado);
+              const deudaActual = gasto.deudores?.find((deudor) => deudor.usuarioId === user?.id)?.montoAdeudado || 0;
+              const comprobantesAsociados = comprobantesDelHogar.filter((comprobante) => comprobante.hogarCuentaId === gasto.id).length;
+              const comprobanteActionLabel =
+                estado === "RESPALDADO"
+                  ? "Ver comprobantes"
+                  : estado === "PARCIAL"
+                    ? "Ver avance y agregar comprobante"
+                    : "Subir comprobante";
 
               return (
                 <article className="module-item" key={gasto.id}>
                   <div className="section-heading-row">
-                    <h4>{gasto.descripcion}</h4>
-                    <span className={estado === "Respaldado" ? "status-pill success" : "status-pill"}>{estado}</span>
+                    <h4>{getCategoriaLabel(gasto.categoria)} · {gasto.descripcion}</h4>
+                    <span className={estado === "RESPALDADO" ? "status-pill success" : estado === "PARCIAL" ? "status-pill warning" : "status-pill"}>
+                      {ESTADO_LABELS[estado]}
+                    </span>
                   </div>
                   <p>{formatCurrency(gasto.monto)}</p>
-                  <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
+                  <span>{gasto.periodo || "Sin periodo"} · vence {formatDate(gasto.fechaVencimiento)}</span>
+                  <span>{gasto.deudores?.length || 0} integrante(s){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
+                  <span>Tu deuda: {formatCurrency(deudaActual)} · Comprobantes: {comprobantesAsociados}</span>
                   <span>Respaldado: {formatCurrency(respaldado)} · Faltante: {formatCurrency(faltante)}</span>
                   <div className="item-actions">
                     <button className="btn btn-outline-success btn-sm" onClick={() => navigate(`/comprobantes?gasto=${gasto.id}`)}>
-                      Subir comprobante
+                      {comprobanteActionLabel}
                     </button>
                   </div>
                 </article>

@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { comprobanteService } from "../services/comprobanteService";
+import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
-import type { Notificacion } from "../types/Backend";
+import type { Comprobante, HogarCuenta, Notificacion } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -36,6 +38,7 @@ function formatLabel(value: string) {
   if (value === "INTERES_ROOMIE") return "Interés roomie";
   if (value === "INVITACION_HOGAR") return "Invitación hogar";
   if (value === "TAREA_HOGAR") return "Tarea hogar";
+  if (value === "CUENTA_HOGAR") return "Cuenta del hogar";
 
   return value
     .toLowerCase()
@@ -54,6 +57,8 @@ export default function Notificaciones() {
   const { user } = useAuth();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
+  const [gastos, setGastos] = useState<HogarCuenta[]>([]);
+  const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [filters, setFilters] = useState(filterDefaults);
@@ -64,16 +69,20 @@ export default function Notificaciones() {
     Promise.allSettled([
       notificacionService.listar(),
       hogarService.listar(),
+      gastoService.listar(),
+      comprobanteService.listar(),
       usuarioService.listar(),
       publicacionService.listar(),
     ])
-      .then(([notificacionesResult, hogaresResult, usuariosResult, publicacionesResult]) => {
+      .then(([notificacionesResult, hogaresResult, gastosResult, comprobantesResult, usuariosResult, publicacionesResult]) => {
         if (notificacionesResult.status === "fulfilled") setNotificaciones(notificacionesResult.value);
         if (hogaresResult.status === "fulfilled") setHogares(hogaresResult.value);
+        if (gastosResult.status === "fulfilled") setGastos(gastosResult.value);
+        if (comprobantesResult.status === "fulfilled") setComprobantes(comprobantesResult.value);
         if (usuariosResult.status === "fulfilled") setUsuarios(usuariosResult.value);
         if (publicacionesResult.status === "fulfilled") setPublicaciones(publicacionesResult.value);
         setMessage("");
-        if ([notificacionesResult, hogaresResult, usuariosResult, publicacionesResult].some((result) => result.status === "rejected")) {
+        if ([notificacionesResult, hogaresResult, gastosResult, comprobantesResult, usuariosResult, publicacionesResult].some((result) => result.status === "rejected")) {
           setMessage("Algunos datos de contexto no se pudieron cargar.");
         }
       })
@@ -97,6 +106,12 @@ export default function Notificaciones() {
     );
   }, [misNotificaciones]);
 
+  const cuentasPendientes = useMemo(() => {
+    return misNotificaciones.filter((notificacion) =>
+      notificacion.tipo === "CUENTA_HOGAR" && notificacion.estado === "PENDIENTE",
+    );
+  }, [misNotificaciones]);
+
   const interesesPendientes = useMemo(() => {
     return misNotificaciones.filter((notificacion) =>
       notificacion.tipo === "INTERES_ROOMIE" && notificacion.estado === "PENDIENTE",
@@ -115,6 +130,14 @@ export default function Notificaciones() {
     const publicacionId = hogar?.publicacionIds?.[0];
     if (!publicacionId) return undefined;
     return publicaciones.find((publicacion) => publicacion.id === publicacionId);
+  };
+
+  const getComprobante = (notificacion: Notificacion) => {
+    return comprobantes.find((comprobante) => comprobante.id === notificacion.referenciaId);
+  };
+
+  const getGastoComprobante = (comprobante?: Comprobante) => {
+    return gastos.find((gasto) => gasto.id === comprobante?.hogarCuentaId);
   };
 
   const esAdminDelHogar = (hogar?: Hogar) => {
@@ -186,7 +209,7 @@ export default function Notificaciones() {
     return misNotificaciones.filter((notificacion) => {
       const yaEstaDestacada =
         notificacion.estado === "PENDIENTE" &&
-        (notificacion.tipo === "INVITACION_HOGAR" || notificacion.tipo === "TAREA_HOGAR" || notificacion.tipo === "INTERES_ROOMIE");
+        (notificacion.tipo === "INVITACION_HOGAR" || notificacion.tipo === "TAREA_HOGAR" || notificacion.tipo === "INTERES_ROOMIE" || notificacion.tipo === "CUENTA_HOGAR");
 
       if (yaEstaDestacada) return false;
 
@@ -350,6 +373,43 @@ export default function Notificaciones() {
               </div>
             </article>
           ))
+        )}
+      </section>
+
+      <section className="module-list mb-4">
+        <h3>Comprobantes y cuentas del hogar</h3>
+        {cuentasPendientes.length === 0 ? (
+          <div className="sin-resultados"><p>No tienes comprobantes nuevos por revisar.</p></div>
+        ) : (
+          cuentasPendientes.map((notificacion) => {
+            const comprobante = getComprobante(notificacion);
+            const gasto = getGastoComprobante(comprobante);
+
+            return (
+              <article className="module-item notification-highlight" key={notificacion.id || notificacion.titulo}>
+                <h4>{notificacion.titulo}</h4>
+                <p>{notificacion.mensaje}</p>
+                <span>
+                  {gasto?.descripcion || "Gasto del hogar"} - {comprobante?.nombreArchivo || `Comprobante #${notificacion.referenciaId || "sin referencia"}`} - {formatDate(notificacion.fechaCreacion)}
+                </span>
+                <div className="dashboard-actions mt-3">
+                  <button
+                    className="btn btn-success btn-sm"
+                    onClick={() => navigate(`/comprobantes${notificacion.referenciaId ? `?comprobante=${notificacion.referenciaId}` : ""}`)}
+                  >
+                    Ver comprobante
+                  </button>
+                  <button
+                    className="btn btn-outline-success btn-sm"
+                    disabled={processingId === notificacion.id}
+                    onClick={() => descartarNotificacion(notificacion)}
+                  >
+                    {processingId === notificacion.id ? "Actualizando..." : "Marcar como revisado"}
+                  </button>
+                </div>
+              </article>
+            );
+          })
         )}
       </section>
 

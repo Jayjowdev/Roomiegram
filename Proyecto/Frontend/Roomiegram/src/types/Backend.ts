@@ -39,12 +39,20 @@ export type CuentaDeudor = {
   montoAdeudado?: number;
 };
 
+export type CategoriaGasto = "ARRIENDO" | "LUZ" | "AGUA" | "GAS" | "INTERNET" | "GASTO_COMUN" | "COMIDA" | "OTRO";
+
+export type EstadoGasto = "PENDIENTE" | "PARCIAL" | "RESPALDADO";
+
 export type HogarCuenta = {
   id?: number;
   descripcion: string;
   monto: number;
   deudores?: CuentaDeudor[];
   montoPorPersona?: number;
+  categoria?: CategoriaGasto;
+  periodo?: string;
+  fechaVencimiento?: string;
+  estado?: EstadoGasto;
 };
 
 export type Comprobante = {
@@ -72,6 +80,16 @@ export type Notificacion = {
   mensaje: string;
   fechaCreacion?: string;
   fechaActualizacion?: string;
+};
+
+export type ResenaRoomie = {
+  id?: number;
+  usuarioEvaluadoId: number;
+  usuarioAutorId: number;
+  hogarId: number;
+  puntuacion: number;
+  comentario: string;
+  fechaCreacion?: string;
 };
 
 export type Hogar = {

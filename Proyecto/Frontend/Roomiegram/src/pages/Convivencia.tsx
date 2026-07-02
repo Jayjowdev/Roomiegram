@@ -4,13 +4,14 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
 import { isPremiumHogar, membresiaService, PLAN_BADGE_CLASS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
 import { usuarioService } from "../services/usuarioService";
-import type { HogarCuenta, Notificacion } from "../types/Backend";
+import type { CategoriaGasto, Comprobante, EstadoGasto, HogarCuenta, Notificacion } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { Tarea } from "../types/Tarea";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -19,6 +20,7 @@ type LoadState = {
   hogares: Hogar[];
   tareas: Tarea[];
   gastos: HogarCuenta[];
+  comprobantes: Comprobante[];
   notificaciones: Notificacion[];
   usuarios: UsuarioResumen[];
 };
@@ -29,12 +31,38 @@ type RecomendacionHogar = {
   ruta?: string;
 };
 
+type ActividadHogar = {
+  titulo: string;
+  detalle: string;
+  ruta: string;
+  fecha?: string;
+  fechaOrden?: number;
+};
+
 const emptyState: LoadState = {
   hogares: [],
   tareas: [],
   gastos: [],
+  comprobantes: [],
   notificaciones: [],
   usuarios: [],
+};
+
+const CATEGORIA_LABELS: Record<CategoriaGasto, string> = {
+  ARRIENDO: "Arriendo",
+  LUZ: "Luz",
+  AGUA: "Agua",
+  GAS: "Gas",
+  INTERNET: "Internet",
+  GASTO_COMUN: "Gasto común",
+  COMIDA: "Comida",
+  OTRO: "Otro",
+};
+
+const ESTADO_LABELS: Record<EstadoGasto, string> = {
+  PENDIENTE: "Pendiente",
+  PARCIAL: "Parcial",
+  RESPALDADO: "Respaldado",
 };
 
 function formatCurrency(value?: number) {
@@ -52,6 +80,22 @@ function formatDate(value?: string) {
 
 function uniqueIds(ids: Array<number | undefined>) {
   return [...new Set(ids.filter((id): id is number => typeof id === "number" && id > 0))];
+}
+
+function getCategoriaLabel(categoria?: CategoriaGasto) {
+  return CATEGORIA_LABELS[categoria || "OTRO"];
+}
+
+function getEstadoRespaldo(monto: number, respaldado: number): EstadoGasto {
+  if (respaldado <= 0) return "PENDIENTE";
+  if (respaldado < monto) return "PARCIAL";
+  return "RESPALDADO";
+}
+
+function getDateOrder(value?: string) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
 }
 
 function getMemberName(
@@ -80,16 +124,18 @@ export default function Convivencia() {
       hogarService.listar(),
       tareaService.listar(),
       gastoService.listar(),
+      comprobanteService.listar(),
       notificacionService.listar(),
       usuarioService.listar(),
       user?.id ? membresiaService.obtenerActiva(user.id) : Promise.resolve(null),
-    ]).then(([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult, suscripcionResult]) => {
+    ]).then(([hogaresResult, tareasResult, gastosResult, comprobantesResult, notificacionesResult, usuariosResult, suscripcionResult]) => {
       if (!isMounted) return;
 
       const partialData: LoadState = {
         hogares: hogaresResult.status === "fulfilled" ? hogaresResult.value : [],
         tareas: tareasResult.status === "fulfilled" ? tareasResult.value : [],
         gastos: gastosResult.status === "fulfilled" ? gastosResult.value : [],
+        comprobantes: comprobantesResult.status === "fulfilled" ? comprobantesResult.value : [],
         notificaciones:
           notificacionesResult.status === "fulfilled" ? notificacionesResult.value : [],
         usuarios: usuariosResult.status === "fulfilled" ? usuariosResult.value : [],
@@ -101,7 +147,7 @@ export default function Convivencia() {
       }
       setIsLoading(false);
 
-      if ([hogaresResult, tareasResult, gastosResult, notificacionesResult, usuariosResult].some((result) => result.status === "rejected")) {
+      if ([hogaresResult, tareasResult, gastosResult, comprobantesResult, notificacionesResult, usuariosResult].some((result) => result.status === "rejected")) {
         setMessage("Algunos datos del hogar no se pudieron cargar. Revisa que los microservicios estén activos.");
       } else {
         setMessage("");
@@ -144,6 +190,12 @@ export default function Convivencia() {
     return ids.length ? data.gastos.filter((gasto) => gasto.id && ids.includes(gasto.id)) : [];
   }, [data.gastos, hogarActual]);
 
+  const gastoIds = useMemo(() => gastosDelHogar.map((gasto) => gasto.id).filter((id): id is number => !!id), [gastosDelHogar]);
+
+  const comprobantesDelHogar = useMemo(() => {
+    return data.comprobantes.filter((comprobante) => gastoIds.includes(comprobante.hogarCuentaId));
+  }, [data.comprobantes, gastoIds]);
+
   const notificacionesDelHogar = useMemo(() => {
     if (!hogarActual) return [];
 
@@ -158,12 +210,23 @@ export default function Convivencia() {
 
   const tareasActivas = tareasDelHogar.filter((tarea) => tarea.completada !== true).length;
   const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
+  const totalRespaldado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const totalPendienteGastos = Math.max(0, totalGastos - totalRespaldado);
+  const gastosPendientes = gastosDelHogar.filter((gasto) => {
+    const respaldado = comprobantesDelHogar
+      .filter((comprobante) => comprobante.hogarCuentaId === gasto.id)
+      .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+    return getEstadoRespaldo(Number(gasto.monto || 0), respaldado) !== "RESPALDADO";
+  });
+  const serviciosBasicosPendientes = gastosPendientes.filter((gasto) =>
+    ["LUZ", "AGUA", "GAS", "INTERNET", "GASTO_COMUN"].includes(gasto.categoria || "OTRO")
+  ).length;
   const deudaUsuario = gastosDelHogar.reduce((total, gasto) => {
     const deuda = gasto.deudores?.find((deudor) => deudor.usuarioId === user?.id);
     return total + Number(deuda?.montoAdeudado || 0);
   }, 0);
   const pendientes = notificacionesDelHogar.filter((notificacion) => notificacion.estado === "PENDIENTE").length;
-  const comprobantesRegistrados = hogarActual?.comprobanteIds?.length || 0;
+  const comprobantesRegistrados = comprobantesDelHogar.length || hogarActual?.comprobanteIds?.length || 0;
   const planActual: PlanId = suscripcion?.plan ?? "GRATIS";
   const tienePremiumHogar = isPremiumHogar(planActual);
 
@@ -174,11 +237,74 @@ export default function Convivencia() {
       .slice(0, 3);
   }, [tareasDelHogar]);
 
-  const avisosPendientes = useMemo(() => {
-    return notificacionesDelHogar
-      .filter((notificacion) => notificacion.estado === "PENDIENTE")
-      .slice(0, 3);
-  }, [notificacionesDelHogar]);
+  const usuariosById = useMemo(() => {
+    return new Map(data.usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [data.usuarios]);
+
+  const actividadHogar = useMemo(() => {
+    const actividades: ActividadHogar[] = [];
+
+    comprobantesDelHogar.forEach((comprobante) => {
+      const gasto = gastosDelHogar.find((item) => item.id === comprobante.hogarCuentaId);
+      const integrante = getMemberName(comprobante.usuarioId, usuariosById, user || undefined);
+      const ruta = comprobante.id
+        ? `/comprobantes?comprobante=${comprobante.id}`
+        : `/comprobantes?gasto=${comprobante.hogarCuentaId}`;
+
+      actividades.push({
+        titulo: `Pago registrado: ${gasto?.descripcion || "gasto del hogar"}`,
+        detalle: `${integrante} subió ${formatCurrency(comprobante.montoPagado)} con ${comprobante.nombreArchivo}.`,
+        ruta,
+        fecha: comprobante.fechaSubida,
+        fechaOrden: getDateOrder(comprobante.fechaSubida),
+      });
+    });
+
+    gastosPendientes.forEach((gasto) => {
+      actividades.push({
+        titulo: `Gasto pendiente: ${getCategoriaLabel(gasto.categoria)}`,
+        detalle: `${gasto.descripcion} necesita respaldo o pago completo.`,
+        ruta: `/comprobantes?gasto=${gasto.id || ""}`,
+        fecha: gasto.fechaVencimiento,
+        fechaOrden: getDateOrder(gasto.fechaVencimiento),
+      });
+    });
+
+    if ((hogarActual?.solicitudesPendientesIds?.length || 0) > 0) {
+      actividades.push({
+        titulo: "Solicitudes pendientes",
+        detalle: `${hogarActual?.solicitudesPendientesIds?.length || 0} persona(s) esperan respuesta del hogar.`,
+        ruta: "/notificaciones",
+        fechaOrden: Date.now(),
+      });
+    }
+
+    proximasTareas.forEach((tarea) => {
+      actividades.push({
+        titulo: `Tarea próxima: ${tarea.titulo}`,
+        detalle: `${tarea.encargado} · ${formatDate(tarea.fecha)}`,
+        ruta: "/tareas",
+        fecha: tarea.fecha,
+        fechaOrden: getDateOrder(tarea.fecha),
+      });
+    });
+
+    notificacionesDelHogar
+      .filter((notificacion) => notificacion.estado === "PENDIENTE" && ["CUENTA_HOGAR", "TAREA_HOGAR"].includes(notificacion.tipo))
+      .forEach((notificacion) => {
+        actividades.push({
+          titulo: notificacion.titulo,
+          detalle: notificacion.mensaje,
+          ruta: notificacion.tipo === "CUENTA_HOGAR" && notificacion.referenciaId ? `/comprobantes?comprobante=${notificacion.referenciaId}` : "/notificaciones",
+          fecha: notificacion.fechaCreacion,
+          fechaOrden: getDateOrder(notificacion.fechaCreacion),
+        });
+      });
+
+    return actividades
+      .sort((a, b) => (b.fechaOrden || 0) - (a.fechaOrden || 0))
+      .slice(0, 6);
+  }, [comprobantesDelHogar, gastosDelHogar, gastosPendientes, hogarActual?.solicitudesPendientesIds?.length, notificacionesDelHogar, proximasTareas, user, usuariosById]);
 
   const recomendaciones = useMemo(() => {
     const items: RecomendacionHogar[] = [];
@@ -186,7 +312,14 @@ export default function Convivencia() {
     if (deudaUsuario > 0) {
       items.push({
         titulo: "Revisar pagos pendientes",
-        detalle: "Hay deuda registrada en el hogar.",
+        detalle: `Hay ${formatCurrency(deudaUsuario)} registrados como deuda del usuario actual.`,
+        ruta: "/gastos",
+      });
+    }
+    if (gastosPendientes.length > 0) {
+      items.push({
+        titulo: "Gestionar gastos pendientes",
+        detalle: `${gastosPendientes.length} gasto(s) aún necesitan comprobantes o pagos completos.`,
         ruta: "/gastos",
       });
     }
@@ -195,6 +328,13 @@ export default function Convivencia() {
         titulo: "Subir comprobantes para respaldar gastos",
         detalle: "Todavía no hay respaldos asociados al hogar.",
         ruta: "/comprobantes",
+      });
+    }
+    if (serviciosBasicosPendientes > 0) {
+      items.push({
+        titulo: "Revisar servicios básicos",
+        detalle: "Hay cuentas de luz, agua, gas, internet o gasto común pendientes.",
+        ruta: "/gastos",
       });
     }
     if (tareasActivas === 0) {
@@ -212,11 +352,7 @@ export default function Convivencia() {
     }
 
     return items;
-  }, [comprobantesRegistrados, deudaUsuario, pendientes, tareasActivas]);
-
-  const usuariosById = useMemo(() => {
-    return new Map(data.usuarios.map((usuario) => [usuario.id, usuario]));
-  }, [data.usuarios]);
+  }, [comprobantesRegistrados, deudaUsuario, gastosPendientes.length, pendientes, serviciosBasicosPendientes, tareasActivas]);
 
   return (
     <div className="dashboard-page">
@@ -276,12 +412,20 @@ export default function Convivencia() {
               <strong>{formatCurrency(totalGastos)}</strong>
             </article>
             <article className="household-stat">
+              <span>Pendiente por respaldar</span>
+              <strong>{formatCurrency(totalPendienteGastos)}</strong>
+            </article>
+            <article className="household-stat">
               <span>Tu deuda registrada</span>
               <strong>{formatCurrency(deudaUsuario)}</strong>
             </article>
             <article className="household-stat">
-              <span>Avisos pendientes</span>
-              <strong>{pendientes}</strong>
+              <span>Comprobantes</span>
+              <strong>{comprobantesRegistrados}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Actividad reciente</span>
+              <strong>{actividadHogar.length}</strong>
             </article>
           </section>
 
@@ -290,7 +434,7 @@ export default function Convivencia() {
               <div className="section-heading-row">
                 <div>
                   <h3>Reportes del hogar</h3>
-                  <p>Resumen avanzado de convivencia, gastos, comprobantes y avisos.</p>
+                  <p>Resumen avanzado de convivencia, gastos, comprobantes y actividad del hogar.</p>
                 </div>
                 <span className={`plan-badge ${PLAN_BADGE_CLASS[tienePremiumHogar ? "PREMIUM_HOGAR" : planActual]}`}>
                   {tienePremiumHogar ? "Premium Hogar activo" : "Premium Hogar"}
@@ -300,8 +444,8 @@ export default function Convivencia() {
               {tienePremiumHogar ? (
                 <>
                   <p>
-                    Tu hogar tiene {integrantes.length} integrante(s), {tareasActivas} tarea(s) activa(s),{" "}
-                    {formatCurrency(totalGastos)} en gastos y {comprobantesRegistrados} comprobante(s) registrado(s).
+                    Tu hogar tiene {gastosDelHogar.length} gasto(s) este periodo, {formatCurrency(totalPendienteGastos)} pendiente(s)
+                    por respaldar y {comprobantesRegistrados} comprobante(s) registrado(s).
                   </p>
                   <div className="module-grid">
                     {recomendaciones.map((recomendacion) => (
@@ -324,7 +468,7 @@ export default function Convivencia() {
                   <h4>Reportes avanzados bloqueados</h4>
                   <p>
                     Los reportes del hogar son un beneficio de Premium Hogar. Puedes seguir usando integrantes,
-                    tareas, gastos, comprobantes y avisos con normalidad.
+                    tareas, gastos, comprobantes y actividad del hogar con normalidad.
                   </p>
                   <button className="btn btn-success" onClick={() => navigate("/planes")}>
                     Mejorar a Premium Hogar
@@ -338,7 +482,9 @@ export default function Convivencia() {
               <p><strong>Integrantes:</strong> {integrantes.length}</p>
               <p><strong>Tareas activas:</strong> {tareasActivas}</p>
               <p><strong>Comprobantes:</strong> {comprobantesRegistrados}</p>
-              <p><strong>Avisos pendientes:</strong> {pendientes}</p>
+              <p><strong>Respaldo registrado:</strong> {formatCurrency(totalRespaldado)}</p>
+              <p><strong>Gastos pendientes:</strong> {gastosPendientes.length}</p>
+              <p><strong>Actividad reciente:</strong> {actividadHogar.length}</p>
             </div>
           </section>
 
@@ -417,14 +563,21 @@ export default function Convivencia() {
                 <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/gastos")}>Ver gastos</button>
               </div>
               {gastosDelHogar.length ? (
-                gastosDelHogar.slice(0, 3).map((gasto) => (
-                  <div className="compact-row" key={gasto.id}>
-                    <div>
-                      <strong>{gasto.descripcion}</strong>
-                      <span>{formatCurrency(gasto.monto)} · {gasto.deudores?.length || 0} deudor(es)</span>
+                gastosDelHogar.slice(0, 3).map((gasto) => {
+                  const respaldado = comprobantesDelHogar
+                    .filter((comprobante) => comprobante.hogarCuentaId === gasto.id)
+                    .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+                  const estado = getEstadoRespaldo(Number(gasto.monto || 0), respaldado);
+
+                  return (
+                    <div className="compact-row" key={gasto.id}>
+                      <div>
+                        <strong>{getCategoriaLabel(gasto.categoria)} · {gasto.descripcion}</strong>
+                        <span>{formatCurrency(gasto.monto)} · {ESTADO_LABELS[estado]} · {gasto.periodo || "Sin periodo"}</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="empty-state">No hay gastos asociados a este hogar.</p>
               )}
@@ -432,20 +585,27 @@ export default function Convivencia() {
 
             <article className="household-panel">
               <div className="section-heading-row">
-                <h3>Avisos del grupo</h3>
-                <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver avisos</button>
+                <h3>Actividad reciente del hogar</h3>
+                <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver actividad</button>
               </div>
-              {avisosPendientes.length ? (
-                avisosPendientes.map((notificacion) => (
-                  <div className="compact-row" key={notificacion.id || notificacion.titulo}>
+              {actividadHogar.length ? (
+                actividadHogar.map((actividad) => (
+                  <button className="compact-row" key={`${actividad.titulo}-${actividad.detalle}`} onClick={() => navigate(actividad.ruta)}>
                     <div>
-                      <strong>{notificacion.titulo}</strong>
-                      <span>{notificacion.estado} · {notificacion.mensaje}</span>
+                      <strong>{actividad.titulo}</strong>
+                      <span>{actividad.detalle}{actividad.fecha ? ` · ${formatDate(actividad.fecha)}` : ""}</span>
                     </div>
-                  </div>
+                  </button>
                 ))
               ) : (
-                <p className="empty-state">No hay avisos pendientes para este hogar.</p>
+                <div className="empty-state">
+                  <p>Tu hogar aún no tiene actividad reciente.</p>
+                  <div className="dashboard-actions mt-3">
+                    <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/gastos")}>Registrar gasto</button>
+                    <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/tareas")}>Crear tarea</button>
+                    <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/comprobantes")}>Subir comprobante</button>
+                  </div>
+                </div>
               )}
             </article>
           </section>
@@ -457,7 +617,7 @@ export default function Convivencia() {
                 <button className="module-link" onClick={() => navigate("/tareas")}><strong>Asignar tareas</strong><span>Crear turnos y responsables.</span></button>
                 <button className="module-link" onClick={() => navigate("/gastos")}><strong>Registrar gastos</strong><span>Controlar cuentas compartidas.</span></button>
                 <button className="module-link" onClick={() => navigate("/comprobantes")}><strong>Subir comprobantes</strong><span>Respaldar pagos realizados.</span></button>
-                <button className="module-link" onClick={() => navigate("/notificaciones")}><strong>Revisar avisos</strong><span>Ver recordatorios del hogar.</span></button>
+                <button className="module-link" onClick={() => navigate("/notificaciones")}><strong>Revisar actividad</strong><span>Ver solicitudes, tareas y comprobantes.</span></button>
               </div>
             </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
@@ -6,7 +7,9 @@ import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
+import { resenaService } from "../services/resenaService";
 import { usuarioService } from "../services/usuarioService";
+import type { ResenaRoomie } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion } from "../types/Publicacion";
 import type { UsuarioResumen } from "../types/Usuario";
@@ -39,6 +42,13 @@ function normalizeText(value?: string) {
 function getTelefonoContacto(telefono?: string) {
   const value = telefono?.trim();
   return value || "Teléfono no informado";
+}
+
+function getUsuarioNombre(usuarioId: number, usuariosById: Map<number, UsuarioResumen>, currentUser?: { id: number; nombre?: string; usuario?: string }) {
+  if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tu";
+
+  const usuario = usuariosById.get(usuarioId);
+  return usuario?.nombre || usuario?.usuario || `Usuario #${usuarioId}`;
 }
 
 function getPublicacionCasaDelHogar(hogar: Hogar | null, publicaciones: Publicacion[]) {
@@ -81,7 +91,11 @@ export default function Perfil() {
   const [contextMessage, setContextMessage] = useState("");
   const [contextResolved, setContextResolved] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSavingResena, setIsSavingResena] = useState(false);
   const [selectedHogarId, setSelectedHogarId] = useState("");
+  const [resenas, setResenas] = useState<ResenaRoomie[]>([]);
+  const [puntuacion, setPuntuacion] = useState(5);
+  const [comentarioResena, setComentarioResena] = useState("");
   const perfilLocal = getLocalPublicaciones()
     .find((publicacion) => publicacion.tipo === "busco_roomie" && String(publicacion.id) === id && !isGeneratedProfile(publicacion));
 
@@ -204,6 +218,9 @@ export default function Perfil() {
   }, [perfilBackend, perfilLocal, usuarioPerfil]);
 
   const perfilUsuarioId = perfil?.usuarioId || usuarioPerfil?.id;
+  const usuariosById = useMemo(() => {
+    return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [usuarios]);
 
   const hogarDelPerfil = useMemo(() => {
     if (!perfilUsuarioId) return null;
@@ -254,6 +271,61 @@ export default function Perfil() {
     () => getPublicacionCasaDelHogar(hogarDelPerfil, publicaciones),
     [hogarDelPerfil, publicaciones],
   );
+
+  useEffect(() => {
+    if (!perfilUsuarioId) {
+      setResenas([]);
+      return;
+    }
+
+    let isMounted = true;
+    resenaService
+      .listarPorUsuario(perfilUsuarioId)
+      .then((data) => {
+        if (isMounted) setResenas(data);
+      })
+      .catch(() => {
+        if (isMounted) setResenas([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [perfilUsuarioId]);
+
+  const promedioResenas = useMemo(() => {
+    if (!resenas.length) return 0;
+    return resenas.reduce((total, resena) => total + Number(resena.puntuacion || 0), 0) / resenas.length;
+  }, [resenas]);
+
+  const enviarResena = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user?.id || !perfilUsuarioId || !hogarDelPerfil?.id) return;
+
+    if (!comentarioResena.trim()) {
+      setMessage("Escribe un comentario para la reseña.");
+      return;
+    }
+
+    try {
+      setIsSavingResena(true);
+      const creada = await resenaService.crear({
+        usuarioEvaluadoId: perfilUsuarioId,
+        usuarioAutorId: user.id,
+        hogarId: hogarDelPerfil.id,
+        puntuacion,
+        comentario: comentarioResena.trim(),
+      });
+      setResenas((current) => [creada, ...current]);
+      setComentarioResena("");
+      setPuntuacion(5);
+      setMessage("Reseña publicada correctamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo publicar la reseña.");
+    } finally {
+      setIsSavingResena(false);
+    }
+  };
 
   const solicitarIngreso = async () => {
     if (!user?.id || !hogarDelPerfil?.id) return;
@@ -453,6 +525,7 @@ export default function Perfil() {
               <div className="profile-status-row">
                 <span className="status-pill success">{estadoPerfil}</span>
                 {compatibilidadScore !== null && <span className="status-pill">{compatibilidadScore}% compatible contigo</span>}
+                <span className="status-pill">{resenas.length ? `${promedioResenas.toFixed(1)} / 5 · ${resenas.length} reseña(s)` : "Sin reseñas todavía"}</span>
               </div>
             </div>
 
@@ -472,6 +545,44 @@ export default function Perfil() {
             <div className="perfil-section contact-info-panel">
               <h3>Contacto</h3>
               <p><strong>Teléfono:</strong> {getTelefonoContacto(usuarioPerfil?.telefono || perfil.telefono)}</p>
+            </div>
+
+            <div className="perfil-section contact-info-panel">
+              <h3>Reputación roomie</h3>
+              <p>
+                {resenas.length
+                  ? `Promedio ${promedioResenas.toFixed(1)} de 5 basado en ${resenas.length} reseña(s).`
+                  : "Este perfil aún no tiene reseñas de convivencia."}
+              </p>
+              {resenas.slice(0, 3).map((resena) => (
+                <article className="compact-row" key={resena.id || `${resena.usuarioAutorId}-${resena.fechaCreacion}`}>
+                  <div>
+                    <strong>{"★".repeat(resena.puntuacion)}{"☆".repeat(5 - resena.puntuacion)}</strong>
+                    <small>Por {getUsuarioNombre(resena.usuarioAutorId, usuariosById, user || undefined)}</small>
+                    <span>{resena.comentario}</span>
+                  </div>
+                </article>
+              ))}
+              {!esMiPerfil && hogarDelPerfil?.id && (
+                <form className="module-form mt-3" onSubmit={enviarResena}>
+                  <h4>Dejar reseña</h4>
+                  <select className="form-control" value={puntuacion} onChange={(event) => setPuntuacion(Number(event.target.value))}>
+                    {[5, 4, 3, 2, 1].map((valor) => (
+                      <option key={valor} value={valor}>{valor} estrella{valor === 1 ? "" : "s"}</option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="form-control"
+                    placeholder="Cuenta cómo fue convivir o coordinar con esta persona"
+                    value={comentarioResena}
+                    onChange={(event) => setComentarioResena(event.target.value)}
+                    maxLength={500}
+                  />
+                  <button className="btn btn-success w-100" disabled={isSavingResena}>
+                    {isSavingResena ? "Publicando..." : "Publicar reseña"}
+                  </button>
+                </form>
+              )}
             </div>
 
             {publicacionCasaDelPerfil && (

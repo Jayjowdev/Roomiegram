@@ -19,7 +19,9 @@ import {
   type PlanId,
   type Suscripcion,
 } from "../services/membresiaService";
+import { resenaService } from "../services/resenaService";
 import { usuarioService } from "../services/usuarioService";
+import type { ResenaRoomie } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
 import { getPreferenciasResumen } from "../utils/preferenciasCompatibilidad";
@@ -48,6 +50,7 @@ export default function MiPerfil() {
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [cropSource, setCropSource] = useState("");
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
+  const [resenas, setResenas] = useState<ResenaRoomie[]>([]);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
   const planActual: PlanId = suscripcion?.plan ?? "GRATIS";
@@ -59,8 +62,9 @@ export default function MiPerfil() {
       hogarService.listar(),
       usuarioService.listar(),
       user?.id ? membresiaService.obtenerActiva(user.id) : Promise.resolve(null),
+      user?.id ? resenaService.listarPorUsuario(user.id) : Promise.resolve([]),
     ])
-      .then(([hogaresResult, usuariosResult, suscripcionResult]) => {
+      .then(([hogaresResult, usuariosResult, suscripcionResult, resenasResult]) => {
         if (!isMounted) return;
 
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
@@ -68,6 +72,9 @@ export default function MiPerfil() {
 
         if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
           setSuscripcion(suscripcionResult.value as Suscripcion);
+        }
+        if (resenasResult.status === "fulfilled") {
+          setResenas(resenasResult.value);
         }
         setIsLoadingGroup(false);
 
@@ -103,6 +110,11 @@ export default function MiPerfil() {
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
+
+  const promedioResenas = useMemo(() => {
+    if (!resenas.length) return 0;
+    return resenas.reduce((total, resena) => total + Number(resena.puntuacion || 0), 0) / resenas.length;
+  }, [resenas]);
 
   const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -248,6 +260,33 @@ export default function MiPerfil() {
           <button className="btn btn-outline-success" onClick={() => navigate("/crear-publicacion")}>
             Crear publicación
           </button>
+        </div>
+      </section>
+
+      <section className="mi-grupo profile-publications-entry">
+        <div>
+          <span className="demo-kicker">Reputación</span>
+          <h2>Reseñas recibidas</h2>
+          <p>
+            {resenas.length
+              ? `Tienes un promedio de ${promedioResenas.toFixed(1)} de 5 en ${resenas.length} reseña(s).`
+              : "Aún no tienes reseñas. Cuando otros roomies te califiquen, aparecerán aquí."}
+          </p>
+        </div>
+        <div className="module-grid">
+          {resenas.slice(0, 3).map((resena) => (
+            <article className="module-link" key={resena.id || `${resena.usuarioAutorId}-${resena.fechaCreacion}`}>
+              <strong>{"★".repeat(resena.puntuacion)}{"☆".repeat(5 - resena.puntuacion)}</strong>
+              <small>Por {getMemberName(resena.usuarioAutorId, usuariosById, user || undefined)}</small>
+              <span>{resena.comentario}</span>
+            </article>
+          ))}
+          {!resenas.length && (
+            <article className="module-link">
+              <strong>Construye confianza</strong>
+              <span>Completa tu perfil, participa en hogares y pide reseñas después de convivir.</span>
+            </article>
+          )}
         </div>
       </section>
 

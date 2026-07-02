@@ -10,6 +10,7 @@ export default function Configuracion() {
   const navigate = useNavigate();
   const { user, updateProfile, isLoading } = useAuth();
   const [nombre, setNombre] = useState(user?.nombre || "");
+  const [descripcion, setDescripcion] = useState(user?.descripcion || "");
   const [accountMessage, setAccountMessage] = useState("");
   const [accountError, setAccountError] = useState("");
   const [isSavingAccount, setIsSavingAccount] = useState(false);
@@ -36,9 +37,14 @@ export default function Configuracion() {
       return;
     }
 
+    if (descripcion.trim().length > 300) {
+      setAccountError("La descripción debe tener 300 caracteres o menos.");
+      return;
+    }
+
     try {
       setIsSavingAccount(true);
-      await updateProfile({ nombre: nombre.trim() });
+      await updateProfile({ nombre: nombre.trim(), descripcion: descripcion.trim() });
       setAccountMessage("Datos de cuenta actualizados.");
     } catch (error) {
       setAccountError(error instanceof Error ? error.message : "No se pudieron guardar los datos de cuenta.");
@@ -115,6 +121,7 @@ export default function Configuracion() {
           <span className="eyebrow">Datos de cuenta</span>
           <h3>Información básica</h3>
           <p className="form-helper">Tu nombre se muestra en tu perfil. Usuario y correo quedan protegidos para no afectar el inicio de sesión.</p>
+          <p className="form-helper">También puedes completar tu descripción para que aparezca en Mi perfil.</p>
           {accountError && <div className="form-error">{accountError}</div>}
           {accountMessage && <div className="form-success">{accountMessage}</div>}
 
@@ -134,6 +141,19 @@ export default function Configuracion() {
           <label className="field-label">
             <span>Correo</span>
             <input className="form-control" value={user?.correo || ""} readOnly />
+          </label>
+          <label className="field-label">
+            <span>Descripción de convivencia</span>
+            <textarea
+              className="form-control"
+              value={descripcion}
+              onChange={(event) => setDescripcion(event.target.value)}
+              maxLength={300}
+              rows={4}
+              disabled={isSavingAccount}
+              placeholder="Cuenta cómo eres para convivir, tus hábitos y qué buscas en un hogar."
+            />
+            <small>{descripcion.trim().length}/300 caracteres</small>
           </label>
           <button className="btn btn-success w-100" type="submit" disabled={isLoading || isSavingAccount}>
             {isSavingAccount ? "Guardando..." : "Guardar datos"}

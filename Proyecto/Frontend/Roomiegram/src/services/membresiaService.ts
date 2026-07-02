@@ -59,9 +59,9 @@ export const PLAN_STATUS_TEXT: Record<PlanId, string> = {
 }
 
 export const PLAN_ACTIVE_BENEFIT: Record<PlanId, string> = {
-  GRATIS: "Puedes usar funciones básicas; los reportes del hogar y beneficios destacados quedan reservados para Premium.",
-  PREMIUM_INDIVIDUAL: "Beneficio activo: perfil, publicaciones y compatibilidad destacados para encontrar mejores matches.",
-  PREMIUM_HOGAR: "Beneficio activo: reportes del hogar, convivencia, gastos y comprobantes para organizar el grupo.",
+  GRATIS: "Puedes buscar roomies, crear publicaciones y usar convivencia básica; los reportes y beneficios destacados quedan reservados para Premium.",
+  PREMIUM_INDIVIDUAL: "Beneficio activo: perfil destacado, compatibilidad y reputación visible para encontrar mejores matches.",
+  PREMIUM_HOGAR: "Beneficio activo: reportes del hogar, gastos, comprobantes y actividad para organizar la convivencia.",
 }
 
 export function isPremiumPlan(plan?: PlanId | null) {
@@ -78,21 +78,21 @@ const FALLBACK_PLANS: PlanInfo[] = [
     nombre: "Gratis",
     precio: 0,
     descripcion: "Para empezar a encontrar tu roomie ideal",
-    beneficios: ["Crear publicaciones y perfiles roomie", "Búsqueda por tipo y ubicación", "Unirse o crear un hogar", "Gestión básica de tareas y gastos"],
+    beneficios: ["Crear publicaciones y perfiles roomie", "Búsqueda por tipo y ubicación", "Unirse o crear un hogar", "Gestión básica de tareas, gastos y comprobantes"],
   },
   {
     id: "PREMIUM_INDIVIDUAL",
     nombre: "Premium Individual",
     precio: 4990,
     descripcion: "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
-    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Gestión de solicitudes e invitaciones", "Avisos por correo"],
+    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Reputación y reseñas visibles", "Gestión de solicitudes e invitaciones"],
   },
   {
     id: "PREMIUM_HOGAR",
     nombre: "Premium Hogar",
     precio: 8990,
     descripcion: "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
-    beneficios: ["Reportes avanzados del hogar", "Resumen de tareas, gastos y deuda", "Seguimiento de comprobantes", "Recomendaciones de convivencia"],
+    beneficios: ["Reportes avanzados del hogar", "Resumen de tareas, gastos y deuda", "Seguimiento de comprobantes y actividad", "Recomendaciones de convivencia"],
   },
 ]
 

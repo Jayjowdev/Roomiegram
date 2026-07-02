@@ -84,7 +84,7 @@ public class MembresiaService {
                                 "Crear publicaciones y perfiles roomie",
                                 "Búsqueda por tipo y ubicación",
                                 "Unirse o crear un hogar compartido",
-                                "Gestión básica de tareas y gastos",
+                                "Gestión básica de tareas, gastos y comprobantes",
                                 "Notificaciones internas y por correo disponibles")),
                 Map.of(
                         "id", "PREMIUM_INDIVIDUAL",
@@ -94,8 +94,9 @@ public class MembresiaService {
                         "beneficios", List.of(
                                 "Perfil y publicaciones con estado Premium",
                                 "Compatibilidad y preferencias destacadas",
+                                "Reputación y reseñas visibles",
                                 "Acceso a solicitudes e invitaciones del hogar",
-                                "Avisos por correo para solicitudes y tareas")),
+                                "Beneficios destacados para encontrar mejores matches")),
                 Map.of(
                         "id", "PREMIUM_HOGAR",
                         "nombre", "Premium Hogar",
@@ -105,7 +106,7 @@ public class MembresiaService {
                                 "Todo lo de Premium Individual",
                                 "Reportes avanzados del hogar",
                                 "Resumen de tareas, gastos y deuda",
-                                "Seguimiento de comprobantes",
+                                "Seguimiento de comprobantes y actividad del hogar",
                                 "Recomendaciones de convivencia")));
     }
 

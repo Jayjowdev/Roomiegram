@@ -20,6 +20,33 @@ const PLAN_COLOR_CLASS: Record<PlanId, string> = {
   PREMIUM_HOGAR: "plan-card-hogar",
 }
 
+const BENEFICIOS_PLANES = [
+  {
+    beneficio: "Búsqueda y publicaciones básicas",
+    GRATIS: "Incluido",
+    PREMIUM_INDIVIDUAL: "Incluido + perfil destacado",
+    PREMIUM_HOGAR: "Incluido",
+  },
+  {
+    beneficio: "Compatibilidad, reputación y reseñas",
+    GRATIS: "Vista básica",
+    PREMIUM_INDIVIDUAL: "Destacado",
+    PREMIUM_HOGAR: "Incluido para integrantes",
+  },
+  {
+    beneficio: "Gastos, comprobantes y actividad del hogar",
+    GRATIS: "Gestión básica",
+    PREMIUM_INDIVIDUAL: "Gestión básica",
+    PREMIUM_HOGAR: "Reportes avanzados",
+  },
+  {
+    beneficio: "Reportes de convivencia",
+    GRATIS: "Bloqueado",
+    PREMIUM_INDIVIDUAL: "Bloqueado",
+    PREMIUM_HOGAR: "Completo",
+  },
+] satisfies Array<{ beneficio: string } & Record<PlanId, string>>
+
 function getPagoErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "No se pudo iniciar el pago."
 
@@ -179,7 +206,7 @@ export default function Planes() {
       <section className="planes-hero">
         <span className="planes-kicker">Planes Roomiegram</span>
         <h1>Elige el plan ideal para ti</h1>
-        <p>Desde encontrar roomie hasta convivir mejor, cada plan acompaña una etapa distinta.</p>
+        <p>Gratis te ayuda a empezar, Premium Individual mejora tu búsqueda y Premium Hogar ordena la convivencia real con gastos, comprobantes y reportes.</p>
 
         {suscripcionActiva && (
           <div className={`plan-activo-badge plan-activo-${planActual.toLowerCase()}`}>
@@ -258,6 +285,20 @@ export default function Planes() {
             )
           })
         )}
+      </section>
+
+      <section className="module-list planes-benefits-matrix">
+        <h3>Qué desbloquea cada plan</h3>
+        {BENEFICIOS_PLANES.map((item) => (
+          <article className="module-item" key={item.beneficio}>
+            <h4>{item.beneficio}</h4>
+            <div className="notification-context-grid">
+              <span><strong>Gratis:</strong> {item.GRATIS}</span>
+              <span><strong>Premium Individual:</strong> {item.PREMIUM_INDIVIDUAL}</span>
+              <span><strong>Premium Hogar:</strong> {item.PREMIUM_HOGAR}</span>
+            </div>
+          </article>
+        ))}
       </section>
     </div>
   )

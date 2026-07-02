@@ -7,8 +7,26 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
-import type { Comprobante, HogarCuenta } from "../types/Backend";
+import { notificacionService } from "../services/notificacionService";
+import type { CategoriaGasto, Comprobante, EstadoGasto, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+
+const CATEGORIA_LABELS: Record<CategoriaGasto, string> = {
+  ARRIENDO: "Arriendo",
+  LUZ: "Luz",
+  AGUA: "Agua",
+  GAS: "Gas",
+  INTERNET: "Internet",
+  GASTO_COMUN: "Gasto común",
+  COMIDA: "Comida",
+  OTRO: "Otro",
+};
+
+const ESTADO_LABELS: Record<EstadoGasto, string> = {
+  PENDIENTE: "Pendiente",
+  PARCIAL: "Parcial",
+  RESPALDADO: "Respaldado",
+};
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
   if (!userId) return false;
@@ -27,10 +45,26 @@ function formatDate(value?: string) {
   return value ? new Date(value).toLocaleString("es-CL") : "Sin fecha";
 }
 
-function getEstadoRespaldo(monto: number, respaldado: number) {
-  if (respaldado <= 0) return "Pendiente";
-  if (respaldado < monto) return "Parcial";
-  return "Respaldado";
+function getShortDate(value?: string) {
+  if (!value) return "Sin vencimiento";
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function getCategoriaLabel(categoria?: CategoriaGasto) {
+  return CATEGORIA_LABELS[categoria || "OTRO"];
+}
+
+function getEstadoRespaldo(monto: number, respaldado: number): EstadoGasto {
+  if (respaldado <= 0) return "PENDIENTE";
+  if (respaldado < monto) return "PARCIAL";
+  return "RESPALDADO";
+}
+
+function getComprobanteUrl(comprobante: Comprobante) {
+  if (!comprobante.archivo) return "";
+  return comprobante.archivo.startsWith("data:")
+    ? comprobante.archivo
+    : `data:${comprobante.tipoContenido};base64,${comprobante.archivo}`;
 }
 
 function fileToBase64(file: File) {
@@ -99,12 +133,23 @@ export default function Comprobantes() {
   const canAssociateComprobante = isHogarAdmin(hogarActual, user?.id);
   const selectedGasto = gastosDelHogar.find((gasto) => String(gasto.id) === hogarCuentaId);
   const totalPagado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
+  const totalFaltante = Math.max(0, totalGastos - totalPagado);
   const comprobantesDelGastoSeleccionado = selectedGasto
     ? comprobantesDelHogar.filter((comprobante) => comprobante.hogarCuentaId === selectedGasto.id)
     : [];
   const totalPagadoSeleccionado = comprobantesDelGastoSeleccionado.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
   const faltanteSeleccionado = selectedGasto ? Math.max(0, Number(selectedGasto.monto || 0) - totalPagadoSeleccionado) : 0;
   const estadoSeleccionado = selectedGasto ? getEstadoRespaldo(Number(selectedGasto.monto || 0), totalPagadoSeleccionado) : "";
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const comprobanteParam = params.get("comprobante");
+    if (!comprobanteParam || hogarCuentaId) return;
+
+    const comprobante = comprobantesDelHogar.find((item) => String(item.id) === comprobanteParam);
+    if (comprobante) setHogarCuentaId(String(comprobante.hogarCuentaId));
+  }, [comprobantesDelHogar, hogarCuentaId, location.search]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -150,6 +195,8 @@ export default function Comprobantes() {
       };
 
       const creado = await comprobanteService.crear(payload);
+      const gastoAsociado = gastosDelHogar.find((gasto) => gasto.id === Number(hogarCuentaId));
+      let avisoAdministradorFallido = false;
 
       if (canAssociateComprobante && creado.id) {
         const hogarActualizado = await hogarService.agregarComprobante(hogarActual.id, {
@@ -159,8 +206,30 @@ export default function Comprobantes() {
         setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
       }
 
+      const administradorId = hogarActual.usuarioAdministradorId || hogarActual.usuarioCreadorId;
+      if (administradorId && user?.id && administradorId !== user.id && creado.id) {
+        try {
+          await notificacionService.crear({
+            usuarioEmisorId: user.id,
+            usuarioReceptorId: administradorId,
+            hogarId: hogarActual.id,
+            referenciaId: creado.id,
+            tipo: "CUENTA_HOGAR",
+            estado: "PENDIENTE",
+            titulo: "Nuevo comprobante del hogar",
+            mensaje: `${user.nombre || user.usuario} subió un comprobante para ${gastoAsociado ? `${getCategoriaLabel(gastoAsociado.categoria)} - ${gastoAsociado.periodo || gastoAsociado.descripcion}` : nombreArchivoLimpio}.`,
+          });
+        } catch {
+          avisoAdministradorFallido = true;
+        }
+      }
+
       setComprobantes((current) => [creado, ...current.filter((item) => item.id !== creado.id)]);
-      setMessage(canAssociateComprobante ? "Comprobante registrado y asociado al hogar." : "Comprobante registrado.");
+      setMessage(
+        avisoAdministradorFallido
+          ? "Comprobante registrado. No se pudo enviar el aviso al administrador."
+          : canAssociateComprobante ? "Comprobante registrado y asociado al hogar." : "Comprobante registrado.",
+      );
       setHogarCuentaId("");
       setMontoPagado("");
       setNombreArchivo("");
@@ -226,6 +295,10 @@ export default function Comprobantes() {
               <span>Total pagado</span>
               <strong>{formatCurrency(totalPagado)}</strong>
             </article>
+            <article className="household-stat">
+              <span>Faltante por respaldar</span>
+              <strong>{formatCurrency(totalFaltante)}</strong>
+            </article>
           </section>
 
           <section className="module-layout">
@@ -234,13 +307,14 @@ export default function Comprobantes() {
               <select className="form-control" value={hogarCuentaId} onChange={(e) => setHogarCuentaId(e.target.value)} required>
                 <option value="">Selecciona un gasto</option>
                 {gastosDelHogar.map((gasto) => (
-                  <option key={gasto.id} value={gasto.id}>{gasto.descripcion} - {formatCurrency(gasto.monto)}</option>
+                  <option key={gasto.id} value={gasto.id}>{getCategoriaLabel(gasto.categoria)} - {gasto.descripcion} - {formatCurrency(gasto.monto)}</option>
                 ))}
               </select>
               {selectedGasto && (
                 <div className="form-helper">
                   <strong>Resumen del gasto seleccionado</strong>
-                  <span>{selectedGasto.descripcion} · {estadoSeleccionado}</span>
+                  <span>{getCategoriaLabel(selectedGasto.categoria)} · {selectedGasto.descripcion} · {ESTADO_LABELS[estadoSeleccionado as EstadoGasto]}</span>
+                  <span>{selectedGasto.periodo || "Sin periodo"} · vence {getShortDate(selectedGasto.fechaVencimiento)}</span>
                   <span>Total: {formatCurrency(selectedGasto.monto)} · Pagado: {formatCurrency(totalPagadoSeleccionado)} · Faltante: {formatCurrency(faltanteSeleccionado)}</span>
                 </div>
               )}
@@ -265,13 +339,31 @@ export default function Comprobantes() {
                 <div className="sin-resultados"><p>No hay comprobantes registrados para este hogar.</p></div>
               ) : comprobantesDelHogar.map((comprobante) => {
                 const gasto = gastosDelHogar.find((item) => item.id === comprobante.hogarCuentaId);
+                const comprobanteUrl = getComprobanteUrl(comprobante);
+                const esImagen = comprobante.tipoContenido?.startsWith("image/");
+                const esPdf = comprobante.tipoContenido === "application/pdf";
                 return (
                   <article className="module-item" key={comprobante.id || comprobante.nombreArchivo}>
                     <h4>{comprobante.nombreArchivo}</h4>
                     <p>{formatCurrency(comprobante.montoPagado)}</p>
-                    <span>{gasto?.descripcion || "Gasto del hogar"} - Integrante del hogar - {formatDate(comprobante.fechaSubida)}</span>
+                    <span>{gasto ? `${getCategoriaLabel(gasto.categoria)} · ${gasto.descripcion}` : "Gasto del hogar"} - Integrante del hogar - {formatDate(comprobante.fechaSubida)}</span>
+                    {gasto?.periodo && <span>Periodo: {gasto.periodo}</span>}
                     {comprobante.observacion && <p>{comprobante.observacion}</p>}
+                    {esImagen && comprobanteUrl && (
+                      <button className="image-upload comprobante-preview" type="button" onClick={() => window.open(comprobanteUrl, "_blank", "noopener,noreferrer")}>
+                        <img src={comprobanteUrl} alt={comprobante.nombreArchivo} />
+                      </button>
+                    )}
                     <div className="item-actions">
+                      {comprobanteUrl && (
+                        <button
+                          className="btn btn-outline-success btn-sm"
+                          type="button"
+                          onClick={() => window.open(comprobanteUrl, "_blank", "noopener,noreferrer")}
+                        >
+                          {esPdf ? "Abrir PDF" : "Ver comprobante"}
+                        </button>
+                      )}
                       <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarComprobante(comprobante)}>Eliminar</button>
                     </div>
                   </article>

@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.roomiegram.hogarcuenta.model.CuentaDeudor;
+import com.roomiegram.hogarcuenta.model.CategoriaGasto;
+import com.roomiegram.hogarcuenta.model.EstadoGasto;
 import com.roomiegram.hogarcuenta.model.HogarCuenta;
 import com.roomiegram.hogarcuenta.repository.HogarCuentaRepository;
 
@@ -17,6 +19,7 @@ public class HogarCuentaService {
 
     public HogarCuenta guardarHogarCuenta(HogarCuenta hogarCuenta) {
         validarHogarCuenta(hogarCuenta);
+        completarDatosPorDefecto(hogarCuenta);
         prepararRelacionDeudores(hogarCuenta);
         hogarCuenta.recalcularMontosDeudores();
 
@@ -46,6 +49,19 @@ public class HogarCuentaService {
 
         if (hogarCuenta.getMonto() == null || hogarCuenta.getMonto().signum() <= 0) {
             throw new IllegalArgumentException("El monto debe ser mayor a 0");
+        }
+
+        if (hogarCuenta.getDeudores() == null || hogarCuenta.getDeudores().isEmpty()) {
+            throw new IllegalArgumentException("Debe existir al menos un deudor");
+        }
+    }
+
+    private void completarDatosPorDefecto(HogarCuenta hogarCuenta) {
+        hogarCuenta.setCategoria(hogarCuenta.getCategoria() == null ? CategoriaGasto.OTRO : hogarCuenta.getCategoria());
+        hogarCuenta.setEstado(hogarCuenta.getEstado() == null ? EstadoGasto.PENDIENTE : hogarCuenta.getEstado());
+
+        if (hogarCuenta.getPeriodo() != null) {
+            hogarCuenta.setPeriodo(hogarCuenta.getPeriodo().trim());
         }
     }
 

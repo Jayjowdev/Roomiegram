@@ -2112,6 +2112,20 @@ p {
   padding: 12px 0;
 }
 
+button.compact-row {
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.compact-row:hover {
+  background: #f7fbf9;
+}
+
 .compact-row:first-of-type {
   border-top: none;
   padding-top: 0;
@@ -2895,6 +2909,22 @@ p {
 
 .image-upload input {
   cursor: pointer;
+}
+
+.comprobante-preview {
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #d3ebe5;
+  background: #f8fbfa;
+  cursor: pointer;
+}
+
+.comprobante-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
 }
 
 .image-preview {

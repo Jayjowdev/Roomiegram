@@ -50,6 +50,7 @@ export default function MiPerfil() {
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [cropSource, setCropSource] = useState("");
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
   const [resenas, setResenas] = useState<ResenaRoomie[]>([]);
   const profileImage = user?.fotoPerfil || avatarUser;
   const preferenciasResumen = getPreferenciasResumen(user?.preferenciasCompatibilidad);
@@ -72,6 +73,8 @@ export default function MiPerfil() {
 
         if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
           setSuscripcion(suscripcionResult.value as Suscripcion);
+        } else if (user?.id && suscripcionResult.status === "rejected") {
+          setMessage("No se pudo cargar tu plan actual. Revisa que el backend de usuario este activo.");
         }
         if (resenasResult.status === "fulfilled") {
           setResenas(resenasResult.value);
@@ -107,9 +110,49 @@ export default function MiPerfil() {
     ]);
   }, [hogarActual]);
 
+  useEffect(() => {
+    if (!integrantes.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(integrantes.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = integrantes[index];
+          if (!usuarioId) return acc;
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setPlanesIntegrantes(planes);
+
+        if (results.some((result) => result.status === "rejected")) {
+          setMessage("No se pudieron confirmar todos los planes del hogar. Algunos beneficios premium pueden no aparecer hasta que el backend responda.");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes]);
+
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
+
+  const titularPremiumHogarId = isPremiumHogar(planActual)
+    ? user?.id
+    : integrantes.find((usuarioId) => planesIntegrantes[usuarioId] === "PREMIUM_HOGAR");
+  const planEfectivo: PlanId = titularPremiumHogarId ? "PREMIUM_HOGAR" : planActual;
+  const premiumHogarPorGrupo = isPremiumHogar(planEfectivo) && !isPremiumHogar(planActual);
+  const titularPremiumHogarNombre = titularPremiumHogarId
+    ? getMemberName(titularPremiumHogarId, usuariosById, user || undefined)
+    : "";
 
   const promedioResenas = useMemo(() => {
     if (!resenas.length) return 0;
@@ -187,9 +230,23 @@ export default function MiPerfil() {
           <div>
             <span className="demo-kicker">Mi perfil</span>
             <h1>{user?.nombre || "Martina"}</h1>
-            {suscripcion && <span className={`plan-badge ${PLAN_BADGE_CLASS[planActual]}`}>{PLAN_LABELS[planActual]}</span>}
+            {suscripcion && (
+              <span className={`plan-badge ${premiumHogarPorGrupo ? "plan-badge-hogar-compartido" : PLAN_BADGE_CLASS[planEfectivo]}`}>
+                {premiumHogarPorGrupo
+                  ? "Beneficio Premium Hogar del grupo"
+                  : isPremiumHogar(planActual)
+                    ? "Titular Premium Hogar"
+                    : PLAN_LABELS[planEfectivo]}
+              </span>
+            )}
             <p>{user?.descripcion || "Completa tu descripción para que otros usuarios conozcan tu estilo de convivencia."}</p>
-            <p>{PLAN_STATUS_TEXT[planActual]}. {PLAN_ACTIVE_BENEFIT[planActual]}</p>
+            <p>
+              {!suscripcion
+                ? "No pudimos confirmar tu membresia actual. Revisa la conexion con el backend de usuario."
+                : premiumHogarPorGrupo
+                ? `Premium Hogar lo contrató ${titularPremiumHogarNombre}. Tu cuenta recibe el beneficio por pertenecer a este hogar; si sales del grupo, el acceso avanzado se desactiva.`
+                : `${PLAN_STATUS_TEXT[planEfectivo]}. ${PLAN_ACTIVE_BENEFIT[planEfectivo]}`}
+            </p>
             {user?.intereses?.length ? (
               <div className="home-tags">
                 {user.intereses.map((interes) => <span className="home-tag" key={interes}>{interes}</span>)}
@@ -228,18 +285,22 @@ export default function MiPerfil() {
             {isPremiumPlan(planActual) ? "Gestionar mi plan" : "Ver planes Premium"}
           </button>
           <p className="api-message mt-2">
-            {planActual === "GRATIS"
-              ? "Con el plan gratis no tienes reportes avanzados del hogar ni beneficios destacados de compatibilidad."
-              : PLAN_ACTIVE_BENEFIT[planActual]}
+            {premiumHogarPorGrupo
+              ? `Beneficio compartido: ${titularPremiumHogarNombre} es titular de Premium Hogar. Tu cuenta no aparece como pagadora, solo recibe los reportes del grupo.`
+              : planEfectivo === "GRATIS"
+              ? "Tu cuenta gratis mantiene búsqueda, publicaciones y convivencia básica. Mejora de plan cuando quieras destacar tu perfil o activar reportes del hogar."
+              : planEfectivo === "PREMIUM_INDIVIDUAL"
+                ? "Tu perfil está destacado: aprovecha compatibilidad, reputación y reseñas para coordinar mejores matches."
+                : "Tu hogar tiene reportes completos: revisa gastos, comprobantes, actividad reciente y recomendaciones de convivencia."}
           </p>
-          {planActual === "PREMIUM_INDIVIDUAL" && (
+          {planEfectivo === "PREMIUM_INDIVIDUAL" && (
             <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/compatibilidad")}>
-              Usar beneficio Premium Individual
+              Revisar compatibilidad y reputación
             </button>
           )}
-          {isPremiumHogar(planActual) && (
-            <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/crear-publicacion")}>
-              Crear publicación para mi hogar
+          {isPremiumHogar(planEfectivo) && (
+            <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/convivencia")}>
+              Ver reportes del hogar
             </button>
           )}
           <NotificationBell className="notification-bell-wide mt-2" title="Invitaciones y notificaciones" />

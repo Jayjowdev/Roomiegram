@@ -563,26 +563,6 @@ export default function Perfil() {
                   </div>
                 </article>
               ))}
-              {!esMiPerfil && hogarDelPerfil?.id && (
-                <form className="module-form mt-3" onSubmit={enviarResena}>
-                  <h4>Dejar reseña</h4>
-                  <select className="form-control" value={puntuacion} onChange={(event) => setPuntuacion(Number(event.target.value))}>
-                    {[5, 4, 3, 2, 1].map((valor) => (
-                      <option key={valor} value={valor}>{valor} estrella{valor === 1 ? "" : "s"}</option>
-                    ))}
-                  </select>
-                  <textarea
-                    className="form-control"
-                    placeholder="Cuenta cómo fue convivir o coordinar con esta persona"
-                    value={comentarioResena}
-                    onChange={(event) => setComentarioResena(event.target.value)}
-                    maxLength={500}
-                  />
-                  <button className="btn btn-success w-100" disabled={isSavingResena}>
-                    {isSavingResena ? "Publicando..." : "Publicar reseña"}
-                  </button>
-                </form>
-              )}
             </div>
 
             {publicacionCasaDelPerfil && (
@@ -638,6 +618,30 @@ export default function Perfil() {
                 <p className="form-helper">Puedes revisar su teléfono y perfil para contactar directamente.</p>
               )}
             </div>
+
+            {!esMiPerfil && hogarDelPerfil?.id && (
+              <div className="perfil-section contact-info-panel">
+                <h3>Dejar una reseña</h3>
+                <p className="form-helper">Cuenta cómo fue coordinar o convivir con esta persona. Tu comentario ayuda a otros roomies a tomar mejores decisiones.</p>
+                <form className="module-form mt-3" onSubmit={enviarResena}>
+                  <select className="form-control" value={puntuacion} onChange={(event) => setPuntuacion(Number(event.target.value))}>
+                    {[5, 4, 3, 2, 1].map((valor) => (
+                      <option key={valor} value={valor}>{valor} estrella{valor === 1 ? "" : "s"}</option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="form-control"
+                    placeholder="Ejemplo: fue responsable con pagos, tareas y comunicación del hogar."
+                    value={comentarioResena}
+                    onChange={(event) => setComentarioResena(event.target.value)}
+                    maxLength={500}
+                  />
+                  <button className="btn btn-success w-100" disabled={isSavingResena}>
+                    {isSavingResena ? "Publicando..." : "Publicar reseña"}
+                  </button>
+                </form>
+              </div>
+            )}
 
             {!!perfil.intereses?.length && (
               <div className="perfil-section">

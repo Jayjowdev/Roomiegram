@@ -4,6 +4,7 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
+import { membresiaService, PLAN_LABELS, type PlanId } from "../services/membresiaService";
 import { publicacionService, type Historia } from "../services/publicacionService";
 import { tareaService } from "../services/tareaService";
 import { usuarioService } from "../services/usuarioService";
@@ -24,7 +25,7 @@ type DashboardStats = {
 };
 
 type DashboardSection = "publicaciones" | "historias" | "hogares" | "tareas" | "usuarios" | "colaboradores";
-type UsuarioFiltro = "todos" | "sin-datos" | "suspendidos" | "clientes";
+type UsuarioFiltro = "todos" | "sin-datos" | "suspendidos" | "clientes" | "con-plan";
 type BloqueoSection = Exclude<DashboardSection, "usuarios" | "colaboradores">;
 type BloqueoEliminarUsuario = {
   key: BloqueoSection;
@@ -62,6 +63,9 @@ export default function Dashboard() {
   const [deletingTareaId, setDeletingTareaId] = useState<number | null>(null);
   const [deletingHogarId, setDeletingHogarId] = useState<number | null>(null);
   const [usuarioActionId, setUsuarioActionId] = useState<number | null>(null);
+  const [planActionId, setPlanActionId] = useState<number | null>(null);
+  const [usuariosPlanes, setUsuariosPlanes] = useState<Record<number, PlanId>>({});
+  const [planDrafts, setPlanDrafts] = useState<Record<number, PlanId>>({});
   const [selectedUsuarioId, setSelectedUsuarioId] = useState<number | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<{ usuario: string; value: string } | null>(null);
   const [usuarioFiltro, setUsuarioFiltro] = useState<UsuarioFiltro>("todos");
@@ -143,6 +147,35 @@ export default function Dashboard() {
       isMounted = false;
     };
   }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== "ADMIN" || usuarios.length === 0) return;
+
+    let isMounted = true;
+
+    Promise.allSettled(usuarios.map((usuarioItem) => membresiaService.obtenerActiva(usuarioItem.id)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = usuarios[index]?.id;
+          if (!usuarioId) return acc;
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setUsuariosPlanes(planes);
+        setPlanDrafts((current) => ({ ...planes, ...current }));
+
+        if (results.some((result) => result.status === "rejected")) {
+          setMessage("No se pudieron cargar todos los planes de usuarios. Revisa que el backend de usuario este activo.");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.role, usuarios]);
 
   const eliminarPublicacion = async (publicacion: Publicacion) => {
     if (!user?.usuario || user.role !== "ADMIN") {
@@ -501,6 +534,35 @@ export default function Dashboard() {
       setMessage(error instanceof Error ? error.message : "No se pudo reactivar la cuenta.");
     } finally {
       setUsuarioActionId(null);
+    }
+  };
+
+  const actualizarPlanUsuarioAdmin = async (usuarioObjetivo: UsuarioResumen) => {
+    if (!user?.id || user.role !== "ADMIN") {
+      setMessage("Solo una cuenta ADMIN puede cambiar planes de usuarios.");
+      return;
+    }
+
+    const plan = planDrafts[usuarioObjetivo.id] || usuariosPlanes[usuarioObjetivo.id] || "GRATIS";
+
+    try {
+      setPlanActionId(usuarioObjetivo.id);
+      await membresiaService.cambiarPlanAdmin(
+        usuarioObjetivo.id,
+        user.id,
+        user.role,
+        plan,
+        plan !== "GRATIS",
+      );
+      const confirmada = await membresiaService.obtenerActiva(usuarioObjetivo.id);
+      setUsuariosPlanes((current) => ({ ...current, [usuarioObjetivo.id]: confirmada.plan }));
+      setPlanDrafts((current) => ({ ...current, [usuarioObjetivo.id]: confirmada.plan }));
+      setTemporaryPassword(null);
+      setMessage(`Plan actualizado y confirmado para demostración/admin: ${PLAN_LABELS[confirmada.plan]}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo actualizar el plan del usuario.");
+    } finally {
+      setPlanActionId(null);
     }
   };
 
@@ -867,10 +929,12 @@ export default function Dashboard() {
       usuarios.filter((usuarioItem) => {
         const datosAsociados = getDatosAsociadosUsuario(usuarioItem);
         const usuarioEliminable = esUsuarioEliminable(usuarioItem);
+        const planUsuario = usuariosPlanes[usuarioItem.id] || "GRATIS";
 
         if (usuarioFiltro === "sin-datos" && !usuarioEliminable) return false;
         if (usuarioFiltro === "suspendidos" && isUsuarioActivo(usuarioItem)) return false;
         if (usuarioFiltro === "clientes" && getUsuarioRole(usuarioItem) !== "CLIENTE") return false;
+        if (usuarioFiltro === "con-plan" && planUsuario === "GRATIS") return false;
 
         return matchesFilter([
           usuarioItem.id,
@@ -880,6 +944,8 @@ export default function Dashboard() {
           usuarioItem.telefono,
           getUsuarioRole(usuarioItem),
           isUsuarioActivo(usuarioItem) ? "activa" : "suspendida",
+          PLAN_LABELS[planUsuario],
+          planUsuario,
           usuarioItem.estadoCuenta,
           usuarioItem.hogarActual,
           `publicaciones ${datosAsociados.publicaciones}`,
@@ -888,7 +954,7 @@ export default function Dashboard() {
           `tareas ${datosAsociados.tareas}`,
         ]);
       }),
-    [dashboardFilter, usuarioFiltro, usuarios, publicaciones, historias, hogares, tareas, user?.id],
+    [dashboardFilter, usuarioFiltro, usuarios, publicaciones, historias, hogares, tareas, user?.id, usuariosPlanes],
   );
 
   const colaboradoresFiltrados = useMemo(
@@ -1453,6 +1519,7 @@ export default function Dashboard() {
                 { id: "sin-datos" as const, label: "Sin datos asociados" },
                 { id: "suspendidos" as const, label: "Suspendidos" },
                 { id: "clientes" as const, label: "Clientes" },
+                { id: "con-plan" as const, label: "Con plan" },
               ].map((filter) => (
                 <button
                   className={`filter-chip ${usuarioFiltro === filter.id ? "active" : ""}`}
@@ -1510,6 +1577,7 @@ export default function Dashboard() {
                   const usuarioActivo = isUsuarioActivo(usuarioItem);
                   const usuarioEliminable = esUsuarioEliminable(usuarioItem);
                   const usuarioSeleccionado = selectedUsuariosIds.includes(usuarioItem.id);
+                  const planUsuario = usuariosPlanes[usuarioItem.id] || "GRATIS";
 
                   return (
                     <article
@@ -1546,6 +1614,7 @@ export default function Dashboard() {
                           {usuarioActivo ? "Activa" : "Suspendida"}
                         </span>
                         <span className="status-pill">{getUsuarioRole(usuarioItem)}</span>
+                        <span className="status-pill">{PLAN_LABELS[planUsuario]}</span>
                         <span className="status-pill">{datosAsociados.total} datos asociados</span>
                       </div>
                     </article>
@@ -1561,6 +1630,9 @@ export default function Dashboard() {
                   const isCurrentAdmin = selectedUsuario.id === user?.id;
                   const isAdminAccount = getUsuarioRole(selectedUsuario) === "ADMIN";
                   const actionDisabled = usuarioActionId === selectedUsuario.id;
+                  const planActualUsuario = usuariosPlanes[selectedUsuario.id] || "GRATIS";
+                  const planSeleccionadoUsuario = planDrafts[selectedUsuario.id] || planActualUsuario;
+                  const planActionDisabled = planActionId === selectedUsuario.id;
 
                   return (
                     <>
@@ -1585,6 +1657,39 @@ export default function Dashboard() {
                         <span><strong>Teléfono:</strong> {selectedUsuario.telefono || "No informado"}</span>
                         <span><strong>Rol:</strong> {getUsuarioRole(selectedUsuario)}</span>
                         <span><strong>Estado de la cuenta:</strong> {usuarioActivo ? "Activa" : "Suspendida"}</span>
+                      </div>
+
+                      <div className="admin-user-associated">
+                        <h5>Membresía</h5>
+                        <p>
+                          Plan actual: <strong>{PLAN_LABELS[planActualUsuario]}</strong>. Esta acción sirve para demostración
+                          o soporte administrativo; las compras reales siguen pasando por Mercado Pago.
+                        </p>
+                        <div className="admin-users-toolbar">
+                          <select
+                            className="form-control"
+                            value={planSeleccionadoUsuario}
+                            onChange={(event) =>
+                              setPlanDrafts((current) => ({
+                                ...current,
+                                [selectedUsuario.id]: event.target.value as PlanId,
+                              }))
+                            }
+                            disabled={planActionDisabled}
+                          >
+                            {(["GRATIS", "PREMIUM_INDIVIDUAL", "PREMIUM_HOGAR"] as PlanId[]).map((planId) => (
+                              <option key={planId} value={planId}>{PLAN_LABELS[planId]}</option>
+                            ))}
+                          </select>
+                          <button
+                            className="btn btn-outline-success btn-sm"
+                            type="button"
+                            onClick={() => actualizarPlanUsuarioAdmin(selectedUsuario)}
+                            disabled={planActionDisabled || planSeleccionadoUsuario === planActualUsuario}
+                          >
+                            {planActionDisabled ? "Actualizando..." : "Actualizar plan"}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="admin-user-associated">

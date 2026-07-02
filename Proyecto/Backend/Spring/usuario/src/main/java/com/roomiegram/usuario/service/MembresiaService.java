@@ -3,6 +3,7 @@ package com.roomiegram.usuario.service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -26,9 +27,7 @@ public class MembresiaService {
     public Suscripcion obtenerActiva(Long usuarioId) {
         validarUsuario(usuarioId);
 
-        return suscripcionRepository
-                .findTopByUsuarioIdOrderByFechaInicioDesc(usuarioId)
-                .filter(suscripcion -> suscripcion.getEstado() == EstadoSuscripcion.ACTIVA)
+        return buscarSuscripcionActiva(usuarioId)
                 .orElseGet(() -> suscripcionGratisVirtual(usuarioId));
     }
 
@@ -43,8 +42,7 @@ public class MembresiaService {
             throw new IllegalArgumentException("Plan no válido");
         }
 
-        suscripcionRepository.findTopByUsuarioIdOrderByFechaInicioDesc(usuarioId)
-                .filter(suscripcion -> suscripcion.getEstado() == EstadoSuscripcion.ACTIVA)
+        buscarSuscripcionActiva(usuarioId)
                 .ifPresent(suscripcion -> {
                     suscripcion.setEstado(EstadoSuscripcion.CANCELADA);
                     suscripcionRepository.save(suscripcion);
@@ -65,8 +63,7 @@ public class MembresiaService {
     public void cancelar(Long usuarioId) {
         validarUsuario(usuarioId);
 
-        suscripcionRepository.findTopByUsuarioIdOrderByFechaInicioDesc(usuarioId)
-                .filter(suscripcion -> suscripcion.getEstado() == EstadoSuscripcion.ACTIVA)
+        buscarSuscripcionActiva(usuarioId)
                 .ifPresent(suscripcion -> {
                     suscripcion.setEstado(EstadoSuscripcion.CANCELADA);
                     suscripcionRepository.save(suscripcion);
@@ -114,6 +111,12 @@ public class MembresiaService {
         if (usuarioId == null || !registerRepository.existsById(usuarioId)) {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
+    }
+
+    private Optional<Suscripcion> buscarSuscripcionActiva(Long usuarioId) {
+        return suscripcionRepository.findTopByUsuarioIdAndEstadoOrderByFechaInicioDescIdDesc(
+                usuarioId,
+                EstadoSuscripcion.ACTIVA);
     }
 
     private Suscripcion suscripcionGratisVirtual(Long usuarioId) {

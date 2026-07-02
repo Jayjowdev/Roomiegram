@@ -60,8 +60,8 @@ export const PLAN_STATUS_TEXT: Record<PlanId, string> = {
 
 export const PLAN_ACTIVE_BENEFIT: Record<PlanId, string> = {
   GRATIS: "Puedes buscar roomies, crear publicaciones y usar convivencia básica; los reportes y beneficios destacados quedan reservados para Premium.",
-  PREMIUM_INDIVIDUAL: "Beneficio activo: perfil destacado, compatibilidad y reputación visible para encontrar mejores matches.",
-  PREMIUM_HOGAR: "Beneficio activo: reportes del hogar, gastos, comprobantes y actividad para organizar la convivencia.",
+  PREMIUM_INDIVIDUAL: "Beneficio personal activo: tu perfil, compatibilidad y reputacion se destacan solo en tu cuenta.",
+  PREMIUM_HOGAR: "Beneficio de hogar activo: el titular habilita reportes, gastos, comprobantes y actividad para su grupo actual.",
 }
 
 export function isPremiumPlan(plan?: PlanId | null) {
@@ -96,17 +96,6 @@ const FALLBACK_PLANS: PlanInfo[] = [
   },
 ]
 
-function freeSubscription(usuarioId: number): Suscripcion {
-  return {
-    usuarioId,
-    plan: "GRATIS",
-    estado: "ACTIVA",
-    fechaInicio: new Date().toISOString().slice(0, 10),
-    fechaFin: null,
-    renovacionAutomatica: false,
-  }
-}
-
 export const membresiaService = {
   async listarPlanes(): Promise<PlanInfo[]> {
     try {
@@ -121,8 +110,8 @@ export const membresiaService = {
     try {
       const { data } = await usuarioApi.get<Suscripcion>(`/auth/membresias/usuario/${usuarioId}`)
       return data
-    } catch {
-      return freeSubscription(usuarioId)
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
     }
   },
 
@@ -193,6 +182,20 @@ export const membresiaService = {
       const { data } = await usuarioApi.post<Suscripcion>("/auth/membresias/demo/suscribir", {
         usuarioId,
         plan,
+      })
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async cambiarPlanAdmin(usuarioId: number, adminId: number, rolSolicitante: string, plan: PlanId, renovacionAutomatica = true): Promise<Suscripcion> {
+    try {
+      const { data } = await usuarioApi.patch<Suscripcion>(`/auth/membresias/admin/usuario/${usuarioId}/plan`, {
+        adminId,
+        rolSolicitante,
+        plan,
+        renovacionAutomatica,
       })
       return data
     } catch (error) {

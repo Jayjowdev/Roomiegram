@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ProtectedRoute } from "./components/ProtectedRoute"
+import { ThemeToggle } from "./components/ThemeToggle"
 import "./styles/pages.css"
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"
@@ -28,6 +29,7 @@ import Soporte from "./pages/Soporte"
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeToggle />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />

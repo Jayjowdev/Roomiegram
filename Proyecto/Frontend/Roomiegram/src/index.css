@@ -17,6 +17,42 @@ body {
   overflow-x: hidden;
 }
 
+.theme-toggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dcebe7;
+  border-radius: 999px;
+  bottom: 18px;
+  box-shadow: 0 12px 28px rgba(18, 63, 51, 0.16);
+  color: #1f7a63;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 9px 13px 9px 10px;
+  position: fixed;
+  left: 18px;
+  right: auto;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  z-index: 1200;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-2px);
+}
+
+.theme-toggle-mark {
+  align-items: center;
+  background: #e6f4f1;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
 #root {
   width: 100%;
   min-height: 100vh;
@@ -3200,10 +3236,18 @@ button.compact-row:hover {
   min-width: 0;
   padding: 24px;
   position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.plan-card:hover {
+  border-color: #b7d8cd;
+  box-shadow: 0 16px 34px rgba(31, 122, 99, 0.12);
+  transform: translateY(-2px);
 }
 
 .plan-card-activo {
   border-color: #1f7a63;
+  box-shadow: 0 18px 38px rgba(31, 122, 99, 0.18);
 }
 
 .plan-popular-badge {
@@ -3267,6 +3311,38 @@ button.compact-row:hover {
   font-weight: 800;
   margin-right: 6px;
   padding: 3px 6px;
+}
+
+.plan-badge {
+  border: 1px solid #d5e7e1;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 8px 0;
+  padding: 7px 11px;
+}
+
+.plan-badge-gratis {
+  background: #f5f8f7;
+  color: #55706a;
+}
+
+.plan-badge-premium {
+  background: #eaf7f3;
+  color: #17614f;
+}
+
+.plan-badge-hogar {
+  background: #fff7df;
+  border-color: #efd27a;
+  color: #77601d;
+}
+
+.plan-badge-hogar-compartido {
+  background: #edf7ff;
+  border-color: #9dc6e8;
+  color: #245a82;
 }
 
 /* ---------- DASHBOARD ---------- */
@@ -4881,5 +4957,783 @@ button.compact-row:hover {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- MODO OSCURO ---------- */
+
+body.theme-dark {
+  --rg-bg: #070b12;
+  --rg-bg-soft: #0b1220;
+  --rg-surface: #111827;
+  --rg-surface-2: #172033;
+  --rg-surface-3: #1d2a3d;
+  --rg-border: #263244;
+  --rg-border-strong: #34465f;
+  --rg-text: #e5edf6;
+  --rg-text-soft: #c3cedd;
+  --rg-text-muted: #94a3b8;
+  --rg-accent: #2fbf8f;
+  --rg-accent-strong: #1f9d75;
+  --rg-accent-soft: rgba(47, 191, 143, 0.14);
+  --rg-danger: #f87171;
+  --rg-danger-soft: rgba(248, 113, 113, 0.14);
+  background: var(--rg-bg);
+  color: var(--rg-text);
+}
+
+body.theme-dark .theme-toggle {
+  background: var(--rg-surface);
+  border-color: var(--rg-border-strong);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.42);
+  color: var(--rg-text);
+}
+
+body.theme-dark .theme-toggle-mark {
+  background: var(--rg-accent-strong);
+  color: #ffffff;
+}
+
+body.theme-dark .landing-page,
+body.theme-dark .login-page,
+body.theme-dark .register-page,
+body.theme-dark .home-page,
+body.theme-dark .perfil-page,
+body.theme-dark .planes-page,
+body.theme-dark .dashboard-page,
+body.theme-dark .collaborator-page,
+body.theme-dark .module-page,
+body.theme-dark .stories-page,
+body.theme-dark .support-page {
+  background:
+    radial-gradient(circle at top left, rgba(47, 191, 143, 0.08), transparent 32%),
+    linear-gradient(180deg, var(--rg-bg) 0%, var(--rg-bg-soft) 100%);
+  color: var(--rg-text);
+}
+
+body.theme-dark .home-header,
+body.theme-dark .perfil-header,
+body.theme-dark .dashboard-header,
+body.theme-dark .landing-header,
+body.theme-dark .support-header,
+body.theme-dark .module-header {
+  background: transparent;
+  color: var(--rg-text);
+}
+
+body.theme-dark .landing-demo-card,
+body.theme-dark .landing-feature-card,
+body.theme-dark .card,
+body.theme-dark .card-body,
+body.theme-dark .modal-content,
+body.theme-dark .modal-header,
+body.theme-dark .modal-footer,
+body.theme-dark .dropdown-menu,
+body.theme-dark .list-group-item,
+body.theme-dark .home-card,
+body.theme-dark .home-info-card,
+body.theme-dark .home-testimonial-card,
+body.theme-dark .home-filter-panel,
+body.theme-dark .home-contact-section,
+body.theme-dark .home-contact-form,
+body.theme-dark .home-inline-form,
+body.theme-dark .filtros-container,
+body.theme-dark .stories-hero,
+body.theme-dark .support-layout,
+body.theme-dark .support-note,
+body.theme-dark .collaborator-hero,
+body.theme-dark .collaborator-scope-card,
+body.theme-dark .collaborator-filter-panel,
+body.theme-dark .collaborator-tabs,
+body.theme-dark .collaborator-publication-row,
+body.theme-dark .collaborator-moderation-note,
+body.theme-dark .mi-perfil-card,
+body.theme-dark .mi-perfil-summary,
+body.theme-dark .mi-grupo,
+body.theme-dark .perfil-publico-container,
+body.theme-dark .perfil-publico-card,
+body.theme-dark .perfil-publication-summary,
+body.theme-dark .perfil-section,
+body.theme-dark .perfil-avatar-placeholder,
+body.theme-dark .profile-publications-entry,
+body.theme-dark .my-publications-hero,
+body.theme-dark .my-publications-empty,
+body.theme-dark .roomie-card,
+body.theme-dark .plan-card,
+body.theme-dark .dashboard-card,
+body.theme-dark .dashboard-welcome,
+body.theme-dark .dashboard-section-nav,
+body.theme-dark .dashboard-activity,
+body.theme-dark .dashboard-profile,
+body.theme-dark .dashboard-filter-panel,
+body.theme-dark .admin-user-row,
+body.theme-dark .admin-user-detail,
+body.theme-dark .admin-users-toolbar,
+body.theme-dark .admin-user-profile,
+body.theme-dark .admin-user-profile span,
+body.theme-dark .admin-hogar-card,
+body.theme-dark .admin-hogar-metric,
+body.theme-dark .admin-hogar-id-list,
+body.theme-dark .admin-hogar-request-note,
+body.theme-dark .admin-hogar-admin,
+body.theme-dark .admin-hogar-row,
+body.theme-dark .admin-hogar-counts span,
+body.theme-dark .admin-hogar-integrantes span,
+body.theme-dark .admin-user-warning,
+body.theme-dark .admin-user-blockers,
+body.theme-dark .admin-user-blockers li,
+body.theme-dark .admin-user-alert,
+body.theme-dark .admin-session-card,
+body.theme-dark .compact-admin-user-profile,
+body.theme-dark .module-item,
+body.theme-dark .module-link,
+body.theme-dark .module-list,
+body.theme-dark .module-form,
+body.theme-dark .planes-benefits-matrix,
+body.theme-dark .member-picker,
+body.theme-dark .member-check,
+body.theme-dark .household-stat,
+body.theme-dark .household-panel,
+body.theme-dark .convivencia-main,
+body.theme-dark .convivencia-side,
+body.theme-dark .empty-household,
+body.theme-dark .demo-widget,
+body.theme-dark .hogar-card,
+body.theme-dark .hogar-current-panel,
+body.theme-dark .hogares-primary-panel,
+body.theme-dark .hogares-secondary-panel,
+body.theme-dark .hogares-path-card,
+body.theme-dark .hogares-loading-panel,
+body.theme-dark .settings-card,
+body.theme-dark .profile-action-panel,
+body.theme-dark .profile-password-card,
+body.theme-dark .detalle-main,
+body.theme-dark .detalle-side,
+body.theme-dark .detalle-gallery,
+body.theme-dark .detalle-thumb-button,
+body.theme-dark .support-form-card,
+body.theme-dark .story-card,
+body.theme-dark .story-form-card,
+body.theme-dark .my-publication-card,
+body.theme-dark .compatibility-panel,
+body.theme-dark .compatibility-form,
+body.theme-dark .compatibility-results,
+body.theme-dark .compatibility-match,
+body.theme-dark .compatibility-match-card,
+body.theme-dark .match-score-bar,
+body.theme-dark .match-tags em,
+body.theme-dark .notification-context-card,
+body.theme-dark .notification-interest-card,
+body.theme-dark .notification-review-panel,
+body.theme-dark .contact-info-panel,
+body.theme-dark .modal-card,
+body.theme-dark .cropper-panel,
+body.theme-dark .cropper-select-area,
+body.theme-dark .create-section,
+body.theme-dark .comprobante-preview,
+body.theme-dark .image-upload,
+body.theme-dark .image-preview {
+  background: var(--rg-surface);
+  border-color: var(--rg-border);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+  color: var(--rg-text);
+}
+
+body.theme-dark .plan-card-premium,
+body.theme-dark .plan-card-hogar,
+body.theme-dark .demo-widget.highlight,
+body.theme-dark .admin-hogar-card.has-requests,
+body.theme-dark .admin-hogar-metric.highlight,
+body.theme-dark .admin-hogar-request-note.pending,
+body.theme-dark .admin-user-warning,
+body.theme-dark .admin-user-blockers,
+body.theme-dark .collaborator-moderation-note {
+  background: linear-gradient(180deg, var(--rg-surface-2) 0%, var(--rg-surface) 100%);
+  border-color: rgba(47, 191, 143, 0.42);
+}
+
+body.theme-dark .home-hero,
+body.theme-dark .planes-hero {
+  background:
+    linear-gradient(135deg, rgba(47, 191, 143, 0.14) 0%, rgba(17, 24, 39, 0.96) 42%, rgba(7, 11, 18, 0.98) 100%);
+  border: 1px solid var(--rg-border);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.38);
+  color: var(--rg-text);
+}
+
+body.theme-dark .home-card:hover,
+body.theme-dark .plan-card:hover,
+body.theme-dark .dashboard-card:hover {
+  border-color: rgba(47, 191, 143, 0.46);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.4);
+}
+
+body.theme-dark h1,
+body.theme-dark h2,
+body.theme-dark h3,
+body.theme-dark h4,
+body.theme-dark h5,
+body.theme-dark h6,
+body.theme-dark .landing-text h1,
+body.theme-dark .home-hero h1,
+body.theme-dark .home-section-heading h2,
+body.theme-dark .home-contact-section h2,
+body.theme-dark .support-copy h1,
+body.theme-dark .collaborator-hero h1,
+body.theme-dark .collaborator-publication-title h3,
+body.theme-dark .home-card-top h3,
+body.theme-dark .home-info-card h3,
+body.theme-dark .home-testimonial-card h3,
+body.theme-dark .home-inline-form h3,
+body.theme-dark .my-publications-hero h1,
+body.theme-dark .my-publications-empty h2,
+body.theme-dark .my-publication-body h3,
+body.theme-dark .perfil-publication-summary h1,
+body.theme-dark .perfil-info h2,
+body.theme-dark .plan-card-nombre,
+body.theme-dark .dashboard-welcome h1,
+body.theme-dark .admin-user-summary strong,
+body.theme-dark .admin-user-profile strong,
+body.theme-dark .admin-user-data-list strong,
+body.theme-dark .admin-user-associated strong,
+body.theme-dark .module-link strong,
+body.theme-dark .module-item h4,
+body.theme-dark .dashboard-activity .module-item h4,
+body.theme-dark .admin-hogar-card h4,
+body.theme-dark .admin-hogar-metric strong,
+body.theme-dark .module-form h3,
+body.theme-dark .module-list h3,
+body.theme-dark .create-section h3,
+body.theme-dark .field-label {
+  color: var(--rg-text);
+}
+
+body.theme-dark p,
+body.theme-dark small,
+body.theme-dark label,
+body.theme-dark .landing-text p,
+body.theme-dark .home-hero p,
+body.theme-dark .home-desc,
+body.theme-dark .home-ubicacion,
+body.theme-dark .home-results-count,
+body.theme-dark .home-info-card p,
+body.theme-dark .home-testimonial-card p,
+body.theme-dark .home-contact-section p,
+body.theme-dark .home-inline-form small,
+body.theme-dark .my-publications-hero p,
+body.theme-dark .my-publications-toolbar p,
+body.theme-dark .my-publications-empty p,
+body.theme-dark .home-desc-oferta,
+body.theme-dark .perfil-ubicacion,
+body.theme-dark .perfil-bio,
+body.theme-dark .perfil-section p,
+body.theme-dark .detalle-desc,
+body.theme-dark .detalle-side p,
+body.theme-dark .compatibility-form p,
+body.theme-dark .compatibility-match small,
+body.theme-dark .match-description,
+body.theme-dark .match-contact,
+body.theme-dark .support-copy p,
+body.theme-dark .support-note span,
+body.theme-dark .collaborator-hero p,
+body.theme-dark .collaborator-scope-card span,
+body.theme-dark .collaborator-publication-main p,
+body.theme-dark .collaborator-publication-title small,
+body.theme-dark .collaborator-publication-meta span,
+body.theme-dark .collaborator-moderation-note,
+body.theme-dark .plan-card-desc,
+body.theme-dark .plan-beneficio-item,
+body.theme-dark .module-link span,
+body.theme-dark .module-item p,
+body.theme-dark .module-item span,
+body.theme-dark .dashboard-section-help,
+body.theme-dark .dashboard-activity .module-item p,
+body.theme-dark .dashboard-activity .module-item span,
+body.theme-dark .dashboard-activity .module-item small,
+body.theme-dark .admin-user-summary small,
+body.theme-dark .admin-users-bulk-actions span,
+body.theme-dark .admin-user-profile span,
+body.theme-dark .admin-hogar-description,
+body.theme-dark .admin-hogar-metric span,
+body.theme-dark .admin-hogar-id-list span,
+body.theme-dark .admin-hogar-admin span,
+body.theme-dark .admin-hogar-request-note span,
+body.theme-dark .admin-hogar-id-list p {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .home-card-body,
+body.theme-dark .my-publication-body,
+body.theme-dark .module-item,
+body.theme-dark .admin-hogar-row,
+body.theme-dark .collaborator-publication-row,
+body.theme-dark .card-body {
+  background: transparent;
+}
+
+body.theme-dark .home-section-heading span,
+body.theme-dark .home-contact-section span,
+body.theme-dark .support-note strong,
+body.theme-dark .collaborator-scope-card strong,
+body.theme-dark .collaborator-publication-meta strong,
+body.theme-dark .collaborator-publication-title h3,
+body.theme-dark .home-precio,
+body.theme-dark .compatibility-kicker,
+body.theme-dark .compatibility-results-title strong,
+body.theme-dark .compatibility-match strong,
+body.theme-dark .match-insight-title,
+body.theme-dark .member-picker h4,
+body.theme-dark .planes-kicker,
+body.theme-dark .demo-kicker,
+body.theme-dark .plan-precio-gratis,
+body.theme-dark .plan-precio-valor,
+body.theme-dark .admin-user-summary strong,
+body.theme-dark .admin-user-profile strong,
+body.theme-dark .admin-hogar-card h4,
+body.theme-dark .admin-hogar-metric strong {
+  color: var(--rg-accent);
+}
+
+body.theme-dark input,
+body.theme-dark select,
+body.theme-dark textarea,
+body.theme-dark .form-control,
+body.theme-dark .form-select,
+body.theme-dark .search-input,
+body.theme-dark .filter-chip,
+body.theme-dark .dashboard-section-tab {
+  background: var(--rg-bg-soft);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark select option {
+  background: var(--rg-bg-soft);
+  color: var(--rg-text);
+}
+
+body.theme-dark input::placeholder,
+body.theme-dark textarea::placeholder {
+  color: #718096;
+}
+
+body.theme-dark .form-control:focus,
+body.theme-dark .form-select:focus,
+body.theme-dark input:focus,
+body.theme-dark select:focus,
+body.theme-dark textarea:focus {
+  background: #0d1626;
+  border-color: var(--rg-accent);
+  box-shadow: 0 0 0 0.22rem rgba(47, 191, 143, 0.16);
+  color: var(--rg-text);
+}
+
+body.theme-dark .btn-outline-success {
+  background: transparent;
+  border-color: rgba(47, 191, 143, 0.78);
+  color: #b8f3df;
+}
+
+body.theme-dark .btn-outline-dark,
+body.theme-dark .btn-logout {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark .btn-outline-danger {
+  background: transparent;
+  border-color: rgba(248, 113, 113, 0.72);
+  color: #fecaca;
+}
+
+body.theme-dark .btn-success {
+  background: var(--rg-accent-strong);
+  border-color: var(--rg-accent-strong);
+  color: #ffffff;
+}
+
+body.theme-dark .btn-outline-success:hover,
+body.theme-dark .filter-chip.active,
+body.theme-dark .dashboard-section-tab.active {
+  background: var(--rg-accent-strong);
+  border-color: var(--rg-accent-strong);
+  color: #ffffff;
+}
+
+body.theme-dark .btn-outline-dark:hover,
+body.theme-dark .btn-logout:hover {
+  background: var(--rg-danger-soft);
+  border-color: rgba(248, 113, 113, 0.66);
+  color: #fecaca;
+}
+
+body.theme-dark .btn-outline-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+body.theme-dark .notification-bell {
+  background: var(--rg-surface);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark .notification-bell:hover,
+body.theme-dark .notification-bell.has-notifications {
+  background: var(--rg-accent-strong);
+  border-color: var(--rg-accent-strong);
+  color: #ffffff;
+}
+
+body.theme-dark .filtro-btn {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .home-location-filter .form-control,
+body.theme-dark .home-contact-form .form-control,
+body.theme-dark .home-inline-form .form-control,
+body.theme-dark .support-form-card .form-control,
+body.theme-dark .module-form .form-control,
+body.theme-dark .create-section .form-control {
+  background: var(--rg-bg-soft);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark .member-check {
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .member-check input {
+  accent-color: var(--rg-accent-strong);
+}
+
+body.theme-dark .notification-context-grid span,
+body.theme-dark .compatibility-results-title strong {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .match-tags em {
+  background: rgba(47, 191, 143, 0.14);
+  color: #b8f3df;
+}
+
+body.theme-dark .match-tags-muted em {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fde68a;
+}
+
+body.theme-dark .match-score-bar span {
+  background: var(--rg-accent-strong);
+}
+
+body.theme-dark .notification-filters {
+  border-bottom-color: var(--rg-border);
+}
+
+body.theme-dark .image-preview img,
+body.theme-dark .comprobante-preview img {
+  border-color: var(--rg-border);
+}
+
+body.theme-dark .filtro-btn:hover {
+  background: var(--rg-surface-2);
+  color: var(--rg-text);
+}
+
+body.theme-dark .filtro-activo,
+body.theme-dark .filtro-activo:hover {
+  background: var(--rg-accent-strong);
+  color: #ffffff;
+}
+
+body.theme-dark .plan-check,
+body.theme-dark .home-tag,
+body.theme-dark .status-pill.success {
+  background: var(--rg-accent-soft);
+  color: #b8f3df;
+}
+
+body.theme-dark .status-pill,
+body.theme-dark .plan-badge-gratis {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .plan-badge-premium {
+  background: rgba(47, 191, 143, 0.14);
+  border-color: rgba(47, 191, 143, 0.46);
+  color: #b8f3df;
+}
+
+body.theme-dark .plan-badge-hogar {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fde68a;
+}
+
+body.theme-dark .plan-badge-hogar-compartido {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.48);
+  color: #bae6fd;
+}
+
+body.theme-dark .api-message,
+body.theme-dark .sin-resultados,
+body.theme-dark .empty-state {
+  background: rgba(47, 191, 143, 0.1);
+  border-color: rgba(47, 191, 143, 0.32);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .form-helper,
+body.theme-dark .form-error,
+body.theme-dark .form-success,
+body.theme-dark .form-feedback {
+  background: rgba(47, 191, 143, 0.1);
+  border-color: rgba(47, 191, 143, 0.32);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .admin-user-alert code {
+  background: var(--rg-bg-soft);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-accent);
+}
+
+body.theme-dark .admin-user-blockers h5,
+body.theme-dark .admin-user-blockers p,
+body.theme-dark .admin-user-blockers li span {
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .plan-activo-badge {
+  background: rgba(47, 191, 143, 0.14);
+  border-color: rgba(47, 191, 143, 0.5);
+  color: #b8f3df;
+}
+
+body.theme-dark .dashboard-section-tab strong {
+  background: var(--rg-surface);
+  color: var(--rg-accent);
+}
+
+body.theme-dark .dashboard-section-tab.active strong {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+body.theme-dark .home-logo,
+body.theme-dark .perfil-logo,
+body.theme-dark .landing-logo,
+body.theme-dark .login-logo,
+body.theme-dark .register-logo,
+body.theme-dark .dashboard-logo {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  filter: none;
+  padding: 5px 8px;
+}
+
+body.theme-dark table,
+body.theme-dark .table {
+  color: var(--rg-text);
+}
+
+body.theme-dark hr {
+  border-color: var(--rg-border);
+}
+
+/* Ajustes puntuales de contraste para las pantallas que aun tenian fondos claros. */
+body.theme-dark .login-box {
+  background: var(--rg-surface);
+  border: 1px solid var(--rg-border);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.38);
+}
+
+body.theme-dark .login-form {
+  background: linear-gradient(180deg, var(--rg-surface) 0%, var(--rg-surface-2) 100%);
+  color: var(--rg-text);
+}
+
+body.theme-dark .login-form h2,
+body.theme-dark .login-recover-title,
+body.theme-dark .login-brand {
+  color: var(--rg-text);
+}
+
+body.theme-dark .login-form input {
+  background: var(--rg-bg-soft);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark .login-forgot-link,
+body.theme-dark .password-toggle {
+  color: #b8f3df;
+}
+
+body.theme-dark .login-forgot-link:hover,
+body.theme-dark .password-toggle:hover {
+  color: var(--rg-accent);
+}
+
+body.theme-dark .login-legal,
+body.theme-dark .login-recover-back,
+body.theme-dark .login-recover-form {
+  border-color: var(--rg-border);
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .household-panel .compact-row,
+body.theme-dark button.compact-row {
+  background: transparent;
+  border-top-color: var(--rg-border);
+  color: var(--rg-text);
+}
+
+body.theme-dark .household-panel .compact-row strong,
+body.theme-dark .compact-row strong {
+  color: var(--rg-text);
+}
+
+body.theme-dark .household-panel .compact-row span,
+body.theme-dark .household-panel .compact-row small,
+body.theme-dark .compact-row span,
+body.theme-dark .compact-row small {
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark button.compact-row:hover {
+  background: rgba(47, 191, 143, 0.1);
+}
+
+body.theme-dark .household-panel .empty-state {
+  background: rgba(47, 191, 143, 0.08);
+  border: 1px solid rgba(47, 191, 143, 0.28);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .hogar-card-mine,
+body.theme-dark .hogar-meta-grid span,
+body.theme-dark .hogar-integrantes-admin-list,
+body.theme-dark .hogar-integrante-row,
+body.theme-dark .request-list,
+body.theme-dark .request-row {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+  color: var(--rg-text);
+}
+
+body.theme-dark .hogar-meta-grid span {
+  border: 1px solid var(--rg-border);
+  border-radius: 12px;
+}
+
+body.theme-dark .hogar-meta-grid strong,
+body.theme-dark .hogar-integrante-row span,
+body.theme-dark .request-row > span,
+body.theme-dark .hogares-primary-heading h2,
+body.theme-dark .hogares-section > h3,
+body.theme-dark .hogar-integrantes-admin-list h5,
+body.theme-dark .request-list h5 {
+  color: var(--rg-text);
+}
+
+body.theme-dark .hogar-card-mine p,
+body.theme-dark .hogar-current-panel p,
+body.theme-dark .hogares-section-secondary {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .hogar-integrante-row + .hogar-integrante-row,
+body.theme-dark .request-row + .request-row {
+  border-top-color: var(--rg-border);
+}
+
+body.theme-dark .contact-info-panel .compact-row,
+body.theme-dark .profile-publications-entry .module-link,
+body.theme-dark .notification-review-panel .compact-row {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+  border-radius: 12px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+body.theme-dark .contact-info-panel .compact-row strong,
+body.theme-dark .profile-publications-entry .module-link strong,
+body.theme-dark .notification-review-panel .compact-row strong {
+  color: #facc15;
+  letter-spacing: 1px;
+}
+
+body.theme-dark .contact-info-panel .compact-row small,
+body.theme-dark .profile-publications-entry .module-link small,
+body.theme-dark .notification-review-panel .compact-row small {
+  color: var(--rg-text-soft);
+  font-weight: 700;
+}
+
+body.theme-dark .contact-info-panel .compact-row span,
+body.theme-dark .profile-publications-entry .module-link span,
+body.theme-dark .notification-review-panel .compact-row span {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .collaborator-publication-meta span,
+body.theme-dark .home-card .home-tag,
+body.theme-dark .perfil-tag,
+body.theme-dark .amenidad-tag,
+body.theme-dark .notification-context-grid span,
+body.theme-dark .admin-hogar-counts span,
+body.theme-dark .admin-hogar-integrantes span {
+  background: var(--rg-surface-2);
+  border: 1px solid var(--rg-border);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .collaborator-publication-meta strong,
+body.theme-dark .home-card .home-tag,
+body.theme-dark .perfil-tag {
+  color: #b8f3df;
+}
+
+body.theme-dark .collaborator-moderation-note strong {
+  color: #fde68a;
+}
+
+body.theme-dark .module-form .member-picker,
+body.theme-dark .member-picker,
+body.theme-dark .member-check {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .member-picker h4,
+body.theme-dark .member-check strong {
+  color: var(--rg-text);
+}
+
+@media (max-width: 640px) {
+  .theme-toggle {
+    bottom: 12px;
+    font-size: 12px;
+    min-height: 38px;
+    padding: 8px 9px;
+    left: 12px;
+    right: auto;
+  }
+
+  .theme-toggle span:last-child {
+    display: none;
   }
 }

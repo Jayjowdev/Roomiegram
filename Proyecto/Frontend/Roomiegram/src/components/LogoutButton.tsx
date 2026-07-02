@@ -11,7 +11,7 @@ export function LogoutButton() {
   };
 
   return (
-    <button className="btn btn-outline-dark" onClick={handleLogout}>
+    <button className="btn btn-outline-dark btn-logout" onClick={handleLogout}>
       Cerrar sesión
     </button>
   );

@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
-import { isPremiumHogar, membresiaService, PLAN_BADGE_CLASS, type PlanId, type Suscripcion } from "../services/membresiaService";
+import { isPremiumHogar, membresiaService, PLAN_BADGE_CLASS, PLAN_LABELS, type PlanId, type Suscripcion } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
 import { usuarioService } from "../services/usuarioService";
@@ -37,6 +37,7 @@ type ActividadHogar = {
   ruta: string;
   fecha?: string;
   fechaOrden?: number;
+  prioridad?: number;
 };
 
 const emptyState: LoadState = {
@@ -98,6 +99,10 @@ function getDateOrder(value?: string) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+function getActivityOrder(fecha?: string, prioridad = 0) {
+  return getDateOrder(fecha) || Date.now() - prioridad;
+}
+
 function getMemberName(
   usuarioId: number,
   usuariosById: Map<number, UsuarioResumen>,
@@ -116,6 +121,7 @@ export default function Convivencia() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -144,12 +150,14 @@ export default function Convivencia() {
       setData(partialData);
       if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
         setSuscripcion(suscripcionResult.value as Suscripcion);
+      } else if (user?.id && suscripcionResult.status === "rejected") {
+        setMessage("No se pudo cargar tu plan actual. Revisa que el backend de usuario este activo.");
       }
       setIsLoading(false);
 
       if ([hogaresResult, tareasResult, gastosResult, comprobantesResult, notificacionesResult, usuariosResult].some((result) => result.status === "rejected")) {
         setMessage("Algunos datos del hogar no se pudieron cargar. Revisa que los microservicios estén activos.");
-      } else {
+      } else if (!(user?.id && suscripcionResult.status === "rejected")) {
         setMessage("");
       }
     });
@@ -178,6 +186,42 @@ export default function Convivencia() {
     ]);
   }, [hogarActual]);
 
+  useEffect(() => {
+    const ids = uniqueIds([user?.id, ...integrantes]);
+    if (!ids.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(ids.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = ids[index];
+          if (!usuarioId) return acc;
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        if (user?.id && suscripcion?.plan) {
+          planes[user.id] = suscripcion.plan;
+        }
+
+        setPlanesIntegrantes(planes);
+
+        if (results.some((result) => result.status === "rejected")) {
+          setMessage("No se pudieron confirmar todos los planes del hogar. Premium Hogar por grupo se activara cuando el backend confirme un titular premium.");
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes, suscripcion?.plan, user?.id]);
+
   const tareasDelHogar = useMemo(() => {
     if (!hogarActual) return [];
     const ids = hogarActual.tareasIds || [];
@@ -193,8 +237,11 @@ export default function Convivencia() {
   const gastoIds = useMemo(() => gastosDelHogar.map((gasto) => gasto.id).filter((id): id is number => !!id), [gastosDelHogar]);
 
   const comprobantesDelHogar = useMemo(() => {
-    return data.comprobantes.filter((comprobante) => gastoIds.includes(comprobante.hogarCuentaId));
-  }, [data.comprobantes, gastoIds]);
+    const comprobanteIds = hogarActual?.comprobanteIds || [];
+    return data.comprobantes.filter((comprobante) =>
+      gastoIds.includes(comprobante.hogarCuentaId) || (comprobante.id ? comprobanteIds.includes(comprobante.id) : false)
+    );
+  }, [data.comprobantes, gastoIds, hogarActual?.comprobanteIds]);
 
   const notificacionesDelHogar = useMemo(() => {
     if (!hogarActual) return [];
@@ -228,7 +275,12 @@ export default function Convivencia() {
   const pendientes = notificacionesDelHogar.filter((notificacion) => notificacion.estado === "PENDIENTE").length;
   const comprobantesRegistrados = comprobantesDelHogar.length || hogarActual?.comprobanteIds?.length || 0;
   const planActual: PlanId = suscripcion?.plan ?? "GRATIS";
-  const tienePremiumHogar = isPremiumHogar(planActual);
+  const titularPremiumHogarId = isPremiumHogar(planActual)
+    ? user?.id
+    : integrantes.find((usuarioId) => planesIntegrantes[usuarioId] === "PREMIUM_HOGAR");
+  const planEfectivo: PlanId = titularPremiumHogarId ? "PREMIUM_HOGAR" : planActual;
+  const premiumHogarPorGrupo = isPremiumHogar(planEfectivo) && !isPremiumHogar(planActual);
+  const tienePremiumHogar = isPremiumHogar(planEfectivo);
 
   const proximasTareas = useMemo(() => {
     return tareasDelHogar
@@ -240,6 +292,9 @@ export default function Convivencia() {
   const usuariosById = useMemo(() => {
     return new Map(data.usuarios.map((usuario) => [usuario.id, usuario]));
   }, [data.usuarios]);
+  const titularPremiumHogarNombre = titularPremiumHogarId
+    ? getMemberName(titularPremiumHogarId, usuariosById, user || undefined)
+    : "";
 
   const actividadHogar = useMemo(() => {
     const actividades: ActividadHogar[] = [];
@@ -256,17 +311,24 @@ export default function Convivencia() {
         detalle: `${integrante} subió ${formatCurrency(comprobante.montoPagado)} con ${comprobante.nombreArchivo}.`,
         ruta,
         fecha: comprobante.fechaSubida,
-        fechaOrden: getDateOrder(comprobante.fechaSubida),
+        fechaOrden: getActivityOrder(comprobante.fechaSubida, 10),
       });
     });
 
-    gastosPendientes.forEach((gasto) => {
+    gastosDelHogar.forEach((gasto, index) => {
+      const respaldado = comprobantesDelHogar
+        .filter((comprobante) => comprobante.hogarCuentaId === gasto.id)
+        .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+      const estado = getEstadoRespaldo(Number(gasto.monto || 0), respaldado);
+
       actividades.push({
-        titulo: `Gasto pendiente: ${getCategoriaLabel(gasto.categoria)}`,
-        detalle: `${gasto.descripcion} necesita respaldo o pago completo.`,
+        titulo: estado === "RESPALDADO"
+          ? `Gasto respaldado: ${getCategoriaLabel(gasto.categoria)}`
+          : `Gasto pendiente: ${getCategoriaLabel(gasto.categoria)}`,
+        detalle: `${gasto.descripcion} - ${formatCurrency(gasto.monto)} - ${ESTADO_LABELS[estado]}.`,
         ruta: `/comprobantes?gasto=${gasto.id || ""}`,
         fecha: gasto.fechaVencimiento,
-        fechaOrden: getDateOrder(gasto.fechaVencimiento),
+        fechaOrden: getActivityOrder(gasto.fechaVencimiento, 100 + index),
       });
     });
 
@@ -275,36 +337,36 @@ export default function Convivencia() {
         titulo: "Solicitudes pendientes",
         detalle: `${hogarActual?.solicitudesPendientesIds?.length || 0} persona(s) esperan respuesta del hogar.`,
         ruta: "/notificaciones",
-        fechaOrden: Date.now(),
+        fechaOrden: getActivityOrder(undefined, 300),
       });
     }
 
-    proximasTareas.forEach((tarea) => {
+    tareasDelHogar.forEach((tarea, index) => {
       actividades.push({
         titulo: `Tarea próxima: ${tarea.titulo}`,
         detalle: `${tarea.encargado} · ${formatDate(tarea.fecha)}`,
         ruta: "/tareas",
         fecha: tarea.fecha,
-        fechaOrden: getDateOrder(tarea.fecha),
+        fechaOrden: getActivityOrder(tarea.fecha, 400 + index),
       });
     });
 
     notificacionesDelHogar
-      .filter((notificacion) => notificacion.estado === "PENDIENTE" && ["CUENTA_HOGAR", "TAREA_HOGAR"].includes(notificacion.tipo))
-      .forEach((notificacion) => {
+      .filter((notificacion) => ["CUENTA_HOGAR", "TAREA_HOGAR", "SOLICITUD_HOGAR", "INVITACION_HOGAR"].includes(notificacion.tipo) || notificacion.hogarId === hogarActual?.id)
+      .forEach((notificacion, index) => {
         actividades.push({
           titulo: notificacion.titulo,
           detalle: notificacion.mensaje,
           ruta: notificacion.tipo === "CUENTA_HOGAR" && notificacion.referenciaId ? `/comprobantes?comprobante=${notificacion.referenciaId}` : "/notificaciones",
           fecha: notificacion.fechaCreacion,
-          fechaOrden: getDateOrder(notificacion.fechaCreacion),
+          fechaOrden: getActivityOrder(notificacion.fechaCreacion, 500 + index),
         });
       });
 
     return actividades
       .sort((a, b) => (b.fechaOrden || 0) - (a.fechaOrden || 0))
-      .slice(0, 6);
-  }, [comprobantesDelHogar, gastosDelHogar, gastosPendientes, hogarActual?.solicitudesPendientesIds?.length, notificacionesDelHogar, proximasTareas, user, usuariosById]);
+      .slice(0, 8);
+  }, [comprobantesDelHogar, gastosDelHogar, hogarActual?.id, hogarActual?.solicitudesPendientesIds?.length, notificacionesDelHogar, tareasDelHogar, user, usuariosById]);
 
   const recomendaciones = useMemo(() => {
     const items: RecomendacionHogar[] = [];
@@ -436,13 +498,18 @@ export default function Convivencia() {
                   <h3>Reportes del hogar</h3>
                   <p>Resumen avanzado de convivencia, gastos, comprobantes y actividad del hogar.</p>
                 </div>
-                <span className={`plan-badge ${PLAN_BADGE_CLASS[tienePremiumHogar ? "PREMIUM_HOGAR" : planActual]}`}>
-                  {tienePremiumHogar ? "Premium Hogar activo" : "Premium Hogar"}
+                <span className={`plan-badge ${premiumHogarPorGrupo ? "plan-badge-hogar-compartido" : PLAN_BADGE_CLASS[tienePremiumHogar ? "PREMIUM_HOGAR" : planActual]}`}>
+                  {premiumHogarPorGrupo ? "Beneficio Premium Hogar del grupo" : tienePremiumHogar ? "Titular Premium Hogar activo" : "Premium Hogar"}
                 </span>
               </div>
 
               {tienePremiumHogar ? (
                 <>
+                  {premiumHogarPorGrupo && (
+                    <p className="api-message">
+                      {titularPremiumHogarNombre} es titular de Premium Hogar. Los demás integrantes reciben el beneficio mientras sigan en este hogar, sin aparecer como pagadores del plan.
+                    </p>
+                  )}
                   <p>
                     Tu hogar tiene {gastosDelHogar.length} gasto(s) este periodo, {formatCurrency(totalPendienteGastos)} pendiente(s)
                     por respaldar y {comprobantesRegistrados} comprobante(s) registrado(s).
@@ -505,6 +572,8 @@ export default function Convivencia() {
                   const isAdmin = usuarioId === hogarActual.usuarioAdministradorId;
                   const memberName = getMemberName(usuarioId, usuariosById, user || undefined);
                   const fotoPerfil = usuariosById.get(usuarioId)?.fotoPerfil || (usuarioId === user?.id ? user?.fotoPerfil : "");
+                  const planIntegrante = planesIntegrantes[usuarioId];
+                  const esTitularPremiumHogar = planIntegrante === "PREMIUM_HOGAR";
 
                   return (
                     <article className="roomie-card" key={usuarioId}>
@@ -514,6 +583,13 @@ export default function Convivencia() {
                       <div>
                         <h4>{memberName}</h4>
                         <span>{isAdmin ? "Administrador del hogar" : "Integrante"}</span>
+                        {esTitularPremiumHogar ? (
+                          <span className="plan-badge plan-badge-hogar">Titular Premium Hogar</span>
+                        ) : planIntegrante ? (
+                          <span className={`plan-badge ${PLAN_BADGE_CLASS[planIntegrante]}`}>{PLAN_LABELS[planIntegrante]}</span>
+                        ) : (
+                          <span className="status-pill">Plan sin confirmar</span>
+                        )}
                       </div>
                     </article>
                   );

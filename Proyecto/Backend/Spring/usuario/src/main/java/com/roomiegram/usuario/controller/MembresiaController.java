@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.roomiegram.usuario.enums.Plan;
 import com.roomiegram.usuario.model.Suscripcion;
+import com.roomiegram.usuario.service.AdminUserService;
 import com.roomiegram.usuario.service.MercadoPagoService;
 import com.roomiegram.usuario.service.MercadoPagoService.ResultadoPago;
 import com.roomiegram.usuario.service.MembresiaService;
@@ -27,6 +29,7 @@ public class MembresiaController {
 
     private final MembresiaService membresiaService;
     private final MercadoPagoService mercadoPagoService;
+    private final AdminUserService adminUserService;
 
     @Value("${pagos.demo-enabled:false}")
     private boolean pagosDemoEnabled;
@@ -34,9 +37,10 @@ public class MembresiaController {
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
-    public MembresiaController(MembresiaService membresiaService, MercadoPagoService mercadoPagoService) {
+    public MembresiaController(MembresiaService membresiaService, MercadoPagoService mercadoPagoService, AdminUserService adminUserService) {
         this.membresiaService = membresiaService;
         this.mercadoPagoService = mercadoPagoService;
+        this.adminUserService = adminUserService;
     }
 
     @GetMapping("/planes")
@@ -112,6 +116,23 @@ public class MembresiaController {
         } catch (IllegalArgumentException | NullPointerException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("mensaje", "No se pudo activar el plan demo solicitado"));
+        }
+    }
+
+    @PatchMapping("/admin/usuario/{usuarioId}/plan")
+    public ResponseEntity<?> cambiarPlanComoAdmin(@PathVariable Long usuarioId, @RequestBody Map<String, Object> body) {
+        try {
+            Long adminId = Long.valueOf(body.get("adminId").toString());
+            String rolSolicitante = body.get("rolSolicitante").toString();
+            Plan plan = Plan.valueOf(body.get("plan").toString());
+            boolean renovacion = Boolean.parseBoolean(body.getOrDefault("renovacionAutomatica", plan != Plan.GRATIS).toString());
+
+            adminUserService.validarAdmin(adminId, rolSolicitante);
+            membresiaService.suscribir(usuarioId, plan, renovacion);
+            return ResponseEntity.ok(membresiaService.obtenerActiva(usuarioId));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("mensaje", e.getMessage() == null ? "No se pudo actualizar el plan del usuario" : e.getMessage()));
         }
     }
 

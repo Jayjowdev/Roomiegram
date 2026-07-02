@@ -151,7 +151,7 @@ public class AdminUserService {
         registerRepository.delete(usuario);
     }
 
-    private void validarAdmin(Long adminId, String rolSolicitante) {
+    public void validarAdmin(Long adminId, String rolSolicitante) {
         if (adminId == null || rolSolicitante == null || !"ADMIN".equalsIgnoreCase(rolSolicitante)) {
             throw new IllegalArgumentException("Solo una cuenta ADMIN puede realizar esta acción");
         }

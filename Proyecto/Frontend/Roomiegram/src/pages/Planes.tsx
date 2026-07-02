@@ -37,13 +37,13 @@ const BENEFICIOS_PLANES = [
     beneficio: "Gastos, comprobantes y actividad del hogar",
     GRATIS: "Gestión básica",
     PREMIUM_INDIVIDUAL: "Gestión básica",
-    PREMIUM_HOGAR: "Reportes avanzados",
+    PREMIUM_HOGAR: "Reportes avanzados para el grupo",
   },
   {
     beneficio: "Reportes de convivencia",
     GRATIS: "Bloqueado",
     PREMIUM_INDIVIDUAL: "Bloqueado",
-    PREMIUM_HOGAR: "Completo",
+    PREMIUM_HOGAR: "Completo para integrantes actuales",
   },
 ] satisfies Array<{ beneficio: string } & Record<PlanId, string>>
 
@@ -68,6 +68,7 @@ export default function Planes() {
   const [procesandoDemo, setProcesandoDemo] = useState<PlanId | null>(null)
   const [demoEstado, setDemoEstado] = useState<EstadoDemoPagos | null>(null)
   const [mensaje, setMensaje] = useState("")
+  const [planDetalle, setPlanDetalle] = useState<PlanId | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -82,6 +83,8 @@ export default function Planes() {
       setPlanes(planesResult.status === "fulfilled" ? planesResult.value : [])
       if (suscripcionResult.status === "fulfilled" && suscripcionResult.value) {
         setSuscripcionActiva(suscripcionResult.value)
+      } else if (user?.id && suscripcionResult.status === "rejected") {
+        setMensaje("No se pudo cargar tu plan actual. Revisa que el backend de usuario y la URL del API esten activos.")
       }
       if (demoResult.status === "fulfilled") {
         setDemoEstado(demoResult.value)
@@ -177,8 +180,9 @@ export default function Planes() {
 
     try {
       const nueva = await membresiaService.suscribirDemo(user.id, planId)
-      setSuscripcionActiva(nueva)
-      setMensaje(`Plan demo activado: ${PLAN_LABELS[planId]}.`)
+      const confirmada = await membresiaService.obtenerActiva(user.id)
+      setSuscripcionActiva(confirmada)
+      setMensaje(`Plan demo activado: ${PLAN_LABELS[nueva.plan]}.`)
     } catch (error) {
       setMensaje(error instanceof Error ? error.message : "No se pudo activar el plan demo.")
     } finally {
@@ -186,7 +190,8 @@ export default function Planes() {
     }
   }
 
-  const planActual = suscripcionActiva?.plan ?? "GRATIS"
+  const planActual = suscripcionActiva?.plan ?? null
+  const puedeVerDemoAdmin = demoEstado?.habilitado && user?.role === "ADMIN"
 
   return (
     <div className="planes-page">
@@ -209,22 +214,26 @@ export default function Planes() {
         <p>Gratis te ayuda a empezar, Premium Individual mejora tu búsqueda y Premium Hogar ordena la convivencia real con gastos, comprobantes y reportes.</p>
 
         {suscripcionActiva && (
-          <div className={`plan-activo-badge plan-activo-${planActual.toLowerCase()}`}>
-            {PLAN_STATUS_TEXT[planActual]}: <strong>{PLAN_LABELS[planActual]}</strong>
+          <div className={`plan-activo-badge plan-activo-${suscripcionActiva.plan.toLowerCase()}`}>
+            {PLAN_STATUS_TEXT[suscripcionActiva.plan]}: <strong>{PLAN_LABELS[suscripcionActiva.plan]}</strong>
             {suscripcionActiva.fechaFin && <span className="plan-activo-fecha"> vence {suscripcionActiva.fechaFin}</span>}
           </div>
         )}
-        <p>{PLAN_ACTIVE_BENEFIT[planActual]}</p>
+        <p>
+          {planActual
+            ? PLAN_ACTIVE_BENEFIT[planActual]
+            : "Cuando cargue tu membresia, aqui veras exactamente que beneficios tienes activos."}
+        </p>
       </section>
 
       {mensaje && <p className="api-message planes-mensaje">{mensaje}</p>}
 
-      {demoEstado?.habilitado && (
+      {puedeVerDemoAdmin && (
         <section className="dashboard-content">
           <div className="dashboard-activity">
             <div className="section-heading-row">
               <div>
-                <span className="demo-kicker">Modo demo local</span>
+                <span className="demo-kicker">Herramienta ADMIN</span>
                 <h3>Probar membresías sin pago real</h3>
                 <p>Disponible solo en localhost con PAGOS_DEMO_ENABLED=true. Mercado Pago real sigue intacto para sandbox o producción.</p>
               </div>
@@ -270,7 +279,7 @@ export default function Planes() {
                 <ul className="plan-beneficios">
                   {plan.beneficios.map((beneficio) => (
                     <li key={beneficio} className="plan-beneficio-item">
-                      <span className="plan-check">OK</span> {beneficio}
+                      <span className="plan-check">Incluye</span> {beneficio}
                     </li>
                   ))}
                 </ul>
@@ -281,6 +290,22 @@ export default function Planes() {
                 >
                   {procesando === plan.id ? "Procesando..." : esActual ? "Plan actual" : plan.precio === 0 ? "Volver a gratuito" : "Pagar con Mercado Pago"}
                 </button>
+                <button
+                  className="btn btn-outline-success w-100 mt-2"
+                  type="button"
+                  onClick={() => setPlanDetalle(planDetalle === plan.id ? null : plan.id)}
+                >
+                  {planDetalle === plan.id ? "Ocultar beneficios" : "Ver qué desbloquea"}
+                </button>
+                {planDetalle === plan.id && (
+                  <p className="form-helper">
+                    {plan.id === "GRATIS"
+                      ? "Ideal para explorar Roomiegram, crear publicaciones y organizar lo básico del hogar."
+                      : plan.id === "PREMIUM_INDIVIDUAL"
+                        ? "Pensado para destacar tu perfil, mostrar reputacion y usar compatibilidad con mas claridad. Es un beneficio personal, no se comparte con el hogar."
+                        : "Pensado para hogares que quieren reportes, gastos, comprobantes y actividad ordenada. El titular habilita el beneficio al grupo mientras siga dentro del hogar."}
+                  </p>
+                )}
               </article>
             )
           })

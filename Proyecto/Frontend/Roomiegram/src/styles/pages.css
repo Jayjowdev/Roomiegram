@@ -167,3 +167,78 @@
     padding: 36px 18px 24px;
   }
 }
+
+body.theme-dark .planes-page {
+  background:
+    radial-gradient(circle at top left, rgba(47, 191, 143, 0.08), transparent 32%),
+    linear-gradient(180deg, var(--rg-bg, #070b12) 0%, var(--rg-bg-soft, #0b1220) 100%);
+  color: var(--rg-text, #e5edf6);
+}
+
+body.theme-dark .planes-hero {
+  background:
+    linear-gradient(135deg, rgba(47, 191, 143, 0.14) 0%, rgba(17, 24, 39, 0.96) 42%, rgba(7, 11, 18, 0.98) 100%);
+  border: 1px solid var(--rg-border, #263244);
+  color: var(--rg-text, #e5edf6);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.38);
+}
+
+body.theme-dark .plan-card {
+  background: var(--rg-surface, #111827);
+  border-color: var(--rg-border, #263244);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+  color: var(--rg-text, #e5edf6);
+}
+
+body.theme-dark .plan-card-premium,
+body.theme-dark .plan-card-hogar {
+  background: linear-gradient(180deg, var(--rg-surface-2, #172033) 0%, var(--rg-surface, #111827) 100%);
+  border-color: rgba(47, 191, 143, 0.42);
+}
+
+body.theme-dark .plan-card-activo {
+  border-color: var(--rg-accent, #2fbf8f);
+  box-shadow: 0 22px 44px rgba(47, 191, 143, 0.14);
+}
+
+body.theme-dark .plan-card-nombre,
+body.theme-dark .plan-beneficio-item {
+  color: var(--rg-text, #e5edf6);
+}
+
+body.theme-dark .plan-card-desc,
+body.theme-dark .plan-precio-periodo {
+  color: var(--rg-text-muted, #94a3b8);
+}
+
+body.theme-dark .plan-precio-gratis,
+body.theme-dark .plan-precio-valor,
+body.theme-dark .plan-check,
+body.theme-dark .planes-kicker {
+  color: var(--rg-accent, #2fbf8f);
+}
+
+body.theme-dark .plan-popular-badge {
+  background: var(--rg-accent-strong, #1f9d75);
+  color: #ffffff;
+}
+
+body.theme-dark .planes-benefits-matrix {
+  background: var(--rg-surface, #111827);
+  border-color: var(--rg-border, #263244);
+  color: var(--rg-text, #e5edf6);
+}
+
+body.theme-dark .planes-benefits-matrix .module-item {
+  background: var(--rg-surface-2, #172033);
+  border: 1px solid var(--rg-border, #263244);
+  border-radius: 12px;
+  color: var(--rg-text, #e5edf6);
+  padding: 14px;
+}
+
+body.theme-dark .planes-benefits-matrix .notification-context-grid span {
+  background: var(--rg-bg-soft, #0b1220);
+  border-color: var(--rg-border, #263244);
+  color: var(--rg-text-muted, #94a3b8);
+}

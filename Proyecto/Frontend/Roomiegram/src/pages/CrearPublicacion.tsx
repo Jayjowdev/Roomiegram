@@ -234,7 +234,7 @@ export default function CrearPublicacion() {
       numeroBanos: tipo === "ofrezco_casa" ? Number(publicacion.numeroBanos || 1) : 0,
     });
     setImagenesPreview(buildEditableImages(publicacion));
-    setMessage("Editando publicacion. Puedes mantener, agregar o eliminar fotos.");
+    setMessage("Editando publicación. Puedes mantener, agregar o eliminar fotos.");
     requestAnimationFrame(() => tituloRef.current?.focus());
   }
 
@@ -252,29 +252,29 @@ export default function CrearPublicacion() {
 
   const validatePublicacion = () => {
     if (form.titulo.trim().length < 5) {
-      return { message: "El titulo debe tener al menos 5 caracteres.", ref: tituloRef };
+      return { message: "El título debe tener al menos 5 caracteres.", ref: tituloRef };
     }
     if (form.ubicacion.trim().length < 3) {
-      return { message: "Ingresa una ubicacion valida.", ref: ubicacionRef };
+      return { message: "Ingresa una ubicación válida.", ref: ubicacionRef };
     }
     if (form.descripcion.trim().length < 20) {
-      return { message: "La descripcion debe tener al menos 20 caracteres.", ref: descripcionRef };
+      return { message: "La descripción debe tener al menos 20 caracteres.", ref: descripcionRef };
     }
     if (!editingPublicacion && tipoPublicacion === "ofrezco_casa" && hogaresAdministrables.length > 1 && !selectedHogarId) {
-      return { message: "Selecciona a que hogar quieres vincular esta publicacion.", ref: hogarSelectRef };
+      return { message: "Selecciona a qué hogar quieres vincular esta publicación.", ref: hogarSelectRef };
     }
     if (Number(form.precio) <= 0) {
       return { message: "El precio debe ser mayor a cero.", ref: precioRef };
     }
     if (tipoPublicacion === "busco_roomie") return null;
     if (Number(form.numeroHabitaciones) < 1) {
-      return { message: "Ingresa al menos una habitacion.", ref: habitacionesRef };
+      return { message: "Ingresa al menos una habitación.", ref: habitacionesRef };
     }
     if (Number(form.numeroPersonas) < 1) {
       return { message: "Ingresa al menos un cupo disponible.", ref: personasRef };
     }
     if (Number(form.numeroBanos) < 1) {
-      return { message: "Ingresa al menos un bano disponible.", ref: banosRef };
+      return { message: "Ingresa al menos un baño disponible.", ref: banosRef };
     }
     return null;
   };
@@ -315,7 +315,7 @@ export default function CrearPublicacion() {
           numeroHabitaciones: Number(form.numeroHabitaciones),
           numeroPersonas: Number(form.numeroPersonas),
           numeroBanos: Number(form.numeroBanos),
-          amenidades: [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`],
+          amenidades: [`${form.numeroHabitaciones} habitación(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} baño(s)`],
           imagen: imagenPrincipal,
           galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
         };
@@ -328,7 +328,7 @@ export default function CrearPublicacion() {
     if (files.length === 0) return;
 
     if (files.some((file) => !file.type.startsWith("image/"))) {
-      setMessage("Sube imagenes validas para la publicacion.");
+      setMessage("Sube imágenes válidas para la publicación.");
       return;
     }
 
@@ -435,7 +435,7 @@ export default function CrearPublicacion() {
             imagen: imagenesPublicacion[0] || undefined,
             galeria: imagenesPublicacion,
             amenidades: tipoPublicacion === "ofrezco_casa"
-              ? [`${form.numeroHabitaciones} habitacion(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} bano(s)`]
+              ? [`${form.numeroHabitaciones} habitación(es)`, `${form.numeroPersonas} cupo(s)`, `${form.numeroBanos} baño(s)`]
               : undefined,
           };
           saveLocalPublicacion(actualizada);
@@ -447,7 +447,7 @@ export default function CrearPublicacion() {
         setEditingPublicacion(null);
         setImagenesPreview([]);
         setSearchParams({});
-        setMessage("Publicacion actualizada correctamente.");
+        setMessage("Publicación actualizada correctamente.");
         return;
       }
 
@@ -518,10 +518,10 @@ export default function CrearPublicacion() {
       </header>
 
       <section className="module-title">
-        <h1>{editingPublicacion ? "Editar publicacion" : "Crear publicacion"}</h1>
+        <h1>{editingPublicacion ? "Editar publicación" : "Crear publicación"}</h1>
         <p>
           {editingPublicacion
-            ? "Corrige la informacion principal de tu publicacion. Las fotos actuales se mantienen."
+            ? "Corrige la información principal de tu publicación. Las fotos actuales se mantienen."
             : "Elige si quieres publicar un hogar disponible o un perfil de usuario que busca hogar."}
         </p>
       </section>
@@ -531,7 +531,7 @@ export default function CrearPublicacion() {
       {cropSource && (
         <ImageCropper
           source={cropSource}
-          title="Ajustar foto de publicacion"
+          title="Ajustar foto de publicación"
           aspect={4 / 3}
           outputWidth={1200}
           outputHeight={900}
@@ -543,7 +543,7 @@ export default function CrearPublicacion() {
       <section className="create-publication-shell">
         <form className="create-publication-form" onSubmit={handleSubmit} noValidate>
           <div className="create-section">
-            <h3>Tipo de publicacion</h3>
+            <h3>Tipo de publicación</h3>
             <div className="d-grid gap-2 gap-md-3">
               <label className="form-check border rounded p-3">
                 <input
@@ -555,7 +555,7 @@ export default function CrearPublicacion() {
                   onChange={() => setTipoPublicacion("ofrezco_casa")}
                   disabled={Boolean(editingPublicacion)}
                 />
-                <span className="ms-2 fw-semibold">Quiero publicar un hogar o habitacion disponible</span>
+                <span className="ms-2 fw-semibold">Quiero publicar un hogar o habitación disponible</span>
               </label>
               <label className="form-check border rounded p-3">
                 <input
@@ -572,8 +572,8 @@ export default function CrearPublicacion() {
             </div>
             <p className="create-section-help">
               {tipoPublicacion === "ofrezco_casa"
-                ? "Esta publicacion quedara vinculada a un hogar privado para gestionar solicitudes."
-                : "Esta publicacion se guardara en el servicio de publicaciones para que otros usuarios la vean."}
+                ? "Esta publicación quedará vinculada a un hogar privado para gestionar solicitudes."
+                : "Esta publicación se guardará en el servicio de publicaciones para que otros usuarios la vean."}
             </p>
           </div>
 
@@ -581,11 +581,11 @@ export default function CrearPublicacion() {
             <div className="create-section">
               <h3>Hogar vinculado</h3>
               <p className="create-section-help">
-                Usa un hogar existente para evitar duplicados. Las solicitudes de esta publicacion llegaran a ese mismo grupo.
+                Usa un hogar existente para evitar duplicados. Las solicitudes de esta publicación llegarán a ese mismo grupo.
               </p>
               {hogaresAdministrables.length === 1 ? (
                 <p className="api-message">
-                  Se vinculara con: {hogaresAdministrables[0].nombre}
+                  Se vinculará con: {hogaresAdministrables[0].nombre}
                 </p>
               ) : (
                 <label className="field-label">
@@ -609,12 +609,12 @@ export default function CrearPublicacion() {
           )}
 
           <div className="create-section">
-            <h3>Informacion principal</h3>
-            <input ref={tituloRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Titulo de la publicacion" : "Titulo de tu busqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
+            <h3>Información principal</h3>
+            <input ref={tituloRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Título de la publicación" : "Título de tu búsqueda"} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required />
             <input
               ref={ubicacionRef}
               className="form-control"
-              placeholder="Comuna o ubicacion"
+              placeholder="Comuna o ubicación"
               list="comunas-santiago"
               value={form.ubicacion}
               onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
@@ -625,19 +625,19 @@ export default function CrearPublicacion() {
                 <option key={comuna} value={comuna} />
               ))}
             </datalist>
-            <textarea ref={descripcionRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas basicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y como seria la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
+            <textarea ref={descripcionRef} className="form-control" placeholder={tipoPublicacion === "ofrezco_casa" ? "Describe el espacio, reglas básicas y ambiente del hogar" : "Describe el tipo de hogar que buscas y cómo sería la convivencia ideal"} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
           </div>
 
           <div className="create-section">
-            <h3>{tipoPublicacion === "ofrezco_casa" ? "Detalles de la casa" : "Preferencias de busqueda"}</h3>
+            <h3>{tipoPublicacion === "ofrezco_casa" ? "Detalles de la casa" : "Preferencias de búsqueda"}</h3>
             <p className="create-section-help">
               {tipoPublicacion === "ofrezco_casa"
-                ? "Estos datos aparecen en la ficha de la publicacion para que el roomie entienda rapido que se ofrece."
-                : "Comparte tu presupuesto para que otros usuarios sepan que tipo de hogar estas buscando."}
+                ? "Estos datos aparecen en la ficha de la publicación para que el roomie entienda rápido qué se ofrece."
+                : "Comparte tu presupuesto para que otros usuarios sepan qué tipo de hogar estás buscando."}
             </p>
             <div className="create-details-grid">
               <label className="field-label">
-                <span>{tipoPublicacion === "ofrezco_casa" ? "Precio mensual" : "Presupuesto maximo"}</span>
+                <span>{tipoPublicacion === "ofrezco_casa" ? "Precio mensual" : "Presupuesto máximo"}</span>
                 <input ref={precioRef} className="form-control" placeholder="Ej: 280000" type="number" min="1" value={form.precio || ""} onChange={(e) => setForm({ ...form, precio: Number(e.target.value) })} required />
               </label>
               {tipoPublicacion === "ofrezco_casa" && (
@@ -651,7 +651,7 @@ export default function CrearPublicacion() {
                     <input ref={personasRef} className="form-control" placeholder="Ej: 1" type="number" min="1" value={form.numeroPersonas} onChange={(e) => setForm({ ...form, numeroPersonas: Number(e.target.value) })} required />
                   </label>
                   <label className="field-label">
-                    <span>Banos disponibles</span>
+                    <span>Baños disponibles</span>
                     <input ref={banosRef} className="form-control" placeholder="Ej: 2" type="number" min="1" value={form.numeroBanos} onChange={(e) => setForm({ ...form, numeroBanos: Number(e.target.value) })} required />
                   </label>
                 </>
@@ -660,13 +660,13 @@ export default function CrearPublicacion() {
           </div>
 
           <div className="create-section">
-              <h3>Fotos de la publicacion</h3>
+              <h3>Fotos de la publicación</h3>
               <label className="image-upload">
                 <span>{editingPublicacion ? "Agregar fotos" : "Agrega hasta 6 fotos"}</span>
                 <input className="form-control" type="file" accept="image/*" multiple onChange={handleImageChange} />
               </label>
               {imagenesPreview.length === 0 ? (
-                <p className="form-helper">Esta publicacion no tiene fotos agregadas.</p>
+                <p className="form-helper">Esta publicación no tiene fotos agregadas.</p>
               ) : (
                 <div className="image-preview gallery-preview">
                   <div className="gallery-preview-grid">
@@ -692,7 +692,7 @@ export default function CrearPublicacion() {
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mi-perfil")}>Volver a mi perfil</button>
             {editingPublicacion && (
               <button className="btn btn-outline-success" type="button" onClick={cancelEditing}>
-                Cancelar edicion
+                Cancelar edición
               </button>
             )}
             <button className="btn btn-success" disabled={isSaving}>

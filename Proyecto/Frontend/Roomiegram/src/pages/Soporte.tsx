@@ -34,7 +34,7 @@ export default function Soporte() {
       return;
     }
     if (!correo || !correo.includes("@")) {
-      setMessage("Ingresa un correo de contacto valido.");
+      setMessage("Ingresa un correo de contacto válido.");
       return;
     }
     if (!mensaje) {
@@ -87,11 +87,11 @@ export default function Soporte() {
           <span className="demo-kicker">Soporte</span>
           <h1>Contacto con Roomiegram</h1>
           <p>
-            Envia dudas sobre tu cuenta, publicaciones o convivencia. El equipo recibira tu mensaje por correo.
+            Envía dudas sobre tu cuenta, publicaciones o convivencia. El equipo recibirá tu mensaje por correo.
           </p>
           <div className="support-note">
             <strong>Tip</strong>
-            <span>Incluye contexto suficiente para que podamos ayudarte mas rapido.</span>
+            <span>Incluye contexto suficiente para que podamos ayudarte más rápido.</span>
           </div>
         </div>
 

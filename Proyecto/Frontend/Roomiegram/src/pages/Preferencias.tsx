@@ -57,7 +57,7 @@ export default function Preferencias() {
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
-          <button className="btn btn-outline-success" onClick={() => navigate("/configuracion")}>Configuracion</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/configuracion")}>Configuración</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Inicio</button>
           <LogoutButton />
         </div>
@@ -65,7 +65,7 @@ export default function Preferencias() {
 
       <section className="module-title">
         <h1>Tus preferencias de convivencia</h1>
-        <p>Completa estos datos para que RoomieGram pueda mostrarte personas mas compatibles contigo.</p>
+        <p>Completa estos datos para que RoomieGram pueda mostrarte personas más compatibles contigo.</p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -73,7 +73,7 @@ export default function Preferencias() {
       <section className="module-layout single">
         <form className="module-form preferences-form" onSubmit={handleSubmit}>
           <h3>Preferencias de compatibilidad</h3>
-          <p className="form-helper">Puedes editar estos datos despues desde tu perfil.</p>
+          <p className="form-helper">Puedes editar estos datos después desde tu perfil.</p>
 
           <div className="compatibility-grid">
             <label className="field-label">
@@ -122,7 +122,7 @@ export default function Preferencias() {
             </label>
 
             <label className="field-label">
-              Presupuesto maximo
+              Presupuesto máximo
               <input className="form-control" type="number" min="1" value={preferencias.presupuesto} onChange={(e) => setPreferencias({ ...preferencias, presupuesto: e.target.value })} />
             </label>
           </div>
@@ -134,9 +134,9 @@ export default function Preferencias() {
 
         <aside className="module-list preferences-helper-card">
           <h3>Cuenta y seguridad</h3>
-          <p>Actualiza tus datos personales o cambia tu contrasena desde Configuracion.</p>
+          <p>Actualiza tus datos personales o cambia tu contraseña desde Configuración.</p>
           <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/configuracion")}>
-            Ir a configuracion
+            Ir a configuración
           </button>
         </aside>
       </section>

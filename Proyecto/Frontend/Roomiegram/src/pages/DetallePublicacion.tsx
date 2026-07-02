@@ -49,7 +49,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
-    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitación disponible"),
     precioMensual: tipo === "ofrezco_casa" ? (pub.precio || pub.precioMensual || 0) : undefined,
     presupuestoMaximo: tipo === "busco_roomie" ? (pub.presupuestoMaximo || pub.precio || 0) : undefined,
     precio: pub.precio || pub.precioMensual || 0,
@@ -60,9 +60,9 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     descripcion: pub.descripcion,
     amenidades: tipo === "ofrezco_casa"
       ? [
-          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroHabitaciones || 1} habitación(es)`,
           `${pub.numeroPersonas || 1} cupo(s)`,
-          `${pub.numeroBanos || 1} bano(s)`,
+          `${pub.numeroBanos || 1} baño(s)`,
         ]
       : undefined,
     imagen,
@@ -210,7 +210,7 @@ export default function DetallePublicacion() {
     if (!publicacion?.id || !esOfertaCasa) return;
     const params = new URLSearchParams({
       publicacionId: String(publicacion.id),
-      titulo: publicacion.titulo || "Publicacion sin titulo",
+      titulo: publicacion.titulo || "Publicación sin título",
       tipo: "ofrezco_casa",
     });
     navigate(`/hogares?${params.toString()}`);
@@ -234,7 +234,7 @@ export default function DetallePublicacion() {
     if (!user?.id || !publicacion?.usuarioId) return;
     const hogar = misHogaresAdministrables.find((item) => String(item.id) === selectedHogarId);
     if (!hogar) {
-      setContactMessage("Selecciona un hogar valido para enviar la invitacion.");
+      setContactMessage("Selecciona un hogar válido para enviar la invitación.");
       return;
     }
 
@@ -247,12 +247,12 @@ export default function DetallePublicacion() {
         referenciaId: hogar.id,
         tipo: "INVITACION_HOGAR",
         estado: "PENDIENTE",
-        titulo: "Invitacion a hogar Roomiegram",
-        mensaje: `${user.nombre || user.usuario || "Un usuario"} te invito a unirte al hogar ${hogar.nombre}.`,
+        titulo: "Invitación a hogar Roomiegram",
+        mensaje: `${user.nombre || user.usuario || "Un usuario"} te invitó a unirte al hogar ${hogar.nombre}.`,
       });
-      setContactMessage(`Invitacion enviada para el hogar ${hogar.nombre}.`);
+      setContactMessage(`Invitación enviada para el hogar ${hogar.nombre}.`);
     } catch {
-      setContactMessage("No se pudo enviar la invitacion. La publicacion no fue modificada.");
+      setContactMessage("No se pudo enviar la invitación. La publicación no fue modificada.");
     } finally {
       setIsRequesting(false);
     }
@@ -298,7 +298,7 @@ export default function DetallePublicacion() {
       }
       setContextResolved(true);
     } catch (error) {
-      setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificacion.");
+      setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificación.");
     } finally {
       setIsRequesting(false);
     }
@@ -328,7 +328,7 @@ export default function DetallePublicacion() {
             tipo: "INVITACION_HOGAR",
             estado: "PENDIENTE",
             titulo: "Solicitud de ingreso pendiente",
-            mensaje: `${user.nombre || user.usuario || "Un usuario"} esta solicitando una revision al hogar ${hogarVinculado.nombre}.`,
+            mensaje: `${user.nombre || user.usuario || "Un usuario"} está solicitando una revisión al hogar ${hogarVinculado.nombre}.`,
           });
         } catch {
           avisosEnviados = false;
@@ -349,7 +349,7 @@ export default function DetallePublicacion() {
       }
 
       setContactMessage(avisosEnviados
-        ? "Solicitud enviada correctamente. Se aviso al administrador del hogar."
+        ? "Solicitud enviada correctamente. Se avisó al administrador del hogar."
         : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
     } catch (error) {
       setContactMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
@@ -386,8 +386,8 @@ export default function DetallePublicacion() {
 
       setContactMessage(correoEnviado
         ? accion === "aprobar"
-          ? "Solicitud aprobada correctamente. Se aviso al solicitante por correo."
-          : "Solicitud rechazada correctamente. Se aviso al solicitante por correo."
+          ? "Solicitud aprobada correctamente. Se avisó al solicitante por correo."
+          : "Solicitud rechazada correctamente. Se avisó al solicitante por correo."
         : accion === "aprobar"
           ? "Solicitud aprobada correctamente, pero no se pudo enviar el correo al solicitante."
           : "Solicitud rechazada correctamente, pero no se pudo enviar el correo al solicitante.");
@@ -422,25 +422,25 @@ export default function DetallePublicacion() {
       {contextMessage && <p className="api-message">{contextMessage}</p>}
 
       {!publicacion ? (
-        <div className="sin-resultados"><p>No se encontro la publicacion.</p></div>
+        <div className="sin-resultados"><p>No se encontró la publicación.</p></div>
       ) : (
         <>
         {notificationContext && (
           <section className="notification-review-panel">
-            <span className="eyebrow">Contexto de notificacion</span>
+            <span className="eyebrow">Contexto de notificación</span>
             <h2>
               {notificationContext.tipoAccion === "solicitud"
-                ? "Solicitud relacionada con esta publicacion"
-                : "Invitacion relacionada con esta casa"}
+                ? "Solicitud relacionada con esta publicación"
+                : "Invitación relacionada con esta casa"}
             </h2>
             <p>
               {notificationContext.tipoAccion === "solicitud"
-                ? "Revisa la publicacion y el perfil del solicitante antes de aceptar o rechazar."
-                : "Revisa esta casa y el perfil del anfitrion antes de aceptar o rechazar."}
+                ? "Revisa la publicación y el perfil del solicitante antes de aceptar o rechazar."
+                : "Revisa esta casa y el perfil del anfitrión antes de aceptar o rechazar."}
             </p>
             <div className="notification-context-grid">
               <span><strong>Hogar:</strong> {notificationContext.hogar?.nombre || `#${notificationContext.hogarId}`}</span>
-              <span><strong>Publicacion:</strong> {publicacion.titulo || "Casa disponible"}</span>
+              <span><strong>Publicación:</strong> {publicacion.titulo || "Casa disponible"}</span>
             </div>
             <div className="dashboard-actions mt-3">
               {notificationContext.usuarioId && (
@@ -449,11 +449,11 @@ export default function DetallePublicacion() {
                   type="button"
                   onClick={() => navigate(`/perfil-publico/${notificationContext.usuarioId}?${searchParams.toString()}`)}
                 >
-                  {notificationContext.tipoAccion === "solicitud" ? "Ver perfil del solicitante" : "Ver perfil del anfitrion"}
+                {notificationContext.tipoAccion === "solicitud" ? "Ver perfil del solicitante" : "Ver perfil del anfitrión"}
                 </button>
               )}
               <button className="btn btn-success btn-sm" disabled={isRequesting || contextResolved} onClick={() => responderContexto("aceptar")}>
-                {notificationContext.tipoAccion === "solicitud" ? "Aceptar solicitud" : "Aceptar invitacion"}
+                {notificationContext.tipoAccion === "solicitud" ? "Aceptar solicitud" : "Aceptar invitación"}
               </button>
               <button className="btn btn-outline-danger btn-sm" disabled={isRequesting || contextResolved} onClick={() => responderContexto("rechazar")}>
                 Rechazar
@@ -478,7 +478,7 @@ export default function DetallePublicacion() {
                 </div>
               )}
             </div>
-            <p className="home-ubicacion">Ubicacion: {publicacion.ubicacion}</p>
+            <p className="home-ubicacion">Ubicación: {publicacion.ubicacion}</p>
             <h1>{publicacion.titulo}</h1>
             <p className="home-precio">
               {esOfertaCasa
@@ -490,7 +490,7 @@ export default function DetallePublicacion() {
               <div className="detalle-info-grid">
                 <span><strong>Habitaciones:</strong> {publicacion.numeroHabitaciones || 1}</span>
                 <span><strong>Cupos:</strong> {publicacion.numeroPersonas || 1}</span>
-                <span><strong>Banos:</strong> {publicacion.numeroBanos || 1}</span>
+                <span><strong>Baños:</strong> {publicacion.numeroBanos || 1}</span>
               </div>
             )}
             {publicacion.amenidades && (
@@ -500,16 +500,16 @@ export default function DetallePublicacion() {
             )}
           </section>
           <aside className="detalle-side">
-            <h3>Datos del anfitrion</h3>
+            <h3>Datos del anfitrión</h3>
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
-            <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitacion/casa" : "Busqueda de roomie"}</p>
+            <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitación/casa" : "Búsqueda de roomie"}</p>
             <div className="contact-info-panel compact-contact">
               <h4>Contacto</h4>
               <p><strong>Teléfono:</strong> {getTelefonoContacto(telefonoContacto)}</p>
             </div>
             {!esOfertaCasa ? (
               <div className="mt-3 profile-action-panel">
-                <p>Esta publicacion es de una persona buscando roomie. No es un hogar al que puedas solicitar ingreso.</p>
+                <p>Esta publicación es de una persona buscando roomie. No es un hogar al que puedas solicitar ingreso.</p>
                 {publicacionCasaDelAutor && (
                   <div className="contact-info-panel compact-contact">
                     <h4>Hogar / publicación de casa</h4>
@@ -603,14 +603,14 @@ export default function DetallePublicacion() {
             ) : (
               <div className="mt-3">
                 <p className="mt-3">
-                  Esta publicacion no tiene un hogar vinculado para gestionar solicitudes.
+                  Esta publicación no tiene un hogar vinculado para gestionar solicitudes.
                   {esCreadorPublicacion ? " Puedes crear un hogar para volver a gestionarla." : ""}
                 </p>
                 {esCreadorPublicacion && (
                   <>
-                    <p className="form-helper">Puedes crear un hogar y vincularlo a esta publicacion al guardarlo.</p>
+                    <p className="form-helper">Puedes crear un hogar y vincularlo a esta publicación al guardarlo.</p>
                     <button className="btn btn-success w-100 mt-3" type="button" onClick={irACrearHogarParaPublicacion}>
-                      Crear hogar para esta publicacion
+                      Crear hogar para esta publicación
                     </button>
                   </>
                 )}

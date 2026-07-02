@@ -74,6 +74,6 @@ export function getApiErrorMessage(error: unknown) {
     responseData?.mensaje ||
     responseData?.message ||
     axiosError.message ||
-    "Ocurrio un error al conectar con el servicio."
+    "Ocurrió un error al conectar con el servicio."
   )
 }

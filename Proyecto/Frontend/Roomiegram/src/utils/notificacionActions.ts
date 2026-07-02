@@ -105,7 +105,7 @@ export async function aceptarInvitacionHogar(params: {
 
   return {
     hogar: actualizado,
-    message: "Invitacion aceptada correctamente.",
+    message: "Invitación aceptada correctamente.",
   } satisfies NotificationActionResult;
 }
 
@@ -115,6 +115,6 @@ export async function rechazarInvitacionHogar(params: { notificacionId?: number 
   }
 
   return {
-    message: "Invitacion rechazada.",
+    message: "Invitación rechazada.",
   } satisfies NotificationActionResult;
 }

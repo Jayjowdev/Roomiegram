@@ -49,11 +49,11 @@ export default function Planes() {
 
   const handleSuscribir = async (planId: PlanId) => {
     if (!user?.id) {
-      setMensaje("Debes iniciar sesion para suscribirte.")
+      setMensaje("Debes iniciar sesión para suscribirte.")
       return
     }
     if (suscripcionActiva?.plan === planId) {
-      setMensaje("Ya estas suscrito a este plan.")
+      setMensaje("Ya estás suscrito a este plan.")
       return
     }
 
@@ -66,10 +66,10 @@ export default function Planes() {
       setMensaje(
         planId === "GRATIS"
           ? "Has vuelto al plan gratuito."
-          : `Suscripcion a ${PLAN_LABELS[planId]} activada correctamente.`,
+          : `Suscripción a ${PLAN_LABELS[planId]} activada correctamente.`,
       )
     } catch (error) {
-      setMensaje(error instanceof Error ? error.message : "No se pudo procesar la suscripcion.")
+      setMensaje(error instanceof Error ? error.message : "No se pudo procesar la suscripción.")
     } finally {
       setProcesando(null)
     }
@@ -95,7 +95,7 @@ export default function Planes() {
       <section className="planes-hero">
         <span className="planes-kicker">Planes Roomiegram</span>
         <h1>Elige el plan ideal para ti</h1>
-        <p>Desde encontrar roomie hasta convivir mejor, cada plan acompana una etapa distinta.</p>
+        <p>Desde encontrar roomie hasta convivir mejor, cada plan acompaña una etapa distinta.</p>
 
         {suscripcionActiva && (
           <div className={`plan-activo-badge plan-activo-${planActual.toLowerCase()}`}>
@@ -115,7 +115,7 @@ export default function Planes() {
             const esActual = planActual === plan.id
             return (
               <article key={plan.id} className={`plan-card ${PLAN_COLOR_CLASS[plan.id]} ${esActual ? "plan-card-activo" : ""}`}>
-                {plan.id === "PREMIUM_INDIVIDUAL" && <span className="plan-popular-badge">Mas popular</span>}
+                {plan.id === "PREMIUM_INDIVIDUAL" && <span className="plan-popular-badge">Más popular</span>}
                 <h2 className="plan-card-nombre">{plan.nombre}</h2>
                 <p className="plan-card-desc">{plan.descripcion}</p>
                 <div className="plan-card-precio">

@@ -22,7 +22,7 @@ export default function Landing() {
             </button>
 
             <button className="btn btn-outline-dark" onClick={() => navigate("/login")}>
-              Iniciar sesion
+              Iniciar sesión
             </button>
           </div>
         </div>
@@ -35,22 +35,22 @@ export default function Landing() {
       <section className="landing-features">
         <div className="landing-feature-card">
           <h3>Encuentra compatibilidad</h3>
-          <p>Conecta con personas segun habitos, intereses y estilo de vida.</p>
+          <p>Conecta con personas según hábitos, intereses y estilo de vida.</p>
         </div>
 
         <div className="landing-feature-card">
           <h3>Organiza gastos</h3>
-          <p>Divide cuentas y lleva control de pagos facilmente.</p>
+          <p>Divide cuentas y lleva control de pagos fácilmente.</p>
         </div>
 
         <div className="landing-feature-card">
           <h3>Convive mejor</h3>
-          <p>Gestiona tareas, responsabilidades y comunicacion en un solo lugar.</p>
+          <p>Gestiona tareas, responsabilidades y comunicación en un solo lugar.</p>
         </div>
       </section>
 
       <footer className="landing-footer">
-        <p>(c) 2026 Roomiegram - Proyecto academico</p>
+        <p>(c) 2026 Roomiegram - Proyecto académico</p>
       </footer>
     </div>
   );

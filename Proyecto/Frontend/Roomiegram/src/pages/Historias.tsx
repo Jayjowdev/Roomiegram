@@ -9,15 +9,15 @@ import { publicacionService, type Historia } from "../services/publicacionServic
 const historiasFallback = [
   {
     id: -1,
-    titulo: "Convivencia mas clara",
+    titulo: "Convivencia más clara",
     nombreVisible: "Camila R.",
-    mensaje: "Me ayudo a encontrar roomies con horarios parecidos y reglas claras desde el primer dia.",
+    mensaje: "Me ayudó a encontrar roomies con horarios parecidos y reglas claras desde el primer día.",
   },
   {
     id: -2,
-    titulo: "Publicacion simple",
+    titulo: "Publicación simple",
     nombreVisible: "Diego M.",
-    mensaje: "Publique una habitacion y pude revisar mejor a quienes estaban interesados antes de coordinar.",
+    mensaje: "Publiqué una habitación y pude revisar mejor a quienes estaban interesados antes de coordinar.",
   },
 ] satisfies Historia[];
 
@@ -65,7 +65,7 @@ export default function Historias() {
     const mensaje = form.mensaje.trim();
 
     if (!titulo) {
-      setMessage("Ingresa un titulo breve para tu historia.");
+      setMessage("Ingresa un título breve para tu historia.");
       return;
     }
     if (!mensaje) {
@@ -128,7 +128,7 @@ export default function Historias() {
       titulo: historia.titulo,
       mensaje: historia.mensaje,
     });
-    setMessage("Editando historia. Guarda los cambios o cancela la edicion.");
+    setMessage("Editando historia. Guarda los cambios o cancela la edición.");
   };
 
   const cancelEdit = () => {
@@ -139,11 +139,11 @@ export default function Historias() {
 
   const handleDelete = async (historia: Historia) => {
     if (!user?.usuario) {
-      setMessage("No se pudo identificar tu sesion.");
+      setMessage("No se pudo identificar tu sesión.");
       return;
     }
 
-    const confirmar = window.confirm(`Eliminar la historia "${historia.titulo}"?`);
+    const confirmar = window.confirm(`¿Eliminar la historia "${historia.titulo}"?`);
     if (!confirmar) return;
 
     try {
@@ -182,7 +182,7 @@ export default function Historias() {
         <div>
           <span className="demo-kicker">Historias</span>
           <h1>Historias de usuarios</h1>
-          <p>Lee experiencias reales de convivencia y comparte brevemente como Roomiegram te ayudo.</p>
+          <p>Lee experiencias reales de convivencia y comparte brevemente cómo Roomiegram te ayudó.</p>
         </div>
       </section>
 
@@ -191,10 +191,10 @@ export default function Historias() {
       <section className="stories-layout">
         <form className="story-form-card" onSubmit={handleSubmit}>
           <h2>{editingHistoria ? "Editar historia" : "Comparte tu historia"}</h2>
-          <p>Escribe una reseña breve y clara. Tu nombre visible se tomara desde tu perfil.</p>
+          <p>Escribe una reseña breve y clara. Tu nombre visible se tomará desde tu perfil.</p>
           <input
             className="form-control"
-            placeholder="Titulo breve"
+            placeholder="Título breve"
             maxLength={80}
             value={form.titulo}
             onChange={(event) => setForm((current) => ({ ...current, titulo: event.target.value }))}
@@ -213,7 +213,7 @@ export default function Historias() {
           </button>
           {editingHistoria && (
             <button className="btn btn-outline-success" type="button" onClick={cancelEdit} disabled={isSaving}>
-              Cancelar edicion
+              Cancelar edición
             </button>
           )}
         </form>

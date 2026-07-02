@@ -51,11 +51,11 @@ function getPrecioLabel(publicacion: Publicacion) {
 
 function getTitulo(publicacion: Publicacion) {
   if (publicacion.titulo?.trim()) return publicacion.titulo;
-  return publicacion.tipo === "busco_roomie" ? "Busco roomie" : "Habitacion disponible";
+  return publicacion.tipo === "busco_roomie" ? "Busco roomie" : "Habitación disponible";
 }
 
 function getDescripcionResumen(publicacion: Publicacion) {
-  const descripcion = publicacion.descripcion || "Sin descripcion";
+  const descripcion = publicacion.descripcion || "Sin descripción";
   return descripcion.length > 150 ? `${descripcion.slice(0, 150).trim()}...` : descripcion;
 }
 
@@ -157,7 +157,7 @@ export default function MisPublicaciones() {
     if (tieneIntegrantesExternos || tieneActividad) {
       return {
         puedeEliminarHogar: false,
-        motivoBloqueo: "Este hogar tiene actividad o integrantes. Por seguridad solo puedes eliminar la publicacion.",
+        motivoBloqueo: "Este hogar tiene actividad o integrantes. Por seguridad solo puedes eliminar la publicación.",
       };
     }
 
@@ -166,7 +166,7 @@ export default function MisPublicaciones() {
 
   const handleDelete = async (publicacion: Publicacion) => {
     if (!user?.usuario) {
-      setMessage("No se pudo identificar tu sesion.");
+      setMessage("No se pudo identificar tu sesión.");
       return;
     }
 
@@ -182,7 +182,7 @@ export default function MisPublicaciones() {
       return;
     }
 
-    const confirmar = window.confirm(`Eliminar la publicacion "${getTitulo(publicacion)}"?`);
+    const confirmar = window.confirm(`¿Eliminar la publicación "${getTitulo(publicacion)}"?`);
     if (!confirmar) return;
 
     await eliminarPublicacion(publicacion, "normal");
@@ -190,7 +190,7 @@ export default function MisPublicaciones() {
 
   const eliminarPublicacion = async (publicacion: Publicacion, modo: "normal" | "mantener-hogar" | "con-hogar") => {
     if (!user?.usuario) {
-      setMessage("No se pudo identificar tu sesion.");
+      setMessage("No se pudo identificar tu sesión.");
       return;
     }
 
@@ -218,13 +218,13 @@ export default function MisPublicaciones() {
       setDeleteContext(null);
       setMessage(
         modo === "con-hogar"
-          ? "Publicacion y hogar eliminados correctamente."
+          ? "Publicación y hogar eliminados correctamente."
           : modo === "mantener-hogar"
-            ? "Publicacion eliminada. El hogar vinculado se mantiene privado."
-            : "Publicacion eliminada correctamente."
+            ? "Publicación eliminada. El hogar vinculado se mantiene privado."
+            : "Publicación eliminada correctamente."
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicación.");
     } finally {
       setDeletingId(null);
     }
@@ -258,9 +258,9 @@ export default function MisPublicaciones() {
       {deleteContext && (
         <div className="modal-backdrop-light" role="dialog" aria-modal="true">
           <div className="modal-card">
-            <h3>Eliminar publicacion vinculada</h3>
+            <h3>Eliminar publicación vinculada</h3>
             <p>
-              Esta publicacion tiene un hogar vinculado. Si eliminas solo la publicacion, el hogar seguira existiendo como espacio privado de convivencia.
+              Esta publicación tiene un hogar vinculado. Si eliminas solo la publicación, el hogar seguirá existiendo como espacio privado de convivencia.
             </p>
             {!deleteContext.puedeEliminarHogar && deleteContext.motivoBloqueo && (
               <p className="form-helper">{deleteContext.motivoBloqueo}</p>
@@ -272,7 +272,7 @@ export default function MisPublicaciones() {
                 disabled={deletingId === deleteContext.publicacion.id}
                 onClick={() => eliminarPublicacion(deleteContext.publicacion, "mantener-hogar")}
               >
-                Eliminar solo publicacion
+                Eliminar solo publicación
               </button>
               <button
                 className="btn btn-danger"
@@ -280,7 +280,7 @@ export default function MisPublicaciones() {
                 disabled={!deleteContext.puedeEliminarHogar || deletingId === deleteContext.publicacion.id}
                 onClick={() => eliminarPublicacion(deleteContext.publicacion, "con-hogar")}
               >
-                Eliminar publicacion y hogar
+                Eliminar publicación y hogar
               </button>
               <button className="btn btn-outline-success" type="button" onClick={() => setDeleteContext(null)}>
                 Cancelar
@@ -292,12 +292,12 @@ export default function MisPublicaciones() {
 
       <section className="my-publications-hero">
         <div>
-          <span className="demo-kicker">Gestion personal</span>
+          <span className="demo-kicker">Gestión personal</span>
           <h1>Mis publicaciones</h1>
-          <p>Gestiona las publicaciones que has creado, edita la informacion y elimina las que ya no quieras mostrar.</p>
+          <p>Gestiona las publicaciones que has creado, edita la información y elimina las que ya no quieras mostrar.</p>
         </div>
         <button className="btn btn-success" onClick={() => navigate("/crear-publicacion")}>
-          Crear publicacion
+          Crear publicación
         </button>
       </section>
 
@@ -321,9 +321,9 @@ export default function MisPublicaciones() {
       ) : publicacionesFiltradas.length === 0 ? (
         <section className="my-publications-empty">
           <h2>No tienes publicaciones en esta vista</h2>
-          <p>Crea una publicacion para ofrecer una habitacion o contar que estas buscando roomie.</p>
+          <p>Crea una publicación para ofrecer una habitación o contar que estás buscando roomie.</p>
           <button className="btn btn-success" onClick={() => navigate("/crear-publicacion")}>
-            Crear publicacion
+            Crear publicación
           </button>
         </section>
       ) : (
@@ -342,7 +342,7 @@ export default function MisPublicaciones() {
                   <h3>{getTitulo(publicacion)}</h3>
                   <span className="status-pill">{getTipoLabel(publicacion.tipo)}</span>
                 </div>
-                <p className="home-ubicacion">{publicacion.ubicacion || "Ubicacion no informada"}</p>
+                <p className="home-ubicacion">{publicacion.ubicacion || "Ubicación no informada"}</p>
                 <p className="home-precio">{getPrecioLabel(publicacion)}</p>
                 <p className="home-desc">{getDescripcionResumen(publicacion)}</p>
                 <div className="item-actions">

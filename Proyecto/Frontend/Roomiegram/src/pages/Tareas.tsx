@@ -287,7 +287,7 @@ export default function Tareas() {
           tipo: "TAREA_HOGAR",
           estado: "PENDIENTE",
           titulo: "Nueva tarea asignada",
-          mensaje: `${user!.nombre || user!.usuario} te asigno la tarea "${creada.titulo}" en ${hogarActual!.nombre}.`,
+          mensaje: `${user!.nombre || user!.usuario} te asignó la tarea "${creada.titulo}" en ${hogarActual!.nombre}.`,
         });
       } catch {
         notificacionEnviada = false;
@@ -305,7 +305,7 @@ export default function Tareas() {
       setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
       setForm(initialForm);
       setMessage(notificacionEnviada && correoEnviado
-        ? "Tarea creada y asociada al hogar. Se aviso al encargado."
+        ? "Tarea creada y asociada al hogar. Se avisó al encargado."
         : "Tarea creada. No se pudo enviar alguno de los avisos al encargado.");
     } catch {
       setMessage("No se pudo guardar la tarea. Revisa que los servicios estén disponibles.");
@@ -334,14 +334,14 @@ export default function Tareas() {
           setMessage("Tarea marcada como completada.");
         } else {
           setMessage(aviso.ok
-            ? "Tarea marcada como completada. Se aviso al administrador del hogar."
+            ? "Tarea marcada como completada. Se avisó al administrador del hogar."
             : "Tarea marcada como completada. No se pudo enviar alguno de los avisos al administrador.");
         }
       } else {
         setMessage("Tarea marcada como pendiente.");
       }
     } catch {
-      setMessage("No se pudo actualizar el estado de la tarea. Revisa que los servicios estÃ©n disponibles.");
+      setMessage("No se pudo actualizar el estado de la tarea. Revisa que los servicios estén disponibles.");
     } finally {
       setUpdatingTaskId(null);
     }

@@ -181,15 +181,15 @@ export function mapBackendPublicacionToOferta(pub: Publicacion): Publicacion {
     ...pub,
     tipo,
     nombre: pub.usuarioCreador || pub.nombre || "RoomieGram",
-    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitación disponible"),
     precioMensual: tipo === "ofrezco_casa" ? (pub.precioMensual ?? pub.precio ?? 0) : undefined,
     presupuestoMaximo: tipo === "busco_roomie" ? (pub.presupuestoMaximo ?? pub.precio ?? 0) : undefined,
     precio: pub.precio ?? pub.precioMensual ?? 0,
     amenidades: tipo === "ofrezco_casa"
       ? (pub.amenidades ?? [
-          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroHabitaciones || 1} habitación(es)`,
           `${pub.numeroPersonas || 1} cupo(s)`,
-          `${pub.numeroBanos || 1} bano(s)`,
+          `${pub.numeroBanos || 1} baño(s)`,
         ])
       : undefined,
     imagen: pub.imagen || home1,

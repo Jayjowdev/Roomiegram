@@ -270,7 +270,7 @@ export default function Notificaciones() {
       }
 
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
-      setMessage(esSolicitudRecibida(notificacion) ? "Solicitud rechazada." : "Invitacion rechazada.");
+      setMessage(esSolicitudRecibida(notificacion) ? "Solicitud rechazada." : "Invitación rechazada.");
     } catch {
       setMessage("No se pudo rechazar la solicitud.");
     } finally {
@@ -285,9 +285,9 @@ export default function Notificaciones() {
       setProcessingId(notificacion.id);
       await notificacionService.eliminar(notificacion.id);
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
-      setMessage("Notificacion marcada como leida.");
+      setMessage("Notificación marcada como leída.");
     } catch {
-      setMessage("No se pudo actualizar la notificacion de tarea.");
+      setMessage("No se pudo actualizar la notificación de tarea.");
     } finally {
       setProcessingId(null);
     }
@@ -345,7 +345,7 @@ export default function Notificaciones() {
                   disabled={processingId === notificacion.id}
                   onClick={() => cerrarTareaPendiente(notificacion)}
                 >
-                  {processingId === notificacion.id ? "Actualizando..." : "Marcar como leida"}
+                  {processingId === notificacion.id ? "Actualizando..." : "Marcar como leída"}
                 </button>
               </div>
             </article>
@@ -368,8 +368,8 @@ export default function Notificaciones() {
                     {(emisor?.nombre || emisor?.usuario || "U").slice(0, 1).toUpperCase()}
                   </div>
                   <div>
-                    <span className="eyebrow">{esSolicitud ? "Solicitud de ingreso" : "Invitacion recibida"}</span>
-                    <h4>{esSolicitud ? `${nombreEmisor} quiere unirse` : `${nombreEmisor} te invito a un hogar`}</h4>
+                    <span className="eyebrow">{esSolicitud ? "Solicitud de ingreso" : "Invitación recibida"}</span>
+                    <h4>{esSolicitud ? `${nombreEmisor} quiere unirse` : `${nombreEmisor} te invitó a un hogar`}</h4>
                     <p>{notificacion.mensaje}</p>
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export default function Notificaciones() {
                   <span><strong>Hogar:</strong> {hogar?.nombre || `#${notificacion.hogarId}`}</span>
                   <span><strong>Fecha:</strong> {formatDate(notificacion.fechaCreacion)}</span>
                   <span><strong>Estado:</strong> {formatLabel(notificacion.estado)}</span>
-                  {publicacion && <span><strong>Publicacion:</strong> {publicacion.titulo || "Casa disponible"}</span>}
+                  {publicacion && <span><strong>Publicación:</strong> {publicacion.titulo || "Casa disponible"}</span>}
                 </div>
 
                 <div className="dashboard-actions mt-3">
@@ -396,7 +396,7 @@ export default function Notificaciones() {
                       type="button"
                       onClick={() => navigate(`/detalle-publicacion/${publicacion.id}?${buildNotificationParams(notificacion, publicacion, esSolicitud)}`)}
                     >
-                      Ver publicacion de casa
+                      Ver publicación de casa
                     </button>
                   )}
                   <button
@@ -404,7 +404,7 @@ export default function Notificaciones() {
                     disabled={processingId === notificacion.id}
                     onClick={() => aceptarNotificacionPendiente(notificacion)}
                   >
-                    {processingId === notificacion.id ? "Aceptando..." : esSolicitud ? "Aceptar solicitud" : "Aceptar invitacion"}
+                    {processingId === notificacion.id ? "Aceptando..." : esSolicitud ? "Aceptar solicitud" : "Aceptar invitación"}
                   </button>
                   <button
                     className="btn btn-outline-danger btn-sm"
@@ -475,7 +475,7 @@ export default function Notificaciones() {
         <div className="notification-filters">
           <input
             className="form-control"
-            placeholder="Buscar por titulo, mensaje, hogar o fecha"
+            placeholder="Buscar por título, mensaje, hogar o fecha"
             value={filters.busqueda}
             onChange={(e) => setFilters((current) => ({ ...current, busqueda: e.target.value }))}
           />

@@ -29,7 +29,7 @@ function getPerfilTitle(perfil: Publicacion, usuario?: UsuarioResumen) {
 
 function getPerfilLocation(perfil: Publicacion) {
   const ubicacion = perfil.ubicacion?.trim();
-  return ubicacion && ubicacion !== "Ubicacion no informada" ? ubicacion : "No informada por el usuario";
+  return ubicacion && ubicacion !== "Ubicacion no informada" && ubicacion !== "Ubicación no informada" ? ubicacion : "No informada por el usuario";
 }
 
 function normalizeText(value?: string) {
@@ -184,7 +184,7 @@ export default function Perfil() {
       usuarioCreador: usuarioPerfil.usuario,
       nombre: usuarioPerfil.nombre || usuarioPerfil.usuario,
       titulo: `${usuarioPerfil.nombre || usuarioPerfil.usuario} busca roomie`,
-      ubicacion: usuarioPerfil.hogarActual || "Ubicacion no informada",
+      ubicacion: usuarioPerfil.hogarActual || "Ubicación no informada",
       descripcion: usuarioPerfil.descripcion || "Usuario registrado con preferencias de convivencia.",
       presupuestoMaximo: Number(usuarioPerfil.preferenciasCompatibilidad?.presupuesto || 0),
       imagen: usuarioPerfil.fotoPerfil,
@@ -295,7 +295,7 @@ export default function Perfil() {
       }
 
       setMessage(avisosEnviados
-        ? "Solicitud enviada correctamente. Se aviso al administrador del hogar."
+        ? "Solicitud enviada correctamente. Se avisó al administrador del hogar."
         : "Solicitud enviada correctamente, pero no se pudo enviar alguno de los avisos.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud.");
@@ -318,12 +318,12 @@ export default function Perfil() {
         referenciaId: hogarInvitacion.id,
         tipo: "INVITACION_HOGAR",
         estado: "PENDIENTE",
-        titulo: "Invitacion a grupo roomie",
-        mensaje: `${user.nombre || user.usuario} te invito a unirte al grupo ${hogarInvitacion.nombre}.`,
+        titulo: "Invitación a grupo roomie",
+        mensaje: `${user.nombre || user.usuario} te invitó a unirte al grupo ${hogarInvitacion.nombre}.`,
       });
-      setMessage("Invitacion enviada correctamente.");
+      setMessage("Invitación enviada correctamente.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo enviar la invitacion.");
+      setMessage(error instanceof Error ? error.message : "No se pudo enviar la invitación.");
     } finally {
       setIsSending(false);
     }
@@ -376,7 +376,7 @@ export default function Perfil() {
       }
       setContextResolved(true);
     } catch (error) {
-      setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificacion.");
+      setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificación.");
     } finally {
       setIsSending(false);
     }
@@ -399,22 +399,22 @@ export default function Perfil() {
 
       {!perfil ? (
         <div className="sin-resultados">
-          <p>No se encontro el perfil de esta publicacion.</p>
+          <p>No se encontró el perfil de esta publicación.</p>
         </div>
       ) : (
         <>
         {notificationContext && (
           <section className="notification-review-panel">
-            <span className="eyebrow">Contexto de notificacion</span>
-            <h2>{notificationContext.tipoAccion === "solicitud" ? "Solicitud de ingreso" : "Invitacion a hogar"}</h2>
+            <span className="eyebrow">Contexto de notificación</span>
+            <h2>{notificationContext.tipoAccion === "solicitud" ? "Solicitud de ingreso" : "Invitación a hogar"}</h2>
             <p>
               {notificationContext.tipoAccion === "solicitud"
-                ? "Esta persona solicito unirse a tu hogar/casa. Revisa su perfil antes de responder."
-                : "Esta persona te invito a un hogar/casa. Revisa su perfil y la publicacion antes de responder."}
+                ? "Esta persona solicitó unirse a tu hogar/casa. Revisa su perfil antes de responder."
+                : "Esta persona te invitó a un hogar/casa. Revisa su perfil y la publicación antes de responder."}
             </p>
             <div className="notification-context-grid">
               <span><strong>Hogar:</strong> {notificationContext.hogar?.nombre || `#${notificationContext.hogarId}`}</span>
-              {notificationContext.publicacion && <span><strong>Casa:</strong> {notificationContext.publicacion.titulo || "Publicacion de casa"}</span>}
+              {notificationContext.publicacion && <span><strong>Casa:</strong> {notificationContext.publicacion.titulo || "Publicación de casa"}</span>}
             </div>
             <div className="dashboard-actions mt-3">
               {notificationContext.publicacionId && (
@@ -423,11 +423,11 @@ export default function Perfil() {
                   type="button"
                   onClick={() => navigate(`/detalle-publicacion/${notificationContext.publicacionId}?${searchParams.toString()}`)}
                 >
-                  Ver publicacion de casa
+                  Ver publicación de casa
                 </button>
               )}
               <button className="btn btn-success btn-sm" disabled={isSending || contextResolved} onClick={() => responderContexto("aceptar")}>
-                {notificationContext.tipoAccion === "solicitud" ? "Aceptar solicitud" : "Aceptar invitacion"}
+                {notificationContext.tipoAccion === "solicitud" ? "Aceptar solicitud" : "Aceptar invitación"}
               </button>
               <button className="btn btn-outline-danger btn-sm" disabled={isSending || contextResolved} onClick={() => responderContexto("rechazar")}>
                 Rechazar
@@ -448,7 +448,7 @@ export default function Perfil() {
             <div className="perfil-publication-summary">
               <span className="demo-kicker">Perfil publico</span>
               <h1>{getPerfilTitle(perfil, usuarioPerfil)}</h1>
-              <p className="perfil-ubicacion">Ubicacion: {getPerfilLocation(perfil)}</p>
+              <p className="perfil-ubicacion">Ubicación: {getPerfilLocation(perfil)}</p>
               <p className="perfil-bio">{perfil.descripcion}</p>
               <div className="profile-status-row">
                 <span className="status-pill success">{estadoPerfil}</span>
@@ -464,7 +464,7 @@ export default function Perfil() {
             <div className="perfil-section">
               <h3>Busca hogar</h3>
               <p>
-                Presupuesto maximo:{" "}
+                Presupuesto máximo:{" "}
                 <strong>${Number(perfil.presupuestoMaximo || perfil.precio || 0).toLocaleString("es-CL")} / mes</strong>
               </p>
             </div>
@@ -494,7 +494,7 @@ export default function Perfil() {
               {hogarDelPerfil ? (
                 <p>Grupo actual: <strong>{hogarDelPerfil.nombre}</strong></p>
               ) : (
-                <p>Este usuario aun no aparece asociado a un grupo hogar.</p>
+                <p>Este usuario aún no aparece asociado a un grupo hogar.</p>
               )}
               {misHogaresAdministrables.length > 1 && !hogarDelPerfil && !esMiPerfil && (
                 <label className="field-label">
@@ -539,7 +539,7 @@ export default function Perfil() {
 
             {!!perfil.habitos?.length && (
               <div className="perfil-section">
-                <h3>Habitos de convivencia</h3>
+                <h3>Hábitos de convivencia</h3>
                 <div className="perfil-tags">
                   {perfil.habitos.map((habito) => (
                     <span className="perfil-tag secondary" key={habito}>{habito.replaceAll("_", " ")}</span>

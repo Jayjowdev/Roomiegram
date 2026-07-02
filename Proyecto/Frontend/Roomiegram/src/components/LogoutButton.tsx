@@ -12,7 +12,7 @@ export function LogoutButton() {
 
   return (
     <button className="btn btn-outline-dark" onClick={handleLogout}>
-      Cerrar sesion
+      Cerrar sesión
     </button>
   );
 }

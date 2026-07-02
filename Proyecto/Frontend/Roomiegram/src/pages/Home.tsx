@@ -29,7 +29,7 @@ function getRoomieTitle(pub: Publicacion) {
 
 function getLocation(pub: Publicacion) {
   const ubicacion = pub.ubicacion?.trim();
-  return ubicacion && ubicacion !== "Ubicacion no informada" ? ubicacion : "Ubicacion no informada";
+  return ubicacion && ubicacion !== "Ubicacion no informada" && ubicacion !== "Ubicación no informada" ? ubicacion : "Ubicación no informada";
 }
 
 function mapBackendPublicacion(pub: Publicacion): Publicacion {
@@ -45,7 +45,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     usuarioId: pub.usuarioId,
     usuarioCreador: pub.usuarioCreador,
     nombre: pub.usuarioCreador || "RoomieGram",
-    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitacion disponible"),
+    titulo: pub.titulo || (tipo === "busco_roomie" ? "Usuario busca roomie" : "Habitación disponible"),
     precioMensual: tipo === "ofrezco_casa" ? (pub.precio || pub.precioMensual || 0) : undefined,
     presupuestoMaximo: tipo === "busco_roomie" ? (pub.precio || pub.presupuestoMaximo || 0) : undefined,
     precio: pub.precio || pub.precioMensual || 0,
@@ -53,9 +53,9 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     descripcion: pub.descripcion,
     amenidades: tipo === "ofrezco_casa"
       ? [
-          `${pub.numeroHabitaciones || 1} habitacion(es)`,
+          `${pub.numeroHabitaciones || 1} habitación(es)`,
           `${pub.numeroPersonas || 1} cupo(s)`,
-          `${pub.numeroBanos || 1} bano(s)`,
+          `${pub.numeroBanos || 1} baño(s)`,
         ]
       : undefined,
     imagen,
@@ -70,14 +70,14 @@ const beneficiosHome = [
   },
   {
     titulo: "Publicaciones",
-    descripcion: "Ofrece una habitacion o publica que estas buscando roomie.",
+    descripcion: "Ofrece una habitación o publica que estás buscando roomie.",
   },
   {
     titulo: "Tareas y gastos",
     descripcion: "Ordena responsabilidades y acuerdos del hogar compartido.",
   },
   {
-    titulo: "Gestion de perfil",
+    titulo: "Gestión de perfil",
     descripcion: "Administra tus preferencias y publicaciones desde tu cuenta.",
   },
 ];
@@ -85,21 +85,21 @@ const beneficiosHome = [
 const historiasFallback = [
   {
     id: -1,
-    titulo: "Convivencia mas clara",
+    titulo: "Convivencia más clara",
     nombreVisible: "Camila R.",
-    mensaje: "Me ayudo a encontrar roomies con horarios parecidos y reglas claras desde el primer dia.",
+    mensaje: "Me ayudó a encontrar roomies con horarios parecidos y reglas claras desde el primer día.",
   },
   {
     id: -2,
-    titulo: "Publicacion simple",
+    titulo: "Publicación simple",
     nombreVisible: "Diego M.",
-    mensaje: "Publique una habitacion y pude revisar mejor a quienes estaban interesados antes de coordinar.",
+    mensaje: "Publiqué una habitación y pude revisar mejor a quienes estaban interesados antes de coordinar.",
   },
   {
     id: -3,
     titulo: "Hogar organizado",
     nombreVisible: "Valentina S.",
-    mensaje: "La parte de tareas hizo mas facil organizar el departamento sin estar recordando todo por chat.",
+    mensaje: "La parte de tareas hizo más fácil organizar el departamento sin estar recordando todo por chat.",
   },
 ] satisfies Historia[];
 
@@ -196,7 +196,7 @@ export default function Home() {
 
       setPublicaciones((current) => current.filter((currentPub) => currentPub.id !== pub.id));
       deleteLocalPublicacion(pub.id);
-      setApiMessage("Publicacion eliminada correctamente.");
+      setApiMessage("Publicación eliminada correctamente.");
     } catch (error) {
       setApiMessage(error instanceof Error ? error.message : "No se pudo eliminar en el servicio.");
     }
@@ -256,7 +256,7 @@ export default function Home() {
               Buscar roomie
             </button>
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/crear-publicacion")}>
-              Crear publicacion
+              Crear publicación
             </button>
             <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mis-publicaciones")}>
               Mis publicaciones
@@ -287,7 +287,7 @@ export default function Home() {
           <div className="home-location-filter">
             <input
               className="form-control"
-              placeholder="Filtrar por ubicacion"
+              placeholder="Filtrar por ubicación"
               list="home-comunas-santiago"
               value={ubicacionFiltro}
               onChange={(event) => setUbicacionFiltro(event.target.value)}
@@ -323,8 +323,8 @@ export default function Home() {
                   <div className="home-card-body">
                     <div className="home-card-top">
                       <h3>{getRoomieTitle(pub)}</h3>
-                      <p className="home-desc-oferta"><strong>Publicado por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} anos)` : ""}</p>
-                      <p className="home-ubicacion">Ubicacion: {getLocation(pub)}</p>
+                      <p className="home-desc-oferta"><strong>Publicado por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} años)` : ""}</p>
+                      <p className="home-ubicacion">Ubicación: {getLocation(pub)}</p>
                     </div>
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}
@@ -343,10 +343,10 @@ export default function Home() {
                   <div className="home-card-body">
                     <div className="home-card-top">
                       <h3>{pub.titulo}</h3>
-                      <p className="home-ubicacion">Ubicacion: {pub.ubicacion}</p>
+                      <p className="home-ubicacion">Ubicación: {pub.ubicacion}</p>
                       <p className="home-precio">${pub.precioMensual?.toLocaleString("es-CL")} / mes</p>
                     </div>
-                    <p className="home-desc-oferta"><strong>Ofrecido por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} anos)` : ""}</p>
+                    <p className="home-desc-oferta"><strong>Ofrecido por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} años)` : ""}</p>
                     <p className="home-desc">{pub.descripcion}</p>
                     {pub.amenidades && <div className="home-tags">{pub.amenidades.map((amenidad) => <span key={amenidad} className="home-tag amenidad-tag">{amenidad}</span>)}</div>}
                     <button className="btn btn-outline-success w-100 mt-4" onClick={() => navigate(`/detalle-publicacion/${pub.id}`)}>Ver detalles</button>
@@ -405,8 +405,8 @@ export default function Home() {
       <section className="home-contact-section" aria-labelledby="home-contact-title">
         <div>
           <span>Soporte</span>
-          <h2 id="home-contact-title">Tienes dudas o necesitas ayuda?</h2>
-          <p>Envia un mensaje al equipo de Roomiegram desde una pantalla dedicada de soporte.</p>
+          <h2 id="home-contact-title">¿Tienes dudas o necesitas ayuda?</h2>
+          <p>Envía un mensaje al equipo de Roomiegram desde una pantalla dedicada de soporte.</p>
         </div>
         <button className="btn btn-success" type="button" onClick={() => navigate("/soporte")}>
           Contactar soporte

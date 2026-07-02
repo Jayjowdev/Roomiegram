@@ -61,7 +61,7 @@ export default function MiPerfil() {
         setIsLoadingGroup(false);
 
         if (hogaresResult.status === "rejected" || usuariosResult.status === "rejected") {
-          setMessage("No se pudo cargar toda la informacion de tu grupo.");
+          setMessage("No se pudo cargar toda la información de tu grupo.");
         }
       });
 
@@ -98,7 +98,7 @@ export default function MiPerfil() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setMessage("Sube una imagen valida para tu perfil.");
+      setMessage("Sube una imagen válida para tu perfil.");
       return;
     }
 
@@ -169,7 +169,7 @@ export default function MiPerfil() {
                 {PLAN_LABELS[suscripcion.plan as PlanId]}
               </span>
             )}
-            <p>{user?.descripcion || "Completa tu descripcion para que otros usuarios conozcan tu estilo de convivencia."}</p>
+            <p>{user?.descripcion || "Completa tu descripción para que otros usuarios conozcan tu estilo de convivencia."}</p>
             {user?.intereses?.length ? (
               <div className="home-tags">
                 {user.intereses.map((interes) => <span className="home-tag" key={interes}>{interes}</span>)}
@@ -177,10 +177,10 @@ export default function MiPerfil() {
             ) : null}
             <div className="profile-main-actions">
               <button className="btn btn-success" type="button" onClick={() => navigate("/configuracion")}>
-                Editar configuracion
+                Editar configuración
               </button>
               <button className="btn btn-outline-success" type="button" onClick={() => navigate(`/perfil-publico/${user?.id}`)}>
-                Ver perfil publico
+                Ver perfil público
               </button>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function MiPerfil() {
         <aside className="mi-perfil-summary">
           <h3>Compatibilidad activa</h3>
           <strong>{preferenciasResumen.length ? "Lista" : "0%"}</strong>
-          <p>{preferenciasResumen.length ? "Tus preferencias ya estan guardadas para buscar matches." : "Completa tus preferencias para activar la busqueda por compatibilidad."}</p>
+          <p>{preferenciasResumen.length ? "Tus preferencias ya están guardadas para buscar matches." : "Completa tus preferencias para activar la búsqueda por compatibilidad."}</p>
           {preferenciasResumen.length ? (
             <div className="home-tags profile-preferences">
               {preferenciasResumen.map((item) => <span className="home-tag" key={item}>{item}</span>)}
@@ -223,7 +223,7 @@ export default function MiPerfil() {
             Ver mis publicaciones
           </button>
           <button className="btn btn-outline-success" onClick={() => navigate("/crear-publicacion")}>
-            Crear publicacion
+            Crear publicación
           </button>
         </div>
       </section>
@@ -243,7 +243,7 @@ export default function MiPerfil() {
           <div className="sin-resultados"><p>Cargando integrantes del hogar...</p></div>
         ) : !hogarActual ? (
           <div className="sin-resultados">
-            <p>Aun no perteneces a un grupo roomie.</p>
+            <p>Aún no perteneces a un grupo roomie.</p>
             <button className="btn btn-success" onClick={() => navigate("/hogares")}>
               Buscar o crear hogar
             </button>

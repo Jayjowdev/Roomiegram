@@ -125,23 +125,23 @@ export default function ColaboradorPanel() {
       return;
     }
 
-    const motivo = window.prompt("Indica el motivo para ocultar esta publicacion:");
+    const motivo = window.prompt("Indica el motivo para ocultar esta publicación:");
     const motivoLimpio = motivo?.trim() || "";
     if (!motivoLimpio) {
-      setMessage("Debes indicar un motivo para ocultar la publicacion.");
+      setMessage("Debes indicar un motivo para ocultar la publicación.");
       return;
     }
 
-    const confirmar = window.confirm("Esta accion ocultara la publicacion de Home y listados normales. Deseas continuar?");
+    const confirmar = window.confirm("Esta acción ocultará la publicación de Home y listados normales. ¿Deseas continuar?");
     if (!confirmar) return;
 
     try {
       setMessage("");
       await publicacionService.ocultar(pub.id, { moderadorId: user.id, motivo: motivoLimpio });
       await recargarPublicaciones();
-      setMessage("Publicacion ocultada correctamente.");
+      setMessage("Publicación ocultada correctamente.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo ocultar la publicacion. Intenta nuevamente.");
+      setMessage(error instanceof Error ? error.message : "No se pudo ocultar la publicación. Intenta nuevamente.");
     }
   };
 
@@ -151,23 +151,23 @@ export default function ColaboradorPanel() {
       return;
     }
 
-    const motivo = window.prompt("Indica el motivo para restaurar esta publicacion:");
+    const motivo = window.prompt("Indica el motivo para restaurar esta publicación:");
     const motivoLimpio = motivo?.trim() || "";
     if (!motivoLimpio) {
-      setMessage("Debes indicar un motivo para restaurar la publicacion.");
+      setMessage("Debes indicar un motivo para restaurar la publicación.");
       return;
     }
 
-    const confirmar = window.confirm("Esta accion volvera a mostrar la publicacion en Home y listados normales. Deseas continuar?");
+    const confirmar = window.confirm("Esta acción volverá a mostrar la publicación en Home y listados normales. ¿Deseas continuar?");
     if (!confirmar) return;
 
     try {
       setMessage("");
       await publicacionService.restaurar(pub.id, { moderadorId: user.id, motivo: motivoLimpio });
       await recargarPublicaciones();
-      setMessage("Publicacion restaurada correctamente.");
+      setMessage("Publicación restaurada correctamente.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo restaurar la publicacion. Intenta nuevamente.");
+      setMessage(error instanceof Error ? error.message : "No se pudo restaurar la publicación. Intenta nuevamente.");
     }
   };
 
@@ -195,7 +195,7 @@ export default function ColaboradorPanel() {
       <section className="collaborator-hero">
         <div>
           <span className="status-pill success">{user?.role || "COLABORADOR"}</span>
-          <h1>Panel de moderacion</h1>
+          <h1>Panel de moderación</h1>
           <p>Revisa publicaciones y gestiona contenido que incumpla las normas de la comunidad.</p>
         </div>
         <div className="collaborator-scope-card">
@@ -222,7 +222,7 @@ export default function ColaboradorPanel() {
       <section className="dashboard-filter-panel collaborator-filter-panel">
         <div>
           <label htmlFor="collaborator-search">Buscar publicaciones</label>
-          <p>Busca por titulo, ubicacion, usuario o tipo.</p>
+          <p>Busca por título, ubicación, usuario o tipo.</p>
         </div>
         <div className="dashboard-filter-controls">
           <input
@@ -281,7 +281,7 @@ export default function ColaboradorPanel() {
 
       {message && <p className="api-message">{message}</p>}
 
-      <section className="collaborator-publication-list" aria-label="Publicaciones para revision">
+      <section className="collaborator-publication-list" aria-label="Publicaciones para revisión">
         {isLoading ? (
           <div className="sin-resultados"><p>Cargando publicaciones...</p></div>
         ) : publicacionesFiltradas.length === 0 ? (
@@ -289,21 +289,21 @@ export default function ColaboradorPanel() {
         ) : (
           publicacionesFiltradas.map((pub) => (
             <article className="collaborator-publication-row" key={pub.id}>
-              <img src={pub.imagen || home1} alt={pub.titulo || "Publicacion"} />
+              <img src={pub.imagen || home1} alt={pub.titulo || "Publicación"} />
               <div className="collaborator-publication-main">
                 <div className="collaborator-publication-title">
                   <div>
                     <div className="collaborator-status-row">
                       <span className="status-pill">{tipoLabel(pub.tipo)}</span>
                       <span className={`status-pill ${estadoModeracion(pub) === "OCULTA_MODERACION" ? "warning" : "success"}`}>
-                        {estadoModeracion(pub) === "OCULTA_MODERACION" ? "Oculta por moderacion" : "Activa"}
+                        {estadoModeracion(pub) === "OCULTA_MODERACION" ? "Oculta por moderación" : "Activa"}
                       </span>
                     </div>
                     <h3>{pub.titulo}</h3>
                   </div>
                   <small>#{pub.id}</small>
                 </div>
-                <p>{pub.descripcion || "Sin descripcion informada."}</p>
+                <p>{pub.descripcion || "Sin descripción informada."}</p>
                 {estadoModeracion(pub) === "OCULTA_MODERACION" && (
                   <div className="collaborator-moderation-note">
                     <strong>Motivo:</strong> {pub.motivoModeracion || "No informado"}
@@ -311,9 +311,9 @@ export default function ColaboradorPanel() {
                   </div>
                 )}
                 <div className="collaborator-publication-meta">
-                  <span><strong>Ubicacion:</strong> {pub.ubicacion || "No informada"}</span>
+                  <span><strong>Ubicación:</strong> {pub.ubicacion || "No informada"}</span>
                   <span><strong>Autor:</strong> {pub.usuarioCreador || pub.nombre || "No informado"}</span>
-                  <span><strong>Telefono:</strong> {pub.telefono || "Telefono no informado"}</span>
+                  <span><strong>Teléfono:</strong> {pub.telefono || "Teléfono no informado"}</span>
                   {pub.precio ? (
                     <span>
                       <strong>{pub.tipo === "busco_roomie" ? "Presupuesto:" : "Precio:"}</strong>{" "}
@@ -335,12 +335,12 @@ export default function ColaboradorPanel() {
                 )}
                 {estadoModeracion(pub) === "ACTIVA" && (
                   <button className="btn btn-outline-danger" type="button" onClick={() => handleOcultar(pub)}>
-                    Ocultar publicacion
+                    Ocultar publicación
                   </button>
                 )}
                 {estadoModeracion(pub) === "OCULTA_MODERACION" && (
                   <button className="btn btn-success" type="button" onClick={() => handleRestaurar(pub)}>
-                    Restaurar publicacion
+                    Restaurar publicación
                   </button>
                 )}
               </div>

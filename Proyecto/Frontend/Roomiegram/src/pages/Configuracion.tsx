@@ -27,7 +27,7 @@ export default function Configuracion() {
     setAccountError("");
 
     if (!user?.id) {
-      setAccountError("Debes iniciar sesion para actualizar tus datos.");
+      setAccountError("Debes iniciar sesión para actualizar tus datos.");
       return;
     }
 
@@ -53,22 +53,22 @@ export default function Configuracion() {
     setPasswordError("");
 
     if (!user?.id) {
-      setPasswordError("Debes iniciar sesion para cambiar tu contrasena.");
+      setPasswordError("Debes iniciar sesión para cambiar tu contraseña.");
       return;
     }
 
     if (!contrasenaActual.trim()) {
-      setPasswordError("Ingresa tu contrasena actual.");
+      setPasswordError("Ingresa tu contraseña actual.");
       return;
     }
 
     if (nuevaContrasena.length < 8) {
-      setPasswordError("La nueva contrasena debe tener al menos 8 caracteres.");
+      setPasswordError("La nueva contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
     if (nuevaContrasena !== confirmarContrasena) {
-      setPasswordError("La nueva contrasena y la confirmacion no coinciden.");
+      setPasswordError("La nueva contraseña y la confirmación no coinciden.");
       return;
     }
 
@@ -79,12 +79,12 @@ export default function Configuracion() {
         nuevaContrasena,
         confirmarContrasena,
       });
-      setPasswordMessage(response.mensaje || "Contrasena actualizada correctamente.");
+      setPasswordMessage(response.mensaje || "Contraseña actualizada correctamente.");
       setContrasenaActual("");
       setNuevaContrasena("");
       setConfirmarContrasena("");
     } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : "No se pudo cambiar la contrasena.");
+      setPasswordError(error instanceof Error ? error.message : "No se pudo cambiar la contraseña.");
     } finally {
       setIsChangingPassword(false);
     }
@@ -106,15 +106,15 @@ export default function Configuracion() {
       </header>
 
       <section className="module-title">
-        <h1>Configuracion de cuenta</h1>
+        <h1>Configuración de cuenta</h1>
         <p>Administra tus datos personales, seguridad y accesos principales de Roomiegram.</p>
       </section>
 
       <section className="settings-layout">
         <form className="module-form settings-card" onSubmit={handleAccountSubmit}>
           <span className="eyebrow">Datos de cuenta</span>
-          <h3>Informacion basica</h3>
-          <p className="form-helper">Tu nombre se muestra en tu perfil. Usuario y correo quedan protegidos para no afectar el inicio de sesion.</p>
+          <h3>Información básica</h3>
+          <p className="form-helper">Tu nombre se muestra en tu perfil. Usuario y correo quedan protegidos para no afectar el inicio de sesión.</p>
           {accountError && <div className="form-error">{accountError}</div>}
           {accountMessage && <div className="form-success">{accountMessage}</div>}
 
@@ -142,15 +142,15 @@ export default function Configuracion() {
 
         <form className="module-form settings-card" onSubmit={handleChangePassword}>
           <span className="eyebrow">Seguridad</span>
-          <h3>Cambiar contrasena</h3>
-          <p className="form-helper">Usa tu contrasena temporal o actual para definir una nueva.</p>
+          <h3>Cambiar contraseña</h3>
+          <p className="form-helper">Usa tu contraseña temporal o actual para definir una nueva.</p>
           {passwordError && <div className="form-error">{passwordError}</div>}
           {passwordMessage && <div className="form-success">{passwordMessage}</div>}
           <div className="password-input-group">
             <input
               className="form-control"
               type={mostrarContrasena ? "text" : "password"}
-              placeholder="Contrasena actual"
+              placeholder="Contraseña actual"
               value={contrasenaActual}
               onChange={(event) => setContrasenaActual(event.target.value)}
               disabled={isChangingPassword}
@@ -160,7 +160,7 @@ export default function Configuracion() {
               className="password-toggle"
               onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
               disabled={isChangingPassword}
-              aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+              aria-label={mostrarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {mostrarContrasena ? "Ocultar" : "Ver"}
             </button>
@@ -168,7 +168,7 @@ export default function Configuracion() {
           <input
             className="form-control"
             type={mostrarContrasena ? "text" : "password"}
-            placeholder="Nueva contrasena"
+            placeholder="Nueva contraseña"
             value={nuevaContrasena}
             onChange={(event) => setNuevaContrasena(event.target.value)}
             disabled={isChangingPassword}
@@ -176,24 +176,24 @@ export default function Configuracion() {
           <input
             className="form-control"
             type={mostrarContrasena ? "text" : "password"}
-            placeholder="Confirmar nueva contrasena"
+            placeholder="Confirmar nueva contraseña"
             value={confirmarContrasena}
             onChange={(event) => setConfirmarContrasena(event.target.value)}
             disabled={isChangingPassword}
           />
           <button className="btn btn-success w-100" type="submit" disabled={isChangingPassword}>
-            {isChangingPassword ? "Actualizando..." : "Actualizar contrasena"}
+            {isChangingPassword ? "Actualizando..." : "Actualizar contraseña"}
           </button>
         </form>
 
         <aside className="module-list settings-card settings-shortcuts">
-          <span className="eyebrow">Accesos utiles</span>
+          <span className="eyebrow">Accesos útiles</span>
           <h3>Cuenta y perfil</h3>
           <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/mi-perfil")}>
             Volver a Mi perfil
           </button>
           <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate(`/perfil-publico/${user?.id}`)}>
-            Ver perfil publico
+            Ver perfil público
           </button>
           <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/preferencias")}>
             Ir a preferencias

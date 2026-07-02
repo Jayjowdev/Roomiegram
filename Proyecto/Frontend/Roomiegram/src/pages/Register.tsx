@@ -44,10 +44,10 @@ export default function Register() {
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
   const passwordRules = [
-    { label: "Minimo 8 caracteres", ok: contrasena.length >= 8 },
-    { label: "Al menos una letra mayuscula", ok: /[A-Z]/.test(contrasena) },
-    { label: "Al menos una letra minuscula", ok: /[a-z]/.test(contrasena) },
-    { label: "Al menos un numero", ok: /\d/.test(contrasena) },
+    { label: "Mínimo 8 caracteres", ok: contrasena.length >= 8 },
+    { label: "Al menos una letra mayúscula", ok: /[A-Z]/.test(contrasena) },
+    { label: "Al menos una letra minúscula", ok: /[a-z]/.test(contrasena) },
+    { label: "Al menos un número", ok: /\d/.test(contrasena) },
   ];
 
   const handleSubmit = async (e: FormEvent) => {
@@ -57,37 +57,37 @@ export default function Register() {
     clearError();
 
     if (nombre.trim().length < 3) {
-      setLocalError("Ingresa un nombre valido.");
+      setLocalError("Ingresa un nombre válido.");
       nombreRef.current?.focus();
       return;
     }
 
     if (!isValidEmail(correo)) {
-      setLocalError("Ingresa un correo valido con dominio, por ejemplo nombre@correo.com.");
+      setLocalError("Ingresa un correo válido con dominio, por ejemplo nombre@correo.com.");
       correoRef.current?.focus();
       return;
     }
 
     if (!/^[a-zA-Z0-9._-]{3,20}$/.test(usuario.trim())) {
-      setLocalError("El usuario debe tener 3 a 20 caracteres y solo usar letras, numeros, punto, guion o guion bajo.");
+      setLocalError("El usuario debe tener 3 a 20 caracteres y solo usar letras, números, punto, guion o guion bajo.");
       usuarioRef.current?.focus();
       return;
     }
 
     if (!isValidPhone(telefono)) {
-      setLocalError("Ingresa un telefono valido de 8 a 12 digitos.");
+      setLocalError("Ingresa un teléfono válido de 8 a 12 dígitos.");
       telefonoRef.current?.focus();
       return;
     }
 
     if (!isStrongPassword(contrasena)) {
-      setLocalError("La contrasena debe tener minimo 8 caracteres, una mayuscula, una minuscula y un numero.");
+      setLocalError("La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.");
       contrasenaRef.current?.focus();
       return;
     }
 
     if (contrasena !== confirmPassword) {
-      setLocalError("Las contrasenas no coinciden.");
+      setLocalError("Las contraseñas no coinciden.");
       confirmPasswordRef.current?.focus();
       return;
     }
@@ -149,20 +149,20 @@ export default function Register() {
           </select>
           {tipoCuenta === "COLABORADOR" && (
             <p className="role-info">
-              Los colaboradores deben ser aprobados por un administrador antes de iniciar sesion.
+              Los colaboradores deben ser aprobados por un administrador antes de iniciar sesión.
             </p>
           )}
 
           <input ref={nombreRef} type="text" className="form-control" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={isLoading} />
-          <input ref={correoRef} type="email" className="form-control" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
+          <input ref={correoRef} type="email" className="form-control" placeholder="Correo electrónico" value={correo} onChange={(e) => setCorreo(e.target.value)} disabled={isLoading} />
           <input ref={usuarioRef} type="text" className="form-control" placeholder="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
-          <input ref={telefonoRef} type="tel" className="form-control" placeholder="Telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
+          <input ref={telefonoRef} type="tel" className="form-control" placeholder="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={isLoading} />
           <div className="password-input-group">
             <input
               ref={contrasenaRef}
               type={mostrarContrasena ? "text" : "password"}
               className="form-control"
-              placeholder="Contrasena segura"
+              placeholder="Contraseña segura"
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
               onFocus={() => setPasswordFocused(true)}
@@ -174,7 +174,7 @@ export default function Register() {
               className="password-toggle"
               onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
               disabled={isLoading}
-              aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+              aria-label={mostrarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {mostrarContrasena ? "Ocultar" : "Ver"}
             </button>
@@ -189,13 +189,13 @@ export default function Register() {
               ))}
             </ul>
           )}
-          <input ref={confirmPasswordRef} type={mostrarContrasena ? "text" : "password"} className="form-control" placeholder="Confirmar contrasena" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
+          <input ref={confirmPasswordRef} type={mostrarContrasena ? "text" : "password"} className="form-control" placeholder="Confirmar contraseña" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
 
           <button className="btn btn-success w-100 mt-3" type="submit" disabled={isLoading}>
             {isLoading ? "Creando cuenta..." : "Crear cuenta"}
           </button>
 
-          <p className="register-legal">Al registrarte aceptas nuestros terminos y condiciones.</p>
+          <p className="register-legal">Al registrarte aceptas nuestros términos y condiciones.</p>
         </form>
       </div>
     </div>

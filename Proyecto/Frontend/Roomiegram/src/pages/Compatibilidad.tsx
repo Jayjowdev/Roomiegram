@@ -237,7 +237,7 @@ export default function Compatibilidad() {
 
     const hogar = hogaresAdministrables.find((item) => String(item.id) === selectedHogarId);
     if (!hogar) {
-      setMessage("Selecciona un hogar valido para enviar la invitacion.");
+      setMessage("Selecciona un hogar válido para enviar la invitación.");
       return;
     }
 
@@ -250,12 +250,12 @@ export default function Compatibilidad() {
         referenciaId: hogar.id,
         tipo: "INVITACION_HOGAR",
         estado: "PENDIENTE",
-        titulo: "Invitacion a hogar Roomiegram",
-        mensaje: `${user.nombre || user.usuario} te invito a unirte al hogar ${hogar.nombre}.`,
+        titulo: "Invitación a hogar Roomiegram",
+        mensaje: `${user.nombre || user.usuario} te invitó a unirte al hogar ${hogar.nombre}.`,
       });
-      setMessage(`Invitacion enviada a ${candidato.nombre} para el hogar ${hogar.nombre}.`);
+      setMessage(`Invitación enviada a ${candidato.nombre} para el hogar ${hogar.nombre}.`);
     } catch {
-      setMessage("No se pudo enviar la invitacion. La accion no modifico el hogar.");
+      setMessage("No se pudo enviar la invitación. La acción no modificó el hogar.");
     } finally {
       setProcessingId(null);
     }

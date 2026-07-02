@@ -69,7 +69,7 @@ export default function Comprobantes() {
         setComprobantes(comprobantesResult.status === "fulfilled" ? comprobantesResult.value : []);
 
         if (hogaresResult.status === "rejected" || gastosResult.status === "rejected" || comprobantesResult.status === "rejected") {
-          setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios esten activos.");
+          setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios estén activos.");
         }
       })
       .finally(() => setIsLoading(false));
@@ -116,7 +116,7 @@ export default function Comprobantes() {
     if (Number(hogarCuentaId) <= 0) return setMessage("Selecciona un gasto del hogar.");
     if (Number(montoPagado) <= 0) return setMessage("El monto pagado debe ser mayor a cero.");
     if (nombreArchivo.trim().length < 3 || !nombreArchivo.includes(".")) {
-      return setMessage("Ingresa un nombre de archivo valido con extension.");
+      return setMessage("Ingresa un nombre de archivo válido con extensión.");
     }
 
     setIsSaving(true);
@@ -195,8 +195,8 @@ export default function Comprobantes() {
         <div className="sin-resultados"><p>Cargando gastos del hogar...</p></div>
       ) : !hogarActual ? (
         <div className="empty-household">
-          <h2>Aun no tienes un hogar</h2>
-          <p>Unete o crea un grupo roomie para registrar comprobantes de pagos compartidos.</p>
+          <h2>Aún no tienes un hogar</h2>
+          <p>Únete o crea un grupo roomie para registrar comprobantes de pagos compartidos.</p>
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
       ) : (
@@ -236,7 +236,7 @@ export default function Comprobantes() {
                 <input className="form-control" type="file" accept="image/*,.pdf" onChange={handleFileChange} />
               </label>
               <input className="form-control" placeholder="Nombre del archivo o comprobante" value={nombreArchivo} onChange={(e) => setNombreArchivo(e.target.value)} required />
-              <textarea className="form-control" placeholder="Observacion" value={observacion} onChange={(e) => setObservacion(e.target.value)} />
+              <textarea className="form-control" placeholder="Observación" value={observacion} onChange={(e) => setObservacion(e.target.value)} />
               <button className="btn btn-success w-100" disabled={isSaving || gastosDelHogar.length === 0}>{isSaving ? "Registrando..." : "Registrar comprobante"}</button>
               {gastosDelHogar.length === 0 && <p className="form-helper">Primero registra un gasto del hogar.</p>}
             </form>

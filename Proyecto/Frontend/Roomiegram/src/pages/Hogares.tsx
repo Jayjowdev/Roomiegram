@@ -113,7 +113,7 @@ export default function Hogares() {
 
     return {
       id: publicacionId,
-      titulo: searchParams.get("titulo")?.trim() || "Publicacion sin titulo",
+      titulo: searchParams.get("titulo")?.trim() || "Publicación sin título",
       tipo: searchParams.get("tipo")?.trim() || "ofrezco_casa",
     };
   }, [searchParams]);
@@ -131,7 +131,7 @@ export default function Hogares() {
     setMessage("");
 
     if (!user?.id) {
-      setMessage("Debes iniciar sesion para crear un hogar.");
+      setMessage("Debes iniciar sesión para crear un hogar.");
       return;
     }
 
@@ -146,7 +146,7 @@ export default function Hogares() {
     }
 
     if (descripcion.trim() && descripcion.trim().length < 10) {
-      setMessage("La descripcion debe tener al menos 10 caracteres o quedar vacia.");
+      setMessage("La descripción debe tener al menos 10 caracteres o quedar vacía.");
       return;
     }
 
@@ -165,10 +165,10 @@ export default function Hogares() {
       if (publicacionContexto) {
         try {
           hogarParaGuardar = await hogarService.agregarPublicacion(creado.id, user.id, publicacionContexto.id);
-          successMessage = "Hogar creado y vinculado a la publicacion correctamente.";
+          successMessage = "Hogar creado y vinculado a la publicación correctamente.";
           setSearchParams({});
         } catch {
-          successMessage = "Hogar creado, pero no se pudo vincular automaticamente a la publicacion.";
+          successMessage = "Hogar creado, pero no se pudo vincular automáticamente a la publicación.";
         }
       }
 
@@ -205,7 +205,7 @@ export default function Hogares() {
         correoEnviado = false;
       }
       setMessage(correoEnviado
-        ? "Solicitud aprobada. Se aviso al solicitante por correo."
+        ? "Solicitud aprobada. Se avisó al solicitante por correo."
         : "Solicitud aprobada, pero no se pudo enviar el correo al solicitante.");
     } catch {
       setMessage("No se pudo aprobar la solicitud.");
@@ -235,7 +235,7 @@ export default function Hogares() {
         correoEnviado = false;
       }
       setMessage(correoEnviado
-        ? "Solicitud rechazada. Se aviso al solicitante por correo."
+        ? "Solicitud rechazada. Se avisó al solicitante por correo."
         : "Solicitud rechazada, pero no se pudo enviar el correo al solicitante.");
     } catch {
       setMessage("No se pudo rechazar la solicitud.");
@@ -269,10 +269,10 @@ export default function Hogares() {
       setMessage(
         fallidas
           ? "Hogar eliminado, pero no se pudieron eliminar todas sus publicaciones asociadas."
-          : "Hogar y publicacion asociada eliminados correctamente."
+          : "Hogar y publicación asociada eliminados correctamente."
       );
     } catch {
-      setMessage("No se pudo eliminar el hogar. Solo el administrador puede realizar esta accion.");
+      setMessage("No se pudo eliminar el hogar. Solo el administrador puede realizar esta acción.");
     }
   };
 
@@ -284,7 +284,7 @@ export default function Hogares() {
       return;
     }
 
-    const confirmar = window.confirm(`Salir del hogar "${hogar.nombre}"?`);
+    const confirmar = window.confirm(`¿Salir del hogar "${hogar.nombre}"?`);
     if (!confirmar) return;
 
     try {
@@ -303,7 +303,7 @@ export default function Hogares() {
     if (!user?.id) return;
 
     const nombreIntegrante = formatMemberName(usuarioId, usuariosById, user || undefined);
-    const confirmar = window.confirm(`Quitar a ${nombreIntegrante} del hogar "${hogar.nombre}"?`);
+    const confirmar = window.confirm(`¿Quitar a ${nombreIntegrante} del hogar "${hogar.nombre}"?`);
     if (!confirmar) return;
 
     try {
@@ -328,7 +328,7 @@ export default function Hogares() {
         <div className="section-heading-row">
           <div>
             <h4>{hogar.nombre}</h4>
-            <p>{hogar.descripcion || "Sin descripcion"}</p>
+            <p>{hogar.descripcion || "Sin descripción"}</p>
           </div>
           <span className={hogar.activo ? "status-pill success" : "status-pill"}>
             {hogar.activo ? "Activo" : "Inactivo"}
@@ -357,7 +357,7 @@ export default function Hogares() {
 
         {isAdmin && integrantes.length > 1 && (
           <div className="hogar-integrantes-admin-list">
-            <h5>Gestion de integrantes</h5>
+            <h5>Gestión de integrantes</h5>
             {integrantes
               .filter((usuarioId) => usuarioId !== user?.id)
               .map((usuarioId) => (
@@ -462,12 +462,12 @@ export default function Hogares() {
         <section className="module-list hogares-empty-flow">
           <section className="module-item hogares-path-card hogares-path-primary">
             <span className="eyebrow">Camino principal</span>
-            <h3>Ofrecer casa o habitacion</h3>
+            <h3>Ofrecer casa o habitación</h3>
             <p>
-              Crea una publicacion de casa para que otros usuarios puedan encontrarte y enviarte solicitudes.
+              Crea una publicación de casa para que otros usuarios puedan encontrarte y enviarte solicitudes.
             </p>
             <button className="btn btn-success" type="button" onClick={() => crearPublicacionCasa()}>
-              Crear publicacion de casa
+              Crear publicación de casa
             </button>
           </section>
 
@@ -499,7 +499,7 @@ export default function Hogares() {
               </p>
               {publicacionContexto && (
                 <p className="api-message">
-                  Crear hogar para la publicacion: {publicacionContexto.titulo}
+                  Crear hogar para la publicación: {publicacionContexto.titulo}
                 </p>
               )}
               <input
@@ -511,7 +511,7 @@ export default function Hogares() {
               />
               <textarea
                 className="form-control"
-                placeholder="Descripcion del hogar"
+                placeholder="Descripción del hogar"
                 value={descripcion}
                 onChange={(event) => setDescripcion(event.target.value)}
               />
@@ -537,9 +537,9 @@ export default function Hogares() {
             {hogaresAdministrablesSinPublicacion.length > 0 && (
               <div className="module-item hogar-next-step">
                 <span className="eyebrow">Siguiente paso</span>
-                <h3>Tu hogar todavia no tiene una publicacion de casa vinculada</h3>
+                <h3>Tu hogar todavía no tiene una publicación de casa vinculada</h3>
                 <p>
-                  Crea una publicacion para recibir solicitudes y mantenerlas asociadas a este mismo hogar.
+                  Crea una publicación para recibir solicitudes y mantenerlas asociadas a este mismo hogar.
                 </p>
                 <div className="item-actions">
                   {hogaresAdministrablesSinPublicacion.length === 1 ? (
@@ -548,7 +548,7 @@ export default function Hogares() {
                       type="button"
                       onClick={() => crearPublicacionCasa(hogaresAdministrablesSinPublicacion[0].id)}
                     >
-                      Crear publicacion de casa
+                      Crear publicación de casa
                     </button>
                   ) : (
                     hogaresAdministrablesSinPublicacion.map((hogar) => (
@@ -558,7 +558,7 @@ export default function Hogares() {
                         key={hogar.id}
                         onClick={() => crearPublicacionCasa(hogar.id)}
                       >
-                        Crear publicacion para {hogar.nombre}
+                        Crear publicación para {hogar.nombre}
                       </button>
                     ))
                   )}

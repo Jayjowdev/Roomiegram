@@ -150,7 +150,7 @@ export default function Dashboard() {
       return;
     }
 
-    const confirmar = window.confirm(`Eliminar la publicacion "${getPublicationTitle(publicacion)}"?`);
+    const confirmar = window.confirm(`¿Eliminar la publicación "${getPublicationTitle(publicacion)}"?`);
     if (!confirmar) return;
 
     setDeletingPublicationId(publicacion.id);
@@ -170,9 +170,9 @@ export default function Dashboard() {
         ...current,
         publicaciones: Math.max(0, current.publicaciones - 1),
       }));
-      setMessage("Publicacion eliminada correctamente.");
+      setMessage("Publicación eliminada correctamente.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicacion.");
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la publicación.");
     } finally {
       setDeletingPublicationId(null);
     }
@@ -184,7 +184,7 @@ export default function Dashboard() {
       titulo: historia.titulo,
       mensaje: historia.mensaje,
     });
-    setMessage("Editando historia desde administracion.");
+    setMessage("Editando historia desde administración.");
   };
 
   const cancelarEdicionHistoria = () => {
@@ -204,7 +204,7 @@ export default function Dashboard() {
     const mensajeHistoria = historiaForm.mensaje.trim();
 
     if (!titulo) {
-      setMessage("El titulo de la historia es obligatorio.");
+      setMessage("El título de la historia es obligatorio.");
       return;
     }
     if (mensajeHistoria.length < 20) {
@@ -248,7 +248,7 @@ export default function Dashboard() {
       return;
     }
 
-    const confirmar = window.confirm(`Eliminar la historia "${historia.titulo}"?`);
+    const confirmar = window.confirm(`¿Eliminar la historia "${historia.titulo}"?`);
     if (!confirmar) return;
 
     try {
@@ -276,7 +276,7 @@ export default function Dashboard() {
       return;
     }
 
-    const confirmar = window.confirm(`Eliminar la tarea "${tarea.titulo}"?`);
+    const confirmar = window.confirm(`¿Eliminar la tarea "${tarea.titulo}"?`);
     if (!confirmar) return;
 
     try {
@@ -308,7 +308,7 @@ export default function Dashboard() {
     }
 
     const confirmar = window.confirm(
-      `Eliminar el hogar "${hogar.nombre}"? Esta accion quitara el registro del hogar y sus asociaciones internas.`,
+      `¿Eliminar el hogar "${hogar.nombre}"? Esta acción quitará el registro del hogar y sus asociaciones internas.`,
     );
     if (!confirmar) return;
 
@@ -669,8 +669,14 @@ export default function Dashboard() {
     return typeof price === "number" && price > 0 ? `$${price.toLocaleString("es-CL")}` : "Sin precio";
   };
 
+  const getPublicationTypeLabel = (publicacion: Publicacion) => {
+    if (publicacion.tipo === "busco_roomie") return "Busco roomie";
+    if (publicacion.tipo === "ofrezco_casa" || publicacion.origen === "backend") return "Ofrezco casa";
+    return "Sin tipo";
+  };
+
   const resumirTexto = (value?: string, max = 150) => {
-    const texto = value?.trim() || "Sin descripcion";
+    const texto = value?.trim() || "Sin descripción";
     return texto.length > max ? `${texto.slice(0, max).trim()}...` : texto;
   };
 
@@ -736,7 +742,7 @@ export default function Dashboard() {
       return;
     }
 
-    const confirmar = window.confirm(`Rechazar la solicitud de colaborador de ${colaborador.usuario}?`);
+    const confirmar = window.confirm(`¿Rechazar la solicitud de colaborador de ${colaborador.usuario}?`);
     if (!confirmar) return;
 
     try {
@@ -1070,10 +1076,10 @@ export default function Dashboard() {
                     <h4>{getPublicationTitle(publicacion)}</h4>
                     <span className="status-pill">{publicacion.usuarioCreador || "Sin creador"}</span>
                   </div>
-                  <p>{publicacion.descripcion || "Sin descripcion"}</p>
+                  <p>{publicacion.descripcion || "Sin descripción"}</p>
                   <span>
-                    {publicacion.tipo || (publicacion.origen === "backend" ? "ofrezco_casa" : "Sin tipo")} -{" "}
-                    {publicacion.ubicacion || "Sin ubicacion"} -{" "}
+                    {getPublicationTypeLabel(publicacion)} -{" "}
+                    {publicacion.ubicacion || "Sin ubicación"} -{" "}
                     {getPublicationPrice(publicacion)}
                   </span>
                   <div className="item-actions">
@@ -1093,8 +1099,8 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-profile">
-          <span className="demo-kicker">Sesion</span>
-          <h4>Sesion activa</h4>
+          <span className="demo-kicker">Sesión</span>
+          <h4>Sesión activa</h4>
           <div className="admin-session-card">
             <span><strong>Usuario:</strong> {user?.usuario || "No informado"}</span>
             <span className="status-pill success">{user?.role || "CLIENTE"}</span>
@@ -1119,7 +1125,7 @@ export default function Dashboard() {
           {editingHistoria && (
             <div className="admin-inline-editor">
               <div>
-                <label htmlFor="admin-historia-titulo">Titulo</label>
+                <label htmlFor="admin-historia-titulo">Título</label>
                 <input
                   id="admin-historia-titulo"
                   className="form-control"
@@ -1243,7 +1249,7 @@ export default function Dashboard() {
                     <div className="admin-hogar-main">
                       <span className="admin-hogar-id">#{hogar.id}</span>
                       <h4>{hogar.nombre}</h4>
-                      <p>{hogar.descripcion || "Sin descripcion registrada."}</p>
+                      <p>{hogar.descripcion || "Sin descripción registrada."}</p>
                     </div>
 
                     <div className="admin-hogar-state">
@@ -1328,7 +1334,7 @@ export default function Dashboard() {
                         {tarea.completada ? "Completada" : "Pendiente"}
                       </span>
                     </div>
-                    <p>{tarea.descripcion || "Sin descripcion"}</p>
+                    <p>{tarea.descripcion || "Sin descripción"}</p>
                     <div className="admin-record-meta">
                       <span>Hogar: {hogar?.nombre || "Sin hogar asociado"}</span>
                       <span>Encargado: {tarea.encargado || "Sin encargado"}</span>
@@ -1385,12 +1391,12 @@ export default function Dashboard() {
                     <span className="status-pill warning">Pendiente</span>
                   </div>
                   <div className="admin-record-meta">
-                    <span>Telefono: {colaborador.telefono || "No informado"}</span>
+                    <span>Teléfono: {colaborador.telefono || "No informado"}</span>
                     <span>Rol solicitado: {getUsuarioRole(colaborador)}</span>
                     <span>Estado: {colaborador.estadoCuenta || "Activa"}</span>
                   </div>
                   <p>
-                    Esta cuenta no puede iniciar sesion como colaborador hasta que una cuenta ADMIN apruebe la solicitud.
+                    Esta cuenta no puede iniciar sesión como colaborador hasta que una cuenta ADMIN apruebe la solicitud.
                   </p>
                   <div className="item-actions">
                     <button

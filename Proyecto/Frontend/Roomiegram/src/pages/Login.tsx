@@ -26,12 +26,12 @@ export default function Login() {
     clearError();
 
     if (usuario.trim().length < 3) {
-      setLocalError("Ingresa tu usuario o correo electronico.");
+      setLocalError("Ingresa tu usuario o correo electrónico.");
       return;
     }
 
     if (contrasena.trim().length < 6) {
-      setLocalError("La contrasena debe tener al menos 6 caracteres.");
+      setLocalError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
@@ -56,10 +56,10 @@ export default function Login() {
     try {
       setRecuperandoContrasena(true);
       const response = await authService.recoverPassword(correoRecuperacion.trim());
-      setRecuperacionMensaje(response.mensaje || "Te enviamos una contrasena temporal por correo.");
+      setRecuperacionMensaje(response.mensaje || "Te enviamos una contraseña temporal por correo.");
       setCorreoRecuperacion("");
     } catch (err) {
-      setRecuperacionError(err instanceof Error ? err.message : "No se pudo recuperar la contrasena.");
+      setRecuperacionError(err instanceof Error ? err.message : "No se pudo recuperar la contraseña.");
     } finally {
       setRecuperandoContrasena(false);
     }
@@ -77,16 +77,16 @@ export default function Login() {
       <div className="login-box">
         <div className="login-image"><img src={roomies} alt="Roomies" /></div>
         <div className="login-form">
-          <h2>Iniciar sesion</h2>
+          <h2>Iniciar sesión</h2>
           {(error || localError) && <div className="form-error">{error || localError}</div>}
           {!mostrarRecuperacion ? (
             <form onSubmit={handleSubmit}>
-              <input className="form-control mb-3" placeholder="Usuario o correo electronico" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
+              <input className="form-control mb-3" placeholder="Usuario o correo electrónico" type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} disabled={isLoading} />
               <div className="password-input-group mb-3">
                 <input
                   className="form-control"
                   type={mostrarContrasena ? "text" : "password"}
-                  placeholder="Contrasena"
+                  placeholder="Contraseña"
                   value={contrasena}
                   onChange={(e) => setContrasena(e.target.value)}
                   disabled={isLoading}
@@ -96,7 +96,7 @@ export default function Login() {
                   className="password-toggle"
                   onClick={() => setMostrarContrasena((valorActual) => !valorActual)}
                   disabled={isLoading}
-                  aria-label={mostrarContrasena ? "Ocultar contrasena" : "Mostrar contrasena"}
+                  aria-label={mostrarContrasena ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {mostrarContrasena ? "Ocultar" : "Ver"}
                 </button>
@@ -111,13 +111,13 @@ export default function Login() {
                 }}
                 disabled={isLoading || recuperandoContrasena}
               >
-                Olvidaste tu contrasena?
+                ¿Olvidaste tu contraseña?
               </button>
               <button className="btn btn-success w-100 mb-3" type="submit" disabled={isLoading}>{isLoading ? "Cargando..." : "Ingresar"}</button>
             </form>
           ) : (
             <form onSubmit={handleRecuperarContrasena} className="login-recover-form">
-              <h3 className="login-recover-title">Recuperar contrasena</h3>
+              <h3 className="login-recover-title">Recuperar contraseña</h3>
               <input
                 className="form-control mb-2"
                 type="email"
@@ -129,7 +129,7 @@ export default function Login() {
               {recuperacionError && <div className="form-error">{recuperacionError}</div>}
               {recuperacionMensaje && <div className="form-success">{recuperacionMensaje}</div>}
               <button className="btn btn-outline-success w-100" type="submit" disabled={recuperandoContrasena || isLoading}>
-                {recuperandoContrasena ? "Enviando..." : "Enviar contrasena temporal"}
+                {recuperandoContrasena ? "Enviando..." : "Enviar contraseña temporal"}
               </button>
               <button
                 type="button"
@@ -141,11 +141,11 @@ export default function Login() {
                 }}
                 disabled={recuperandoContrasena || isLoading}
               >
-                Volver al inicio de sesion
+                Volver al inicio de sesión
               </button>
             </form>
           )}
-          <p className="login-legal">Al continuar aceptas nuestros terminos y condiciones.</p>
+          <p className="login-legal">Al continuar aceptas nuestros términos y condiciones.</p>
         </div>
       </div>
     </div>

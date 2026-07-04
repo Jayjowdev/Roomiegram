@@ -5,6 +5,10 @@ import com.roomiegram.usuario.DTO.TaskCompletedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestReceivedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestResolvedEmailRequest;
 import com.roomiegram.usuario.DTO.SupportContactRequest;
+import com.roomiegram.usuario.DTO.VisitAlternativeEmailRequest;
+import com.roomiegram.usuario.DTO.VisitAlternativeResolvedEmailRequest;
+import com.roomiegram.usuario.DTO.VisitRequestedEmailRequest;
+import com.roomiegram.usuario.DTO.VisitResolvedEmailRequest;
 import com.roomiegram.usuario.model.Register;
 import com.roomiegram.usuario.repository.RegisterRepository;
 import org.slf4j.Logger;
@@ -159,6 +163,133 @@ public class NotificationEmailService {
                 request.usuarioReceptorId());
     }
 
+    public boolean enviarCorreoVisitaSolicitada(VisitRequestedEmailRequest request) {
+        validarVisitaSolicitada(request);
+
+        Register receptor = registerRepository.findById(request.usuarioReceptorId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario receptor no encontrado"));
+
+        String correoDestino = receptor.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario receptor no tiene correo registrado");
+        }
+
+        String nombreReceptor = valueOrDefault(receptor.getNombre(), receptor.getUsuario());
+        String interesadoNombre = valueOrDefault(request.interesadoNombre(), "Un usuario");
+        String publicacionTitulo = valueOrDefault(request.publicacionTitulo(), "tu publicacion");
+        String fechaHora = valueOrDefault(request.fechaHora(), "horario propuesto");
+        String mensaje = valueOrDefault(request.mensaje(), "Sin mensaje adicional");
+
+        return enviarCorreo(
+                correoDestino,
+                "Nueva solicitud de visita en Roomiegram",
+                "Hola " + nombreReceptor + ",\n\n"
+                        + interesadoNombre + " quiere coordinar una visita para " + publicacionTitulo + ".\n\n"
+                        + "Horario propuesto: " + fechaHora + "\n"
+                        + "Mensaje: " + mensaje + "\n\n"
+                        + "Entra a Roomiegram para revisar su perfil, aceptar, rechazar o proponer otro horario.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "visita solicitada",
+                request.usuarioReceptorId());
+    }
+
+    public boolean enviarCorreoVisitaResuelta(VisitResolvedEmailRequest request) {
+        validarVisitaResuelta(request);
+
+        Register interesado = registerRepository.findById(request.usuarioInteresadoId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario interesado no encontrado"));
+
+        String correoDestino = interesado.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario interesado no tiene correo registrado");
+        }
+
+        String nombreInteresado = valueOrDefault(interesado.getNombre(), interesado.getUsuario());
+        String anfitrionNombre = registerRepository.findById(request.anfitrionId())
+                .map(usuario -> valueOrDefault(usuario.getNombre(), usuario.getUsuario()))
+                .orElse("El anfitrion");
+        String publicacionTitulo = valueOrDefault(request.publicacionTitulo(), "la publicacion");
+        String estado = request.aceptada() ? "aceptada" : "rechazada";
+        String accion = request.aceptada()
+                ? "Ya puedes revisar los detalles de la visita y avanzar con la solicitud de ingreso si corresponde."
+                : "Puedes seguir buscando otros hogares disponibles en Roomiegram.";
+
+        return enviarCorreo(
+                correoDestino,
+                "Tu visita fue " + estado + " en Roomiegram",
+                "Hola " + nombreInteresado + ",\n\n"
+                        + anfitrionNombre + " ha " + estado + " tu solicitud de visita para " + publicacionTitulo + ".\n\n"
+                        + "Horario: " + valueOrDefault(request.fechaHora(), "sin horario informado") + "\n\n"
+                        + accion + "\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "visita " + estado,
+                request.usuarioInteresadoId());
+    }
+
+    public boolean enviarCorreoVisitaAlternativa(VisitAlternativeEmailRequest request) {
+        validarVisitaAlternativa(request);
+
+        Register interesado = registerRepository.findById(request.usuarioInteresadoId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario interesado no encontrado"));
+
+        String correoDestino = interesado.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario interesado no tiene correo registrado");
+        }
+
+        String nombreInteresado = valueOrDefault(interesado.getNombre(), interesado.getUsuario());
+        String anfitrionNombre = registerRepository.findById(request.anfitrionId())
+                .map(usuario -> valueOrDefault(usuario.getNombre(), usuario.getUsuario()))
+                .orElse("El anfitrion");
+        String publicacionTitulo = valueOrDefault(request.publicacionTitulo(), "la publicacion");
+
+        return enviarCorreo(
+                correoDestino,
+                "Nuevo horario propuesto para tu visita",
+                "Hola " + nombreInteresado + ",\n\n"
+                        + anfitrionNombre + " propuso otro horario para la visita de " + publicacionTitulo + ".\n\n"
+                        + "Nuevo horario: " + valueOrDefault(request.fechaHoraAlternativa(), "sin horario informado") + "\n"
+                        + "Mensaje: " + valueOrDefault(request.mensaje(), "Sin mensaje adicional") + "\n\n"
+                        + "Entra a Roomiegram para aceptar o rechazar la propuesta.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "horario alternativo de visita",
+                request.usuarioInteresadoId());
+    }
+
+    public boolean enviarCorreoVisitaAlternativaResuelta(VisitAlternativeResolvedEmailRequest request) {
+        validarVisitaAlternativaResuelta(request);
+
+        Register anfitrion = registerRepository.findById(request.usuarioAnfitrionId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario anfitrion no encontrado"));
+
+        String correoDestino = anfitrion.getCorreo();
+        if (correoDestino == null || correoDestino.isBlank()) {
+            throw new IllegalArgumentException("El usuario anfitrion no tiene correo registrado");
+        }
+
+        String nombreAnfitrion = valueOrDefault(anfitrion.getNombre(), anfitrion.getUsuario());
+        String interesadoNombre = registerRepository.findById(request.interesadoId())
+                .map(usuario -> valueOrDefault(usuario.getNombre(), usuario.getUsuario()))
+                .orElse("El interesado");
+        String publicacionTitulo = valueOrDefault(request.publicacionTitulo(), "la publicacion");
+        String estado = request.aceptada() ? "acepto" : "rechazo";
+
+        return enviarCorreo(
+                correoDestino,
+                "Respuesta al horario alternativo de visita",
+                "Hola " + nombreAnfitrion + ",\n\n"
+                        + interesadoNombre + " " + estado + " el horario alternativo para visitar " + publicacionTitulo + ".\n\n"
+                        + "Horario: " + valueOrDefault(request.fechaHora(), "sin horario informado") + "\n\n"
+                        + "Entra a Roomiegram para revisar el estado de la visita.\n"
+                        + frontendLinkLine() + "\n\n"
+                        + "Equipo Roomiegram",
+                "respuesta a horario alternativo",
+                request.usuarioAnfitrionId());
+    }
+
     public boolean enviarCorreoBienvenida(Register usuario) {
         if (usuario == null || usuario.getCorreo() == null || usuario.getCorreo().isBlank()) {
             return false;
@@ -308,6 +439,54 @@ public class NotificationEmailService {
         }
         if (!request.correo().contains("@")) {
             throw new IllegalArgumentException("Ingresa un correo de contacto valido");
+        }
+    }
+
+    private void validarVisitaSolicitada(VisitRequestedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioReceptorId() == null) {
+            throw new IllegalArgumentException("El anfitrion receptor es obligatorio");
+        }
+        if (request.usuarioInteresadoId() == null) {
+            throw new IllegalArgumentException("El usuario interesado es obligatorio");
+        }
+    }
+
+    private void validarVisitaResuelta(VisitResolvedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioInteresadoId() == null) {
+            throw new IllegalArgumentException("El usuario interesado es obligatorio");
+        }
+        if (request.anfitrionId() == null) {
+            throw new IllegalArgumentException("El anfitrion es obligatorio");
+        }
+    }
+
+    private void validarVisitaAlternativa(VisitAlternativeEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioInteresadoId() == null) {
+            throw new IllegalArgumentException("El usuario interesado es obligatorio");
+        }
+        if (request.anfitrionId() == null) {
+            throw new IllegalArgumentException("El anfitrion es obligatorio");
+        }
+    }
+
+    private void validarVisitaAlternativaResuelta(VisitAlternativeResolvedEmailRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("La solicitud de correo es obligatoria");
+        }
+        if (request.usuarioAnfitrionId() == null) {
+            throw new IllegalArgumentException("El anfitrion receptor es obligatorio");
+        }
+        if (request.interesadoId() == null) {
+            throw new IllegalArgumentException("El usuario interesado es obligatorio");
         }
     }
 

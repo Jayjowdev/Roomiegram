@@ -6,6 +6,10 @@ import com.roomiegram.usuario.DTO.RequestReceivedEmailRequest;
 import com.roomiegram.usuario.DTO.RequestResolvedEmailRequest;
 import com.roomiegram.usuario.DTO.SupportContactRequest;
 import com.roomiegram.usuario.service.NotificationEmailService;
+import com.roomiegram.usuario.DTO.VisitAlternativeEmailRequest;
+import com.roomiegram.usuario.DTO.VisitAlternativeResolvedEmailRequest;
+import com.roomiegram.usuario.DTO.VisitRequestedEmailRequest;
+import com.roomiegram.usuario.DTO.VisitResolvedEmailRequest;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -89,6 +93,82 @@ public class NotificationEmailController {
                     "mensaje", enviado
                             ? "Correo de tarea completada enviado"
                             : "Tarea completada, pero no se pudo enviar el correo al responsable"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "enviado", false,
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/visita-solicitada")
+    public ResponseEntity<?> enviarCorreoVisitaSolicitada(@RequestBody VisitRequestedEmailRequest request) {
+        try {
+            boolean enviado = notificationEmailService.enviarCorreoVisitaSolicitada(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "enviado", enviado,
+                    "mensaje", enviado
+                            ? "Correo de visita solicitada enviado"
+                            : "Visita solicitada, pero no se pudo enviar el correo al anfitrion"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "enviado", false,
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/visita-resuelta")
+    public ResponseEntity<?> enviarCorreoVisitaResuelta(@RequestBody VisitResolvedEmailRequest request) {
+        try {
+            boolean enviado = notificationEmailService.enviarCorreoVisitaResuelta(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "enviado", enviado,
+                    "mensaje", enviado
+                            ? "Correo de respuesta de visita enviado"
+                            : "Visita actualizada, pero no se pudo enviar el correo al interesado"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "enviado", false,
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/visita-alternativa")
+    public ResponseEntity<?> enviarCorreoVisitaAlternativa(@RequestBody VisitAlternativeEmailRequest request) {
+        try {
+            boolean enviado = notificationEmailService.enviarCorreoVisitaAlternativa(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "enviado", enviado,
+                    "mensaje", enviado
+                            ? "Correo de horario alternativo enviado"
+                            : "Horario alternativo propuesto, pero no se pudo enviar el correo"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "enviado", false,
+                    "mensaje", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/visita-alternativa-resuelta")
+    public ResponseEntity<?> enviarCorreoVisitaAlternativaResuelta(@RequestBody VisitAlternativeResolvedEmailRequest request) {
+        try {
+            boolean enviado = notificationEmailService.enviarCorreoVisitaAlternativaResuelta(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "enviado", enviado,
+                    "mensaje", enviado
+                            ? "Correo de respuesta al horario alternativo enviado"
+                            : "Respuesta registrada, pero no se pudo enviar el correo"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(

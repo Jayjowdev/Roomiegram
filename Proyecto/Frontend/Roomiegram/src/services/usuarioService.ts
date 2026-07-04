@@ -169,6 +169,67 @@ export async function enviarCorreoSolicitudResuelta(payload: {
   }
 }
 
+export async function enviarCorreoVisitaSolicitada(payload: {
+  usuarioReceptorId: number
+  usuarioInteresadoId: number
+  interesadoNombre?: string
+  publicacionTitulo?: string
+  fechaHora?: string
+  mensaje?: string
+}) {
+  try {
+    const { data } = await usuarioApi.post<{ enviado: boolean; mensaje: string }>("/auth/emails/visita-solicitada", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function enviarCorreoVisitaResuelta(payload: {
+  usuarioInteresadoId: number
+  anfitrionId: number
+  publicacionTitulo?: string
+  fechaHora?: string
+  aceptada: boolean
+}) {
+  try {
+    const { data } = await usuarioApi.post<{ enviado: boolean; mensaje: string }>("/auth/emails/visita-resuelta", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function enviarCorreoVisitaAlternativa(payload: {
+  usuarioInteresadoId: number
+  anfitrionId: number
+  publicacionTitulo?: string
+  fechaHoraAlternativa?: string
+  mensaje?: string
+}) {
+  try {
+    const { data } = await usuarioApi.post<{ enviado: boolean; mensaje: string }>("/auth/emails/visita-alternativa", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function enviarCorreoVisitaAlternativaResuelta(payload: {
+  usuarioAnfitrionId: number
+  interesadoId: number
+  publicacionTitulo?: string
+  fechaHora?: string
+  aceptada: boolean
+}) {
+  try {
+    const { data } = await usuarioApi.post<{ enviado: boolean; mensaje: string }>("/auth/emails/visita-alternativa-resuelta", payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export async function enviarContactoSoporte(payload: {
   asunto: string
   mensaje: string
@@ -199,5 +260,9 @@ export const usuarioService = {
   enviarCorreoTareaCompletada,
   enviarCorreoSolicitudRecibida,
   enviarCorreoSolicitudResuelta,
+  enviarCorreoVisitaSolicitada,
+  enviarCorreoVisitaResuelta,
+  enviarCorreoVisitaAlternativa,
+  enviarCorreoVisitaAlternativaResuelta,
   enviarContactoSoporte,
 }

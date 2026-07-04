@@ -2490,8 +2490,10 @@ p {
 
 .household-summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  align-items: stretch;
+  justify-content: center;
   margin-bottom: 24px;
 }
 
@@ -2500,6 +2502,10 @@ p {
   border-radius: 14px;
   padding: 18px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .household-stat span,
@@ -6810,3 +6816,79 @@ body.theme-dark .session-copy strong {
     display: none;
   }
 }
+
+
+
+
+/* ---------- CENTRADO PÁGINAS FORMULARIO ---------- */
+
+/* Crear publicación: centra título, mensajes y formulario sin tocar header */
+.module-page:has(> .create-publication-shell) > .module-title,
+.module-page:has(> .create-publication-shell) > .api-message,
+.module-page:has(> .create-publication-shell) > .create-publication-shell {
+  width: min(100%, 980px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.module-page:has(> .create-publication-shell) > .module-title {
+  text-align: center;
+}
+
+.module-page:has(> .create-publication-shell) > .module-title p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Preferencias y otras páginas con layout single */
+.module-page > .module-layout.single {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.module-page > .module-layout.single + .api-message,
+.module-page:has(> .module-layout.single) > .module-title {
+  width: min(100%, 760px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.module-page:has(> .module-layout.single) > .module-title {
+  text-align: center;
+}
+
+.module-page:has(> .module-layout.single) > .module-title p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  .module-page:has(> .create-publication-shell) > .module-title,
+  .module-page:has(> .module-layout.single) > .module-title {
+    text-align: left;
+  }
+}
+
+
+/* ---------- CENTRADO GLOBAL DE EMPTY STATES ---------- */
+
+.empty-household {
+  width: min(100%, 760px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.module-layout:has(.empty-household) {
+  display: block !important;
+  width: min(100%, 1180px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.module-page:has(.empty-household) > .home-hero {
+  width: min(100%, 1180px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+

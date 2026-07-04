@@ -10,9 +10,11 @@ import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
+import { visitaService } from "../services/visitaService";
 import type { Publicacion } from "../types/Publicacion";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
+import type { EstadoVisitaHogar, VisitaHogar } from "../types/VisitaHogar";
 import { getLocalPublicaciones } from "../utils/localPublicaciones";
 import {
   aceptarInvitacionHogar,
@@ -32,6 +34,21 @@ function normalizarTexto(valor?: string) {
 function getTelefonoContacto(telefono?: string) {
   const value = telefono?.trim();
   return value || "Teléfono no informado";
+}
+
+function formatVisitDate(value?: string) {
+  return value ? new Date(value).toLocaleString("es-CL") : "Sin fecha definida";
+}
+
+function getEstadoVisitaLabel(estado?: EstadoVisitaHogar) {
+  const labels: Record<EstadoVisitaHogar, string> = {
+    PENDIENTE: "Pendiente de respuesta",
+    ACEPTADA: "Visita aceptada",
+    RECHAZADA: "Visita rechazada",
+    PROPUESTA_ALTERNATIVA: "Nuevo horario propuesto",
+    CANCELADA: "Visita cancelada",
+  };
+  return estado ? labels[estado] : "Sin visita";
 }
 
 function buildGallery(images: Array<string | undefined>) {
@@ -91,6 +108,10 @@ export default function DetallePublicacion() {
   const [selectedHogarId, setSelectedHogarId] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
   const [processingRequest, setProcessingRequest] = useState("");
+  const [visitas, setVisitas] = useState<VisitaHogar[]>([]);
+  const [showVisitForm, setShowVisitForm] = useState(false);
+  const [visitForm, setVisitForm] = useState({ fecha: "", hora: "", mensaje: "" });
+  const [isVisitRequesting, setIsVisitRequesting] = useState(false);
 
   useEffect(() => {
     publicacionService
@@ -120,6 +141,18 @@ export default function DetallePublicacion() {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setVisitas([]);
+      return;
+    }
+
+    visitaService
+      .listarPorUsuario(user.id)
+      .then(setVisitas)
+      .catch(() => undefined);
+  }, [user?.id]);
 
   const hogarVinculado = useMemo(() => {
     if (!publicacion?.id || publicacion.tipo === "busco_roomie") return null;
@@ -197,13 +230,32 @@ export default function DetallePublicacion() {
       || normalizarTexto(publicacion.usuarioCreador) === normalizarTexto(user?.nombre)
     );
 
-  const puedeAdministrarSolicitudes = esOfertaCasa && !!user?.id && !!hogarVinculado && (
+  const esAnfitrionHogarVinculado = esOfertaCasa && !!user?.id && !!hogarVinculado && (
     hogarVinculado.usuarioAdministradorId === user.id
     || hogarVinculado.usuarioCreadorId === user.id
-    || esCreadorPublicacion
   );
 
+  const puedeAdministrarSolicitudes = esAnfitrionHogarVinculado;
+
   const solicitudYaEnviada = !!user?.id && !!hogarVinculado?.solicitudesPendientesIds?.includes(user.id);
+
+  const visitaActual = useMemo(() => {
+    if (!user?.id || !publicacion?.id || !hogarVinculado?.id) return undefined;
+    return visitas
+      .filter((visita) =>
+        visita.publicacionId === publicacion.id
+        && visita.hogarId === hogarVinculado.id
+        && visita.interesadoId === user.id,
+      )
+      .sort((a, b) => {
+        const fechaA = new Date(a.fechaActualizacion || a.fechaCreacion || a.fechaHoraPropuesta).getTime();
+        const fechaB = new Date(b.fechaActualizacion || b.fechaCreacion || b.fechaHoraPropuesta).getTime();
+        return fechaB - fechaA;
+      })[0];
+  }, [hogarVinculado?.id, publicacion?.id, user?.id, visitas]);
+
+  const visitaAceptada = visitaActual?.estado === "ACEPTADA";
+  const puedeSolicitarNuevaVisita = !visitaActual || visitaActual.estado === "RECHAZADA" || visitaActual.estado === "CANCELADA";
 
   const getNombreUsuario = (usuarioId: number) => {
     const usuario = usuarios.find((item) => item.id === usuarioId);
@@ -305,6 +357,65 @@ export default function DetallePublicacion() {
       setContextMessage(error instanceof Error ? error.message : "No se pudo resolver esta notificación.");
     } finally {
       setIsRequesting(false);
+    }
+  };
+
+  const solicitarVisita = async () => {
+    if (!user?.id || !publicacion?.id || !hogarVinculado?.id) {
+      setContactMessage("No se pudo identificar la publicación o el hogar para solicitar la visita.");
+      return;
+    }
+
+    if (!visitForm.fecha || !visitForm.hora) {
+      setContactMessage("Selecciona fecha y hora para coordinar la visita.");
+      return;
+    }
+
+    const fechaHoraPropuesta = `${visitForm.fecha}T${visitForm.hora}:00`;
+    if (new Date(fechaHoraPropuesta).getTime() <= Date.now()) {
+      setContactMessage("La fecha de visita debe ser futura.");
+      return;
+    }
+
+    const anfitrionId = hogarVinculado.usuarioAdministradorId || hogarVinculado.usuarioCreadorId;
+    if (!anfitrionId) {
+      setContactMessage("No se pudo identificar al anfitrión del hogar.");
+      return;
+    }
+
+    try {
+      setIsVisitRequesting(true);
+      const nuevaVisita = await visitaService.crear({
+        publicacionId: publicacion.id,
+        hogarId: hogarVinculado.id,
+        interesadoId: user.id,
+        anfitrionId,
+        fechaHoraPropuesta,
+        mensaje: visitForm.mensaje,
+      });
+      setVisitas((current) => [nuevaVisita, ...current.filter((visita) => visita.id !== nuevaVisita.id)]);
+      setShowVisitForm(false);
+      setVisitForm({ fecha: "", hora: "", mensaje: "" });
+      try {
+        const correo = await usuarioService.enviarCorreoVisitaSolicitada({
+          usuarioReceptorId: anfitrionId,
+          usuarioInteresadoId: user.id,
+          interesadoNombre: user.nombre || user.usuario,
+          publicacionTitulo: publicacion.titulo,
+          fechaHora: formatVisitDate(fechaHoraPropuesta),
+          mensaje: visitForm.mensaje,
+        });
+        if (!correo.enviado) {
+          console.warn(correo.mensaje);
+        }
+      } catch (error) {
+        console.warn("No se pudo enviar el correo de solicitud de visita.", error);
+      }
+      setContactMessage("Solicitud de visita enviada. El anfitrión recibirá una notificación para responder.");
+    } catch (error) {
+      setContactMessage(error instanceof Error ? error.message : "No se pudo solicitar la visita.");
+    } finally {
+      setIsVisitRequesting(false);
     }
   };
 
@@ -606,13 +717,94 @@ export default function DetallePublicacion() {
                 )}
               </div>
             ) : hogarVinculado ? (
-              solicitudYaEnviada ? (
-                <span className="status-pill mt-3">Solicitud enviada</span>
-              ) : (
-                <button className="btn btn-success w-100 mt-3" disabled={isRequesting} onClick={solicitarIngreso}>
-                  {isRequesting ? "Enviando solicitud..." : "Solicitar ingreso"}
-                </button>
-              )
+              <div className="mt-3 visit-request-panel">
+                <h4>Coordinar visita</h4>
+                <p className="form-helper">
+                  Antes de solicitar ingreso al hogar, coordina una visita con el anfitrión.
+                </p>
+
+                {visitaActual && (
+                  <div className="contact-info-panel compact-contact">
+                    <h4>{getEstadoVisitaLabel(visitaActual.estado)}</h4>
+                    {visitaAceptada && (
+                      <p className="form-helper">
+                        Visita confirmada con {getNombreUsuario(visitaActual.anfitrionId)} para {publicacion.titulo || "esta publicaciÃ³n"}.
+                      </p>
+                    )}
+                    <p><strong>Horario solicitado:</strong> {formatVisitDate(visitaActual.fechaHoraPropuesta)}</p>
+                    {visitaActual.fechaHoraAlternativa && (
+                      <p><strong>Horario alternativo:</strong> {formatVisitDate(visitaActual.fechaHoraAlternativa)}</p>
+                    )}
+                    <p><strong>Estado:</strong> {getEstadoVisitaLabel(visitaActual.estado)}</p>
+                    {visitaActual.mensajeAlternativa && <p>{visitaActual.mensajeAlternativa}</p>}
+                  </div>
+                )}
+
+                {puedeSolicitarNuevaVisita && (
+                  <>
+                    {!showVisitForm ? (
+                      <button className="btn btn-success w-100 mt-3" type="button" onClick={() => setShowVisitForm(true)}>
+                        Solicitar visita
+                      </button>
+                    ) : (
+                      <div className="module-form compact-contact mt-3">
+                        <label className="field-label">
+                          <span>Fecha</span>
+                          <input
+                            className="form-control"
+                            type="date"
+                            value={visitForm.fecha}
+                            onChange={(event) => setVisitForm((current) => ({ ...current, fecha: event.target.value }))}
+                          />
+                        </label>
+                        <label className="field-label">
+                          <span>Hora</span>
+                          <input
+                            className="form-control"
+                            type="time"
+                            value={visitForm.hora}
+                            onChange={(event) => setVisitForm((current) => ({ ...current, hora: event.target.value }))}
+                          />
+                        </label>
+                        <label className="field-label">
+                          <span>Mensaje opcional</span>
+                          <textarea
+                            className="form-control"
+                            rows={3}
+                            value={visitForm.mensaje}
+                            onChange={(event) => setVisitForm((current) => ({ ...current, mensaje: event.target.value }))}
+                            placeholder="Cuéntale al anfitrión por qué te interesa visitar este hogar"
+                          />
+                        </label>
+                        <div className="item-actions vertical-actions">
+                          <button className="btn btn-success w-100" type="button" disabled={isVisitRequesting} onClick={solicitarVisita}>
+                            {isVisitRequesting ? "Enviando..." : "Enviar solicitud de visita"}
+                          </button>
+                          <button className="btn btn-outline-success w-100" type="button" onClick={() => setShowVisitForm(false)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!puedeSolicitarNuevaVisita && !visitaAceptada && (
+                  <p className="form-helper mt-3">
+                    Espera la respuesta del anfitrión antes de solicitar ingreso al hogar.
+                  </p>
+                )}
+
+                {visitaAceptada && (
+                  solicitudYaEnviada ? (
+                    <span className="status-pill mt-3">Solicitud enviada</span>
+                  ) : (
+                    <button className="btn btn-success w-100 mt-3" disabled={isRequesting} onClick={solicitarIngreso}>
+                      {isRequesting ? "Enviando solicitud..." : "Solicitar ingreso al hogar"}
+                    </button>
+                  )
+                )}
+              </div>
             ) : (
               <div className="mt-3">
                 <p className="mt-3">

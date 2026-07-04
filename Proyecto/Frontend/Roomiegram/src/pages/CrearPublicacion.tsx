@@ -507,7 +507,7 @@ export default function CrearPublicacion() {
   };
 
   return (
-    <div className="module-page">
+    <div className="module-page centered-page-content">
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">

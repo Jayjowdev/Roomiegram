@@ -28,7 +28,7 @@ export const preferenciasLabels = {
   mascotas: {
     sin_mascotas: "Prefiere sin mascotas",
     mascotas: "Acepta mascotas",
-    indiferente_mascotas: "Indiferente con mascotas",
+    indiferente_mascotas: "No tengo problema con mascotas",
   },
   fumar: {
     no_fuma: "No fumador",

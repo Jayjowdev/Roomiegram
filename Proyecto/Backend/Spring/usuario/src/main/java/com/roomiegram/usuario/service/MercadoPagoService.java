@@ -56,11 +56,18 @@ public class MercadoPagoService {
 
     @PostConstruct
     public void init() {
-        if (accessToken == null || accessToken.isBlank()) {
+        logger.info("Mercado Pago token configurado: {}", tieneTexto(accessToken));
+        logger.info("Mercado Pago public key configurada: {}", tieneTexto(publicKey));
+        logger.info("Mercado Pago frontend URL configurada: {}", tieneTexto(frontendUrl));
+        configurarAccessTokenSiExiste();
+    }
+
+    private void configurarAccessTokenSiExiste() {
+        if (!tieneTexto(accessToken)) {
             logger.warn("Falta configurar MERCADOPAGO_ACCESS_TOKEN para Mercado Pago");
             return;
         }
-        MercadoPagoConfig.setAccessToken(accessToken);
+        MercadoPagoConfig.setAccessToken(accessToken.trim());
     }
 
     public Map<String, String> crearPreferenciaPago(Long usuarioId, Plan plan) {
@@ -189,9 +196,14 @@ public class MercadoPagoService {
     }
 
     private void validarConfiguracion() {
-        if (accessToken == null || accessToken.isBlank()) {
+        if (!tieneTexto(accessToken)) {
             throw new IllegalArgumentException("Falta configurar MERCADOPAGO_ACCESS_TOKEN en .env para crear pagos con Mercado Pago");
         }
+        MercadoPagoConfig.setAccessToken(accessToken.trim());
+    }
+
+    private boolean tieneTexto(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String obtenerInitPoint(Preference preference) {

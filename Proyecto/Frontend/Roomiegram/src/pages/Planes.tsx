@@ -161,6 +161,9 @@ export default function Planes() {
       }
 
       const preferencia = await membresiaService.crearPreferenciaPago(user.id, planId)
+      if (!preferencia.initPoint) {
+        throw new Error("Mercado Pago no devolvio un enlace de pago. Revisa la configuracion del access token.")
+      }
       window.location.href = preferencia.initPoint
     } catch (error) {
       setMensaje(getPagoErrorMessage(error))

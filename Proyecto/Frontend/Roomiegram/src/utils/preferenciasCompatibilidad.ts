@@ -39,6 +39,12 @@ export const preferenciasLabels = {
 
 export type MascotasPreferencia = keyof typeof preferenciasLabels.mascotas;
 
+type PreferenciaDetalle = {
+  key: keyof PreferenciasCompatibilidad;
+  label: string;
+  value: string;
+};
+
 export function getMascotasPreferenceValue(value?: string | null): MascotasPreferencia | null {
   const normalized = value?.trim().toLowerCase();
   if (normalized === "mascotas" || normalized === "sin_mascotas" || normalized === "indiferente_mascotas") {
@@ -56,15 +62,78 @@ export function getMascotasPreferenceLabel(value?: string | null) {
   return preference ? preferenciasLabels.mascotas[preference] : "";
 }
 
+export function getPreferenciasDetalle(preferencias?: Partial<PreferenciasCompatibilidad> | null): PreferenciaDetalle[] {
+  if (!preferencias) return [];
+
+  const detalle: PreferenciaDetalle[] = [];
+
+  if (preferencias.limpieza) {
+    detalle.push({
+      key: "limpieza",
+      label: "Limpieza",
+      value: preferenciasLabels.limpieza[preferencias.limpieza as keyof typeof preferenciasLabels.limpieza],
+    });
+  }
+  if (preferencias.ambiente) {
+    detalle.push({
+      key: "ambiente",
+      label: "Ambiente",
+      value: preferenciasLabels.ambiente[preferencias.ambiente as keyof typeof preferenciasLabels.ambiente],
+    });
+  }
+  if (preferencias.horario) {
+    detalle.push({
+      key: "horario",
+      label: "Horario",
+      value: preferenciasLabels.horario[preferencias.horario as keyof typeof preferenciasLabels.horario],
+    });
+  }
+  if (preferencias.mascotas) {
+    detalle.push({
+      key: "mascotas",
+      label: "Mascotas",
+      value: preferenciasLabels.mascotas[preferencias.mascotas as keyof typeof preferenciasLabels.mascotas],
+    });
+  }
+  if (preferencias.fumar) {
+    detalle.push({
+      key: "fumar",
+      label: "Fumar",
+      value: preferenciasLabels.fumar[preferencias.fumar as keyof typeof preferenciasLabels.fumar],
+    });
+  }
+  if (preferencias.presupuesto && Number(preferencias.presupuesto) > 0) {
+    detalle.push({
+      key: "presupuesto",
+      label: "Presupuesto",
+      value: `$${Number(preferencias.presupuesto).toLocaleString("es-CL")} max.`,
+    });
+  }
+
+  return detalle.filter((item) => Boolean(item.value));
+}
+
+export function getPreferenciasDetalleFromValues(values?: Array<string | undefined | null>) {
+  if (!values?.length) return [];
+
+  const preferencias: Partial<PreferenciasCompatibilidad> = {};
+
+  values.forEach((value) => {
+    const normalized = value?.trim().toLowerCase();
+    if (!normalized) return;
+
+    if (normalized in preferenciasLabels.limpieza) preferencias.limpieza = normalized;
+    if (normalized in preferenciasLabels.ambiente) preferencias.ambiente = normalized;
+    if (normalized in preferenciasLabels.horario) preferencias.horario = normalized;
+    if (normalized in preferenciasLabels.mascotas) preferencias.mascotas = normalized;
+    if (normalized in preferenciasLabels.fumar) preferencias.fumar = normalized;
+  });
+
+  return getPreferenciasDetalle(preferencias);
+}
+
 export function getPreferenciasResumen(preferencias?: PreferenciasCompatibilidad) {
   if (!preferencias) return [];
 
-  return [
-    preferenciasLabels.limpieza[preferencias.limpieza as keyof typeof preferenciasLabels.limpieza],
-    preferenciasLabels.ambiente[preferencias.ambiente as keyof typeof preferenciasLabels.ambiente],
-    preferenciasLabels.horario[preferencias.horario as keyof typeof preferenciasLabels.horario],
-    preferenciasLabels.mascotas[preferencias.mascotas as keyof typeof preferenciasLabels.mascotas],
-    preferenciasLabels.fumar[preferencias.fumar as keyof typeof preferenciasLabels.fumar],
-    `$${Number(preferencias.presupuesto || 0).toLocaleString("es-CL")} max.`,
-  ].filter(Boolean);
+  return getPreferenciasDetalle(preferencias).map((preferencia) => preferencia.value);
 }

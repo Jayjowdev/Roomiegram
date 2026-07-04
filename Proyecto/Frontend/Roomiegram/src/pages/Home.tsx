@@ -8,9 +8,11 @@ import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { publicacionService, type Historia } from "../services/publicacionService";
+import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
+import type { UsuarioResumen } from "../types/Usuario";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
-import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel } from "../utils/preferenciasCompatibilidad";
+import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel, getPreferenciasDetalleFromValues } from "../utils/preferenciasCompatibilidad";
 import { getPublicacionImage } from "../utils/publicacionImages";
 import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
@@ -65,6 +67,33 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
   };
 }
 
+function getPreferenciasAsHabitos(usuario?: UsuarioResumen) {
+  const preferencias = usuario?.preferenciasCompatibilidad;
+  if (!preferencias) return undefined;
+
+  return [
+    preferencias.limpieza,
+    preferencias.ambiente,
+    preferencias.horario,
+    preferencias.mascotas,
+    preferencias.fumar,
+  ].filter(Boolean);
+}
+
+function enrichPublicacionWithUsuarioPreferencias(pub: Publicacion, usuarios: UsuarioResumen[]) {
+  if (pub.habitos?.length) return pub;
+
+  const creador = normalizarTexto(pub.usuarioCreador || pub.nombre);
+  const usuario = usuarios.find((item) =>
+    item.id === pub.usuarioId
+    || normalizarTexto(item.usuario) === creador
+    || normalizarTexto(item.nombre) === creador,
+  );
+  const habitos = getPreferenciasAsHabitos(usuario);
+
+  return habitos?.length ? { ...pub, habitos } : pub;
+}
+
 function renderMascotasBadge(pub: Publicacion) {
   const mascotas = getMascotasPreferenceFromValues(pub.habitos);
   if (!mascotas) return null;
@@ -73,6 +102,21 @@ function renderMascotasBadge(pub: Publicacion) {
     <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotas}`}>
       {getMascotasPreferenceLabel(mascotas)}
     </span>
+  );
+}
+
+function renderPreferenciasBadges(pub: Publicacion) {
+  const preferencias = getPreferenciasDetalleFromValues(pub.habitos);
+  if (!preferencias.length) return renderMascotasBadge(pub);
+
+  return (
+    <div className="home-tags preference-tags">
+      {preferencias.map((preferencia) => (
+        <span className={`home-tag preference-tag preference-tag-${preferencia.key}`} key={`${preferencia.key}-${preferencia.value}`}>
+          <strong>{preferencia.label}:</strong> {preferencia.value}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -140,12 +184,15 @@ export default function Home() {
     let isMounted = true;
     setIsLoading(true);
 
-    publicacionService
-      .listar()
-      .then((data) => {
+    Promise.allSettled([publicacionService.listar(), usuarioService.listar()])
+      .then(([publicacionesResult, usuariosResult]) => {
         if (!isMounted) return;
-        const mapped = data.map(mapBackendPublicacion);
-        const locales = getLocalPublicaciones().filter((pub) => !isGeneratedProfile(pub));
+        const usuarios = usuariosResult.status === "fulfilled" ? usuariosResult.value : [];
+        const backend = publicacionesResult.status === "fulfilled" ? publicacionesResult.value : [];
+        const mapped = backend.map(mapBackendPublicacion).map((pub) => enrichPublicacionWithUsuarioPreferencias(pub, usuarios));
+        const locales = getLocalPublicaciones()
+          .filter((pub) => !isGeneratedProfile(pub))
+          .map((pub) => enrichPublicacionWithUsuarioPreferencias(pub, usuarios));
         setPublicaciones([...locales, ...mapped]);
         setApiMessage("");
       })
@@ -339,7 +386,7 @@ export default function Home() {
                       <p className="home-ubicacion">Ubicación: {getLocation(pub)}</p>
                     </div>
                     <p className="home-desc">{pub.descripcion}</p>
-                    {renderMascotasBadge(pub)}
+                    {renderPreferenciasBadges(pub)}
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}
                     <button
                       className="btn btn-success w-100 mt-4"
@@ -361,7 +408,7 @@ export default function Home() {
                     </div>
                     <p className="home-desc-oferta"><strong>Ofrecido por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} años)` : ""}</p>
                     <p className="home-desc">{pub.descripcion}</p>
-                    {renderMascotasBadge(pub)}
+                    {renderPreferenciasBadges(pub)}
                     {pub.amenidades && <div className="home-tags">{pub.amenidades.map((amenidad) => <span key={amenidad} className="home-tag amenidad-tag">{amenidad}</span>)}</div>}
                     <button className="btn btn-outline-success w-100 mt-4" onClick={() => navigate(`/detalle-publicacion/${pub.id}`)}>Ver detalles</button>
                     {puedeEliminarPublicacion(pub) && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub)}>Eliminar</button>}

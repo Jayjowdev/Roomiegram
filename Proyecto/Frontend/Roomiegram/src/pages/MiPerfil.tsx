@@ -3,7 +3,6 @@ import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import avatarUser from "../assets/avatarUser.svg";
-import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +23,7 @@ import { usuarioService } from "../services/usuarioService";
 import type { ResenaRoomie } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
+import { prepareImageForUpload } from "../utils/imageProcessing";
 import { getPreferenciasResumen } from "../utils/preferenciasCompatibilidad";
 
 function uniqueIds(ids: Array<number | undefined>) {
@@ -48,7 +48,6 @@ export default function MiPerfil() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
-  const [cropSource, setCropSource] = useState("");
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
   const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
   const [resenas, setResenas] = useState<ResenaRoomie[]>([]);
@@ -159,7 +158,7 @@ export default function MiPerfil() {
     return resenas.reduce((total, resena) => total + Number(resena.puntuacion || 0), 0) / resenas.length;
   }, [resenas]);
 
-  const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -173,20 +172,14 @@ export default function MiPerfil() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCropSource(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const saveCroppedProfilePhoto = (image: string) => {
-    setCropSource("");
-    updateProfilePhoto(image).then(() => {
+    try {
+      const image = await prepareImageForUpload(file, { width: 700, height: 700, background: "#eef7f3" });
+      await updateProfilePhoto(image);
       setMessage("Foto de perfil actualizada.");
-    });
+      event.currentTarget.value = "";
+    } catch {
+      setMessage("No se pudo preparar la foto. Intenta con otra imagen.");
+    }
   };
 
   return (
@@ -206,18 +199,6 @@ export default function MiPerfil() {
 
       {message && <p className="api-message">{message}</p>}
 
-      {cropSource && (
-        <ImageCropper
-          source={cropSource}
-          title="Ajustar foto de perfil"
-          aspect={1}
-          outputWidth={700}
-          outputHeight={700}
-          onCancel={() => setCropSource("")}
-          onSave={saveCroppedProfilePhoto}
-        />
-      )}
-
       <section className="mi-perfil-hero">
         <div className="mi-perfil-card">
           <div className="profile-photo-editor">
@@ -226,6 +207,7 @@ export default function MiPerfil() {
               Cambiar foto
               <input type="file" accept="image/*" onChange={handleProfilePhoto} />
             </label>
+            <small className="form-helper">La foto se centra automáticamente para evitar recortes incómodos.</small>
           </div>
           <div>
             <span className="demo-kicker">Mi perfil</span>

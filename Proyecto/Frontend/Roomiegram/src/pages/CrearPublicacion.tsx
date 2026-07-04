@@ -5,7 +5,6 @@ import logo from "../assets/Logo-removebg-preview.png";
 import home1 from "../assets/home1.svg";
 import home2 from "../assets/home2.svg";
 import home3 from "../assets/home3.svg";
-import { ImageCropper } from "../components/ImageCropper";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
@@ -15,6 +14,7 @@ import type { PublicacionRequest } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
 import type { Publicacion, TipoPublicacion } from "../types/Publicacion";
 import { getLocalPublicaciones, isGeneratedProfile, saveLocalPublicacion } from "../utils/localPublicaciones";
+import { prepareImageForUpload } from "../utils/imageProcessing";
 import { removePublicacionImage, savePublicacionImage } from "../utils/publicacionImages";
 import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
@@ -100,8 +100,6 @@ export default function CrearPublicacion() {
   const [form, setForm] = useState<PublicacionRequest>(initialPublicacionForm);
   const [tipoPublicacion, setTipoPublicacion] = useState<TipoPublicacion>("ofrezco_casa");
   const [imagenesPreview, setImagenesPreview] = useState<string[]>([]);
-  const [cropQueue, setCropQueue] = useState<string[]>([]);
-  const [cropSource, setCropSource] = useState("");
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [selectedHogarId, setSelectedHogarId] = useState("");
@@ -243,8 +241,6 @@ export default function CrearPublicacion() {
     setTipoPublicacion("ofrezco_casa");
     setForm(initialPublicacionForm);
     setImagenesPreview([]);
-    setCropQueue([]);
-    setCropSource("");
     setSelectedHogarId("");
     setMessage("");
     setSearchParams({});
@@ -295,6 +291,15 @@ export default function CrearPublicacion() {
           ubicacion: form.ubicacion.trim(),
           descripcion: form.descripcion.trim(),
           presupuestoMaximo: Number(form.precio),
+          habitos: user?.preferenciasCompatibilidad
+            ? [
+                user.preferenciasCompatibilidad.limpieza,
+                user.preferenciasCompatibilidad.ambiente,
+                user.preferenciasCompatibilidad.horario,
+                user.preferenciasCompatibilidad.mascotas,
+                user.preferenciasCompatibilidad.fumar,
+              ]
+            : undefined,
           imagen: imagenPrincipal,
           galeria: imagenesPreview.length > 0 ? imagenesPreview : [home1, home2, home3],
         }
@@ -323,7 +328,7 @@ export default function CrearPublicacion() {
     saveLocalPublicacion(nuevaPublicacion);
   };
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
@@ -337,39 +342,20 @@ export default function CrearPublicacion() {
       return;
     }
 
-    Promise.all(
-      files.slice(0, 6).map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-            reader.readAsDataURL(file);
-          }),
-      ),
-    ).then((images) => {
-      const validImages = images.filter(Boolean);
-      setCropQueue(validImages.slice(1));
-      setCropSource(validImages[0] || "");
+    try {
+      const preparedImages = await Promise.all(
+        files.slice(0, 6).map((file) => prepareImageForUpload(file, { width: 1200, height: 900 })),
+      );
+      setImagenesPreview((current) => [...current, ...preparedImages.filter(Boolean)].slice(0, 6));
       setMessage("");
       event.currentTarget.value = "";
-    });
+    } catch {
+      setMessage("No se pudo preparar alguna imagen. Intenta con otra foto.");
+    }
   };
 
   const removePreviewImage = (indexToRemove: number) => {
     setImagenesPreview((current) => current.filter((_, index) => index !== indexToRemove));
-  };
-
-  const saveCroppedPublicationImage = (image: string) => {
-    setImagenesPreview((current) => [...current, image].slice(0, 6));
-    const [nextImage, ...remainingImages] = cropQueue;
-    setCropQueue(remainingImages);
-    setCropSource(nextImage || "");
-  };
-
-  const cancelCrop = () => {
-    const [nextImage, ...remainingImages] = cropQueue;
-    setCropQueue(remainingImages);
-    setCropSource(nextImage || "");
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -527,18 +513,6 @@ export default function CrearPublicacion() {
 
       {message && <p className="api-message">{message}</p>}
 
-      {cropSource && (
-        <ImageCropper
-          source={cropSource}
-          title="Ajustar foto de publicación"
-          aspect={4 / 3}
-          outputWidth={1200}
-          outputHeight={900}
-          onCancel={cancelCrop}
-          onSave={saveCroppedPublicationImage}
-        />
-      )}
-
       <section className="create-publication-shell">
         <form className="create-publication-form" onSubmit={handleSubmit} noValidate>
           <div className="create-section">
@@ -664,6 +638,7 @@ export default function CrearPublicacion() {
                 <span>{editingPublicacion ? "Agregar fotos" : "Agrega hasta 6 fotos"}</span>
                 <input className="form-control" type="file" accept="image/*" multiple onChange={handleImageChange} />
               </label>
+              <p className="form-helper">Roomiegram ajusta cada foto automáticamente para que se vea completa, centrada y sin zoom innecesario.</p>
               {imagenesPreview.length === 0 ? (
                 <p className="form-helper">Esta publicación no tiene fotos agregadas.</p>
               ) : (

@@ -20,7 +20,10 @@ import {
   rechazarInvitacionHogar,
   rechazarSolicitudIngreso,
 } from "../utils/notificacionActions";
-import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel, getMascotasPreferenceValue } from "../utils/preferenciasCompatibilidad";
+import {
+  getPreferenciasDetalle,
+  getPreferenciasDetalleFromValues,
+} from "../utils/preferenciasCompatibilidad";
 
 function isGenericTitle(titulo?: string) {
   return !titulo?.trim() || /^perfil de\s+/i.test(titulo);
@@ -272,8 +275,8 @@ export default function Perfil() {
     () => getPublicacionCasaDelHogar(hogarDelPerfil, publicaciones),
     [hogarDelPerfil, publicaciones],
   );
-  const mascotasPreferencia = getMascotasPreferenceValue(usuarioPerfil?.preferenciasCompatibilidad?.mascotas)
-    || getMascotasPreferenceFromValues(perfil?.habitos);
+  const preferenciasDetalle = getPreferenciasDetalle(usuarioPerfil?.preferenciasCompatibilidad)
+    .concat(usuarioPerfil?.preferenciasCompatibilidad ? [] : getPreferenciasDetalleFromValues(perfil?.habitos));
 
   useEffect(() => {
     if (!perfilUsuarioId) {
@@ -545,14 +548,18 @@ export default function Perfil() {
               </p>
             </div>
 
-            {mascotasPreferencia && (
+            {preferenciasDetalle.length > 0 ? (
               <div className="perfil-section contact-info-panel">
-                <h3>Preferencia de mascotas</h3>
-                <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotasPreferencia}`}>
-                  {getMascotasPreferenceLabel(mascotasPreferencia)}
-                </span>
+                <h3>Preferencias de convivencia</h3>
+                <div className="preference-chip-grid">
+                  {preferenciasDetalle.map((preferencia) => (
+                    <span className={`home-tag preference-tag preference-tag-${preferencia.key}`} key={`${preferencia.key}-${preferencia.value}`}>
+                      <strong>{preferencia.label}:</strong> {preferencia.value}
+                    </span>
+                  ))}
+                </div>
               </div>
-            )}
+            ) : null}
 
             <div className="perfil-section contact-info-panel">
               <h3>Contacto</h3>

@@ -235,9 +235,21 @@ export default function Landing() {
       <section className="landing-cta">
         <h2>¿Listo para encontrar tu hogar ideal?</h2>
         <p>Únete a Roomiegram y organiza búsqueda, convivencia, tareas y gastos desde un solo lugar.</p>
-        <button className="btn landing-cta-btn" onClick={() => navigate("/register")} type="button">
-          Comenzar gratis
-        </button>
+        <div className="landing-cta-actions">
+          <button className="btn landing-cta-btn" onClick={() => navigate("/register")} type="button">
+            Comenzar gratis
+          </button>
+          <button
+            className="btn landing-cta-support"
+            onClick={() => {
+              window.location.href = "mailto:soporte@roomiegram.com?subject=Soporte%20Roomiegram";
+            }}
+            type="button"
+          >
+            Contactar soporte
+          </button>
+        </div>
+        <small className="landing-cta-help">También puedes escribir a soporte@roomiegram.com</small>
       </section>
 
       <footer className="landing-footer">

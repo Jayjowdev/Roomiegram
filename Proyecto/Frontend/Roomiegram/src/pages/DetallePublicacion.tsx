@@ -22,7 +22,13 @@ import {
   rechazarInvitacionHogar,
   rechazarSolicitudIngreso,
 } from "../utils/notificacionActions";
-import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel, getMascotasPreferenceValue } from "../utils/preferenciasCompatibilidad";
+import {
+  getMascotasPreferenceFromValues,
+  getMascotasPreferenceLabel,
+  getMascotasPreferenceValue,
+  getPreferenciasDetalle,
+  getPreferenciasDetalleFromValues,
+} from "../utils/preferenciasCompatibilidad";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 const fallbackGallery = [home1, home2, home3];
@@ -211,6 +217,8 @@ export default function DetallePublicacion() {
   const telefonoContacto = publicacion?.telefono || usuarioPublicacion?.telefono;
   const mascotasPreferencia = getMascotasPreferenceFromValues(publicacion?.habitos)
     || getMascotasPreferenceValue(usuarioPublicacion?.preferenciasCompatibilidad?.mascotas);
+  const preferenciasDetalle = getPreferenciasDetalle(usuarioPublicacion?.preferenciasCompatibilidad)
+    .concat(usuarioPublicacion?.preferenciasCompatibilidad ? [] : getPreferenciasDetalleFromValues(publicacion?.habitos));
 
   const misHogaresAdministrables = useMemo(() => {
     if (!user?.id) return [];
@@ -620,10 +628,20 @@ export default function DetallePublicacion() {
             <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitación/casa" : "Búsqueda de roomie"}</p>
             {mascotasPreferencia && (
               <div className="contact-info-panel compact-contact">
-                <h4>Mascotas</h4>
-                <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotasPreferencia}`}>
-                  {getMascotasPreferenceLabel(mascotasPreferencia)}
-                </span>
+                <h4>Preferencias de convivencia</h4>
+                {preferenciasDetalle.length > 0 ? (
+                  <div className="preference-chip-grid">
+                    {preferenciasDetalle.map((preferencia) => (
+                      <span className={`home-tag preference-tag preference-tag-${preferencia.key}`} key={`${preferencia.key}-${preferencia.value}`}>
+                        <strong>{preferencia.label}:</strong> {preferencia.value}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotasPreferencia}`}>
+                    {getMascotasPreferenceLabel(mascotasPreferencia)}
+                  </span>
+                )}
               </div>
             )}
             <div className="contact-info-panel compact-contact">

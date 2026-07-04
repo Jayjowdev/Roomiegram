@@ -8,8 +8,10 @@ import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
 import { notificacionService } from "../services/notificacionService";
+import { usuarioService } from "../services/usuarioService";
 import type { CategoriaGasto, Comprobante, EstadoGasto, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+import type { UsuarioResumen } from "../types/Usuario";
 
 const CATEGORIA_LABELS: Record<CategoriaGasto, string> = {
   ARRIENDO: "Arriendo",
@@ -54,10 +56,26 @@ function getCategoriaLabel(categoria?: CategoriaGasto) {
   return CATEGORIA_LABELS[categoria || "OTRO"];
 }
 
+function getMemberName(usuarioId: number, usuariosById: Map<number, UsuarioResumen>, currentUser?: { id: number; nombre?: string; usuario?: string }) {
+  if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "TÃº";
+  const usuario = usuariosById.get(usuarioId);
+  return usuario?.nombre || usuario?.usuario || "Integrante del hogar";
+}
+
 function getEstadoRespaldo(monto: number, respaldado: number): EstadoGasto {
   if (respaldado <= 0) return "PENDIENTE";
   if (respaldado < monto) return "PARCIAL";
   return "RESPALDADO";
+}
+
+function getResponsabilidadUsuario(gasto: HogarCuenta, comprobantesGasto: Comprobante[], usuarioId?: number) {
+  const parteAsignada = gasto.deudores?.find((deudor) => deudor.usuarioId === usuarioId)?.montoAdeudado || 0;
+  const respaldadoUsuario = comprobantesGasto
+    .filter((comprobante) => comprobante.usuarioId === usuarioId)
+    .reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
+  const faltanteUsuario = Math.max(0, Number(parteAsignada || 0) - respaldadoUsuario);
+
+  return { parteAsignada: Number(parteAsignada || 0), respaldadoUsuario, faltanteUsuario };
 }
 
 function getComprobanteUrl(comprobante: Comprobante) {
@@ -86,9 +104,11 @@ export default function Comprobantes() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [gastos, setGastos] = useState<HogarCuenta[]>([]);
   const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [hogarCuentaId, setHogarCuentaId] = useState("");
   const [montoPagado, setMontoPagado] = useState("");
   const [nombreArchivo, setNombreArchivo] = useState("");
+  const [nombreComprobante, setNombreComprobante] = useState("");
   const [observacion, setObservacion] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -97,18 +117,20 @@ export default function Comprobantes() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const gastoParam = params.get("gasto");
+    const gastoParam = params.get("gastoId") || params.get("gasto");
     if (gastoParam) setHogarCuentaId(gastoParam);
+    else setHogarCuentaId("");
   }, [location.search]);
 
   useEffect(() => {
-    Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar()])
-      .then(([hogaresResult, gastosResult, comprobantesResult]) => {
+    Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, gastosResult, comprobantesResult, usuariosResult]) => {
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setGastos(gastosResult.status === "fulfilled" ? gastosResult.value : []);
         setComprobantes(comprobantesResult.status === "fulfilled" ? comprobantesResult.value : []);
+        setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
 
-        if (hogaresResult.status === "rejected" || gastosResult.status === "rejected" || comprobantesResult.status === "rejected") {
+        if (hogaresResult.status === "rejected" || gastosResult.status === "rejected" || comprobantesResult.status === "rejected" || usuariosResult.status === "rejected") {
           setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios estén activos.");
         }
       })
@@ -126,6 +148,10 @@ export default function Comprobantes() {
 
   const gastoIds = useMemo(() => gastosDelHogar.map((gasto) => gasto.id).filter((id): id is number => !!id), [gastosDelHogar]);
 
+  const usuariosById = useMemo(() => {
+    return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  }, [usuarios]);
+
   const comprobantesDelHogar = useMemo(() => {
     return comprobantes.filter((comprobante) => gastoIds.includes(comprobante.hogarCuentaId));
   }, [comprobantes, gastoIds]);
@@ -141,6 +167,20 @@ export default function Comprobantes() {
   const totalPagadoSeleccionado = comprobantesDelGastoSeleccionado.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
   const faltanteSeleccionado = selectedGasto ? Math.max(0, Number(selectedGasto.monto || 0) - totalPagadoSeleccionado) : 0;
   const estadoSeleccionado = selectedGasto ? getEstadoRespaldo(Number(selectedGasto.monto || 0), totalPagadoSeleccionado) : "";
+  const responsabilidadUsuario = selectedGasto
+    ? getResponsabilidadUsuario(selectedGasto, comprobantesDelGastoSeleccionado, user?.id)
+    : { parteAsignada: 0, respaldadoUsuario: 0, faltanteUsuario: 0 };
+  const usuarioEsResponsableDelGasto = selectedGasto
+    ? (selectedGasto.deudores || []).some((deudor) => deudor.usuarioId === user?.id)
+    : false;
+  const canSubmitComprobante = !!selectedGasto && usuarioEsResponsableDelGasto;
+  const isFocusedUploadMode = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.has("gastoId") || params.has("gasto");
+  }, [location.search]);
+  const showCreatedMessage = useMemo(() => {
+    return new URLSearchParams(location.search).get("creado") === "1";
+  }, [location.search]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -150,6 +190,11 @@ export default function Comprobantes() {
     const comprobante = comprobantesDelHogar.find((item) => String(item.id) === comprobanteParam);
     if (comprobante) setHogarCuentaId(String(comprobante.hogarCuentaId));
   }, [comprobantesDelHogar, hogarCuentaId, location.search]);
+
+  useEffect(() => {
+    if (!isFocusedUploadMode || !canSubmitComprobante || montoPagado || responsabilidadUsuario.faltanteUsuario <= 0) return;
+    setMontoPagado(String(Math.round(responsabilidadUsuario.faltanteUsuario)));
+  }, [canSubmitComprobante, isFocusedUploadMode, montoPagado, responsabilidadUsuario.faltanteUsuario]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -171,24 +216,22 @@ export default function Comprobantes() {
 
     if (!hogarActual) return setMessage("Debes pertenecer a un hogar para registrar comprobantes.");
     if (Number(hogarCuentaId) <= 0) return setMessage("Selecciona un gasto del hogar.");
-    if (Number(montoPagado) <= 0) return setMessage("El monto pagado debe ser mayor a cero.");
-    if (nombreArchivo.trim().length < 3 || !nombreArchivo.includes(".")) {
-      return setMessage("Ingresa un nombre de archivo válido con extensión.");
-    }
+    if (!selectedGasto) return setMessage("Selecciona un gasto registrado del hogar.");
+    if (!usuarioEsResponsableDelGasto) return setMessage("Solo los responsables de este gasto pueden subir comprobantes.");
+    if (Number(montoPagado) <= 0) return setMessage("El monto respaldado debe ser mayor a cero.");
+    if (!archivo) return setMessage("Selecciona una imagen o PDF como comprobante.");
 
     setIsSaving(true);
     try {
-      const nombreArchivoLimpio = nombreArchivo.trim();
-      const archivoBase64 = archivo
-        ? await fileToBase64(archivo)
-        : btoa(`Comprobante registrado desde frontend: ${nombreArchivoLimpio}`);
+      const nombreArchivoLimpio = nombreComprobante.trim() || archivo.name;
+      const archivoBase64 = await fileToBase64(archivo);
 
       const payload: Comprobante = {
         hogarCuentaId: Number(hogarCuentaId),
         usuarioId: user?.id || 1,
         nombreArchivo: nombreArchivoLimpio,
-        tipoContenido: archivo?.type || "text/plain",
-        tamanoArchivo: archivo?.size || nombreArchivoLimpio.length,
+        tipoContenido: archivo.type || "application/octet-stream",
+        tamanoArchivo: archivo.size,
         montoPagado: Number(montoPagado),
         observacion: observacion.trim(),
         archivo: archivoBase64,
@@ -230,11 +273,13 @@ export default function Comprobantes() {
           ? "Comprobante registrado. No se pudo enviar el aviso al administrador."
           : canAssociateComprobante ? "Comprobante registrado y asociado al hogar." : "Comprobante registrado.",
       );
-      setHogarCuentaId("");
+      if (!isFocusedUploadMode) setHogarCuentaId("");
       setMontoPagado("");
       setNombreArchivo("");
+      setNombreComprobante("");
       setObservacion("");
       setArchivo(null);
+      if (isFocusedUploadMode) navigate("/comprobantes?creado=1");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo registrar el comprobante.");
     } finally {
@@ -255,7 +300,7 @@ export default function Comprobantes() {
   };
 
   return (
-    <div className="module-page">
+    <div className="module-page finance-module-page">
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
@@ -266,8 +311,12 @@ export default function Comprobantes() {
       </header>
 
       <section className="module-title">
-        <h1>Comprobantes de pago</h1>
-        <p>Sube respaldos de pagos asociados a los gastos del hogar y revisa lo registrado.</p>
+        <h1>{isFocusedUploadMode ? "Subir comprobante" : "Comprobantes del hogar"}</h1>
+        <p>
+          {isFocusedUploadMode
+            ? "Registra el respaldo de este gasto específico del hogar."
+            : "Revisa imágenes o PDF asociados a gastos específicos del hogar. Roomiegram organiza comprobantes, no procesa pagos."}
+        </p>
       </section>
 
       {message && <p className="api-message">{message}</p>}
@@ -277,11 +326,14 @@ export default function Comprobantes() {
       ) : !hogarActual ? (
         <div className="empty-household">
           <h2>Aún no tienes un hogar</h2>
-          <p>Únete o crea un grupo roomie para registrar comprobantes de pagos compartidos.</p>
+          <p>Únete o crea un grupo roomie para registrar comprobantes de gastos compartidos.</p>
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
       ) : (
         <>
+          {showCreatedMessage && <p className="api-message">Comprobante registrado correctamente. Ya aparece en el historial del hogar.</p>}
+
+          {!isFocusedUploadMode && (
           <section className="household-summary">
             <article className="household-stat">
               <span>Gastos con respaldo</span>
@@ -292,7 +344,7 @@ export default function Comprobantes() {
               <strong>{comprobantesDelHogar.length}</strong>
             </article>
             <article className="household-stat">
-              <span>Total pagado</span>
+              <span>Monto respaldado</span>
               <strong>{formatCurrency(totalPagado)}</strong>
             </article>
             <article className="household-stat">
@@ -300,40 +352,82 @@ export default function Comprobantes() {
               <strong>{formatCurrency(totalFaltante)}</strong>
             </article>
           </section>
+          )}
 
-          <section className="module-layout">
+          <section className={`module-layout single ${isFocusedUploadMode ? "finance-upload-layout" : "finance-history-layout"}`}>
+            {isFocusedUploadMode && !selectedGasto && (
+              <div className="empty-household">
+                <h2>Gasto no encontrado</h2>
+                <p>No pudimos encontrar el gasto seleccionado para registrar el comprobante.</p>
+                <button className="btn btn-success" onClick={() => navigate("/gastos")}>Volver a gastos</button>
+              </div>
+            )}
+
+            {isFocusedUploadMode && selectedGasto && !usuarioEsResponsableDelGasto && (
+              <div className="empty-household">
+                <h2>Comprobante no disponible</h2>
+                <p>Solo los responsables del gasto pueden subir comprobantes.</p>
+                <button className="btn btn-success" onClick={() => navigate("/gastos")}>Volver a gastos</button>
+              </div>
+            )}
+
+            {isFocusedUploadMode && canSubmitComprobante && (
             <form className="module-form" onSubmit={handleSubmit}>
               <h3>Subir comprobante</h3>
-              <select className="form-control" value={hogarCuentaId} onChange={(e) => setHogarCuentaId(e.target.value)} required>
-                <option value="">Selecciona un gasto</option>
-                {gastosDelHogar.map((gasto) => (
-                  <option key={gasto.id} value={gasto.id}>{getCategoriaLabel(gasto.categoria)} - {gasto.descripcion} - {formatCurrency(gasto.monto)}</option>
-                ))}
-              </select>
+              <p className="form-helper">Registra el respaldo documental para este gasto. Roomiegram no procesa pagos bancarios.</p>
               {selectedGasto && (
-                <div className="form-helper">
-                  <strong>Resumen del gasto seleccionado</strong>
-                  <span>{getCategoriaLabel(selectedGasto.categoria)} · {selectedGasto.descripcion} · {ESTADO_LABELS[estadoSeleccionado as EstadoGasto]}</span>
-                  <span>{selectedGasto.periodo || "Sin periodo"} · vence {getShortDate(selectedGasto.fechaVencimiento)}</span>
-                  <span>Total: {formatCurrency(selectedGasto.monto)} · Pagado: {formatCurrency(totalPagadoSeleccionado)} · Faltante: {formatCurrency(faltanteSeleccionado)}</span>
-                </div>
+                <>
+                  <div className="household-summary">
+                    <article className="household-stat">
+                      <span>Tu parte asignada</span>
+                      <strong>{formatCurrency(responsabilidadUsuario.parteAsignada)}</strong>
+                    </article>
+                    <article className="household-stat">
+                      <span>Ya respaldaste</span>
+                      <strong>{formatCurrency(responsabilidadUsuario.respaldadoUsuario)}</strong>
+                    </article>
+                    <article className="household-stat">
+                      <span>Te falta respaldar</span>
+                      <strong>{formatCurrency(responsabilidadUsuario.faltanteUsuario)}</strong>
+                    </article>
+                  </div>
+                  <div className="notification-context-grid">
+                    <span><strong>Monto total del gasto:</strong> {formatCurrency(selectedGasto.monto)}</span>
+                    <span><strong>Estado documental:</strong> {ESTADO_LABELS[estadoSeleccionado as EstadoGasto]}</span>
+                    <span><strong>Periodo:</strong> {selectedGasto.periodo || "Sin periodo"}</span>
+                    <span><strong>Vencimiento:</strong> {getShortDate(selectedGasto.fechaVencimiento)}</span>
+                    <span><strong>Monto respaldado del gasto:</strong> {formatCurrency(totalPagadoSeleccionado)}</span>
+                    <span><strong>Faltante total del gasto:</strong> {formatCurrency(faltanteSeleccionado)}</span>
+                  </div>
+                  <div className="notification-context-grid">
+                    {(selectedGasto.deudores || []).map((deudor) => (
+                      <span key={`${selectedGasto.id}-${deudor.usuarioId}`}>
+                        <strong>{getMemberName(deudor.usuarioId, usuariosById, user || undefined)}:</strong> {formatCurrency(deudor.montoAdeudado)}
+                      </span>
+                    ))}
+                  </div>
+                </>
               )}
-              <input className="form-control" placeholder="Monto pagado" type="number" min="1" value={montoPagado} onChange={(e) => setMontoPagado(e.target.value)} required />
+              <input className="form-control" placeholder="Nombre del comprobante" value={nombreComprobante} onChange={(e) => setNombreComprobante(e.target.value)} />
+              <input className="form-control" placeholder="Monto respaldado" type="number" min="1" value={montoPagado} onChange={(e) => setMontoPagado(e.target.value)} required />
               <label className="image-upload">
                 <span>Archivo del comprobante</span>
                 <input className="form-control" type="file" accept="image/*,.pdf" onChange={handleFileChange} />
               </label>
-              <input className="form-control" placeholder="Nombre del archivo o comprobante" value={nombreArchivo} onChange={(e) => setNombreArchivo(e.target.value)} required />
+              {nombreArchivo && <p className="form-helper">Archivo seleccionado: {nombreArchivo}</p>}
               <textarea className="form-control" placeholder="Observación" value={observacion} onChange={(e) => setObservacion(e.target.value)} />
-              <button className="btn btn-success w-100" disabled={isSaving || gastosDelHogar.length === 0}>{isSaving ? "Registrando..." : "Registrar comprobante"}</button>
-              {gastosDelHogar.length === 0 && <p className="form-helper">Primero registra un gasto del hogar.</p>}
+              <button className="btn btn-success w-100" disabled={isSaving}>{isSaving ? "Registrando..." : "Registrar comprobante"}</button>
+              <button className="btn btn-outline-success w-100" type="button" onClick={() => navigate("/gastos")}>Volver a gastos</button>
             </form>
+            )}
 
+            {!isFocusedUploadMode && (
             <div className="module-list">
               <div className="section-heading-row">
                 <h3>Comprobantes del hogar</h3>
                 <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/gastos")}>Ver gastos</button>
               </div>
+              <p className="form-helper">Cada comprobante queda ligado al gasto seleccionado y suma como respaldo documental.</p>
 
               {comprobantesDelHogar.length === 0 ? (
                 <div className="sin-resultados"><p>No hay comprobantes registrados para este hogar.</p></div>
@@ -345,8 +439,8 @@ export default function Comprobantes() {
                 return (
                   <article className="module-item" key={comprobante.id || comprobante.nombreArchivo}>
                     <h4>{comprobante.nombreArchivo}</h4>
-                    <p>{formatCurrency(comprobante.montoPagado)}</p>
-                    <span>{gasto ? `${getCategoriaLabel(gasto.categoria)} · ${gasto.descripcion}` : "Gasto del hogar"} - Integrante del hogar - {formatDate(comprobante.fechaSubida)}</span>
+                    <p>Monto respaldado: {formatCurrency(comprobante.montoPagado)}</p>
+                    <span>{gasto ? `${getCategoriaLabel(gasto.categoria)} · ${gasto.descripcion}` : "Gasto del hogar"} - {getMemberName(comprobante.usuarioId, usuariosById, user || undefined)} - {formatDate(comprobante.fechaSubida)}</span>
                     {gasto?.periodo && <span>Periodo: {gasto.periodo}</span>}
                     {comprobante.observacion && <p>{comprobante.observacion}</p>}
                     {esImagen && comprobanteUrl && (
@@ -370,6 +464,7 @@ export default function Comprobantes() {
                 );
               })}
             </div>
+            )}
           </section>
         </>
       )}

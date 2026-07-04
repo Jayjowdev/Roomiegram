@@ -307,8 +307,8 @@ export default function Convivencia() {
         : `/comprobantes?gasto=${comprobante.hogarCuentaId}`;
 
       actividades.push({
-        titulo: `Pago registrado: ${gasto?.descripcion || "gasto del hogar"}`,
-        detalle: `${integrante} subió ${formatCurrency(comprobante.montoPagado)} con ${comprobante.nombreArchivo}.`,
+        titulo: `Comprobante registrado: ${gasto?.descripcion || "gasto del hogar"}`,
+        detalle: `${integrante} respaldó ${formatCurrency(comprobante.montoPagado)} con ${comprobante.nombreArchivo}.`,
         ruta,
         fecha: comprobante.fechaSubida,
         fechaOrden: getActivityOrder(comprobante.fechaSubida, 10),
@@ -373,15 +373,15 @@ export default function Convivencia() {
 
     if (deudaUsuario > 0) {
       items.push({
-        titulo: "Revisar pagos pendientes",
-        detalle: `Hay ${formatCurrency(deudaUsuario)} registrados como deuda del usuario actual.`,
+        titulo: "Revisar deuda asignada",
+        detalle: `Hay ${formatCurrency(deudaUsuario)} asignados al usuario actual. Los comprobantes respaldan gastos, no descuentan deuda por persona.`,
         ruta: "/gastos",
       });
     }
     if (gastosPendientes.length > 0) {
       items.push({
         titulo: "Gestionar gastos pendientes",
-        detalle: `${gastosPendientes.length} gasto(s) aún necesitan comprobantes o pagos completos.`,
+        detalle: `${gastosPendientes.length} gasto(s) aún necesitan comprobantes suficientes.`,
         ruta: "/gastos",
       });
     }
@@ -436,7 +436,7 @@ export default function Convivencia() {
         <p>
           {hogarActual
             ? hogarActual.descripcion || "Resumen operativo del hogar compartido."
-            : "Cuando te unas a un hogar, aquí verás integrantes, tareas, gastos, pagos y avisos del grupo."}
+            : "Cuando te unas a un hogar, aquí verás integrantes, tareas, gastos, comprobantes y avisos del grupo."}
         </p>
       </section>
 
@@ -477,7 +477,7 @@ export default function Convivencia() {
               <strong>{formatCurrency(totalPendienteGastos)}</strong>
             </article>
             <article className="household-stat">
-              <span>Tu deuda registrada</span>
+              <span>Deuda asignada a ti</span>
               <strong>{formatCurrency(deudaUsuario)}</strong>
             </article>
             <article className="household-stat">
@@ -603,7 +603,7 @@ export default function Convivencia() {
               </article>
               <article className="demo-widget">
                 <strong>Comprobantes asociados</strong>
-                <span>{hogarActual.comprobanteIds?.length || 0} pago(s) registrados en el hogar.</span>
+                <span>{hogarActual.comprobanteIds?.length || 0} comprobante(s) registrados en el hogar.</span>
               </article>
               <article className="demo-widget">
                 <strong>Publicaciones asociadas</strong>
@@ -691,7 +691,7 @@ export default function Convivencia() {
               <div className="module-grid">
                 <button className="module-link" onClick={() => navigate("/tareas")}><strong>Asignar tareas</strong><span>Crear turnos y responsables.</span></button>
                 <button className="module-link" onClick={() => navigate("/gastos")}><strong>Registrar gastos</strong><span>Controlar cuentas compartidas.</span></button>
-                <button className="module-link" onClick={() => navigate("/comprobantes")}><strong>Subir comprobantes</strong><span>Respaldar pagos realizados.</span></button>
+                <button className="module-link" onClick={() => navigate("/comprobantes")}><strong>Subir comprobantes</strong><span>Respaldar gastos con archivos.</span></button>
                 <button className="module-link" onClick={() => navigate("/notificaciones")}><strong>Revisar actividad</strong><span>Ver solicitudes, tareas y comprobantes.</span></button>
               </div>
             </div>

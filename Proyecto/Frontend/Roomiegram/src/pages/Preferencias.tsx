@@ -5,7 +5,7 @@ import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import type { PreferenciasCompatibilidad } from "../types/auth";
-import { preferenciasIniciales } from "../utils/preferenciasCompatibilidad";
+import { preferenciasIniciales, preferenciasLabels } from "../utils/preferenciasCompatibilidad";
 
 export default function Preferencias() {
   const navigate = useNavigate();
@@ -13,6 +13,13 @@ export default function Preferencias() {
   const [preferencias, setPreferencias] = useState<PreferenciasCompatibilidad>(user?.preferenciasCompatibilidad || preferenciasIniciales);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  const mascotasLabel = preferenciasLabels.mascotas[preferencias.mascotas as keyof typeof preferenciasLabels.mascotas] || "Mascotas";
+  const mascotasHelper = preferencias.mascotas === "mascotas"
+    ? "Tu perfil destaca que aceptas convivir con mascotas."
+    : preferencias.mascotas === "sin_mascotas"
+      ? "Tu perfil indica que prefieres un hogar sin mascotas."
+      : "Tu perfil indica que eres flexible con mascotas.";
 
   const validate = () => {
     if (!preferencias.limpieza || !preferencias.ambiente || !preferencias.horario || !preferencias.mascotas || !preferencias.fumar) {
@@ -56,7 +63,6 @@ export default function Preferencias() {
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/configuracion")}>Configuración</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Inicio</button>
           <LogoutButton />
@@ -110,6 +116,8 @@ export default function Preferencias() {
                 <option value="mascotas">Pet-friendly</option>
                 <option value="indiferente_mascotas">Me da igual</option>
               </select>
+              <span className={`pet-preference-badge pet-preference-${preferencias.mascotas}`}>{mascotasLabel}</span>
+              <small className="pet-preference-helper">{mascotasHelper}</small>
             </label>
 
             <label className="field-label">

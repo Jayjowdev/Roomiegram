@@ -26,9 +26,9 @@ export const preferenciasLabels = {
     flexible: "Flexible",
   },
   mascotas: {
-    sin_mascotas: "Sin mascotas",
-    mascotas: "Pet-friendly",
-    indiferente_mascotas: "Me da igual",
+    sin_mascotas: "Prefiere sin mascotas",
+    mascotas: "Acepta mascotas",
+    indiferente_mascotas: "Indiferente con mascotas",
   },
   fumar: {
     no_fuma: "No fumador",
@@ -36,6 +36,25 @@ export const preferenciasLabels = {
     indiferente_fuma: "Me da igual",
   },
 };
+
+export type MascotasPreferencia = keyof typeof preferenciasLabels.mascotas;
+
+export function getMascotasPreferenceValue(value?: string | null): MascotasPreferencia | null {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "mascotas" || normalized === "sin_mascotas" || normalized === "indiferente_mascotas") {
+    return normalized;
+  }
+  return null;
+}
+
+export function getMascotasPreferenceFromValues(values?: Array<string | undefined | null>) {
+  return values?.map(getMascotasPreferenceValue).find((value): value is MascotasPreferencia => Boolean(value)) || null;
+}
+
+export function getMascotasPreferenceLabel(value?: string | null) {
+  const preference = getMascotasPreferenceValue(value);
+  return preference ? preferenciasLabels.mascotas[preference] : "";
+}
 
 export function getPreferenciasResumen(preferencias?: PreferenciasCompatibilidad) {
   if (!preferencias) return [];

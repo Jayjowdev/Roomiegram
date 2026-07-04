@@ -20,6 +20,7 @@ import {
   rechazarInvitacionHogar,
   rechazarSolicitudIngreso,
 } from "../utils/notificacionActions";
+import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel, getMascotasPreferenceValue } from "../utils/preferenciasCompatibilidad";
 import { getPublicacionImage } from "../utils/publicacionImages";
 
 const fallbackGallery = [home1, home2, home3];
@@ -58,6 +59,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     numeroBanos: pub.numeroBanos,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
+    habitos: pub.habitos,
     amenidades: tipo === "ofrezco_casa"
       ? [
           `${pub.numeroHabitaciones || 1} habitación(es)`,
@@ -174,6 +176,8 @@ export default function DetallePublicacion() {
   }, [hogarDelAutor, publicaciones]);
 
   const telefonoContacto = publicacion?.telefono || usuarioPublicacion?.telefono;
+  const mascotasPreferencia = getMascotasPreferenceFromValues(publicacion?.habitos)
+    || getMascotasPreferenceValue(usuarioPublicacion?.preferenciasCompatibilidad?.mascotas);
 
   const misHogaresAdministrables = useMemo(() => {
     if (!user?.id) return [];
@@ -503,8 +507,17 @@ export default function DetallePublicacion() {
             <h3>Datos del anfitrión</h3>
             <p><strong>Nombre:</strong> {publicacion.nombre}</p>
             <p><strong>Tipo:</strong> {esOfertaCasa ? "Oferta de habitación/casa" : "Búsqueda de roomie"}</p>
+            {mascotasPreferencia && (
+              <div className="contact-info-panel compact-contact">
+                <h4>Mascotas</h4>
+                <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotasPreferencia}`}>
+                  {getMascotasPreferenceLabel(mascotasPreferencia)}
+                </span>
+              </div>
+            )}
             <div className="contact-info-panel compact-contact">
               <h4>Contacto</h4>
+              <p className="whatsapp-note">Contacto por WhatsApp</p>
               <p><strong>Teléfono:</strong> {getTelefonoContacto(telefonoContacto)}</p>
             </div>
             {!esOfertaCasa ? (

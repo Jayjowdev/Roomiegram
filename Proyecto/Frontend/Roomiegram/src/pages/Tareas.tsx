@@ -132,6 +132,9 @@ export default function Tareas() {
       .sort((a, b) => getTaskSortValue(b) - getTaskSortValue(a));
   }, [hogarActual, tareas]);
 
+  const tareasActivas = useMemo(() => tareasDelHogar.filter((tarea) => !isTaskCompleted(tarea)), [tareasDelHogar]);
+  const tareasCompletadas = useMemo(() => tareasDelHogar.filter(isTaskCompleted), [tareasDelHogar]);
+
   const canManage = isHogarAdmin(hogarActual, user?.id);
   const isEditing = editingTaskId !== null;
 
@@ -315,7 +318,7 @@ export default function Tareas() {
   };
 
   const toggleTaskStatus = async (tarea: Tarea) => {
-    const canUpdateStatus = canManage || isTaskAssignedToCurrentUser(tarea, user || undefined);
+    const canUpdateStatus = isTaskAssignedToCurrentUser(tarea, user || undefined);
     if (!canUpdateStatus) return;
 
     setMessage("");
@@ -346,6 +349,42 @@ export default function Tareas() {
       setUpdatingTaskId(null);
     }
   };
+
+  const renderTarea = (tarea: Tarea) => (
+    <article className="module-item" key={tarea.id}>
+      <div className="section-heading-row">
+        <h4>{tarea.titulo}</h4>
+        <span className={isTaskCompleted(tarea) ? "status-pill success" : "status-pill"}>
+          {isTaskCompleted(tarea) ? "Completada" : "Pendiente"}
+        </span>
+      </div>
+      <p>{tarea.descripcion}</p>
+      <span>Encargado: {tarea.encargado} Â· Fecha limite: {tarea.fecha}</span>
+      <div className="item-actions">
+        {canManage && (
+          <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
+            Editar
+          </button>
+        )}
+        {isTaskAssignedToCurrentUser(tarea, user || undefined) ? (
+          <button
+            className={isTaskCompleted(tarea) ? "btn btn-outline-success btn-sm" : "btn btn-success btn-sm"}
+            type="button"
+            onClick={() => toggleTaskStatus(tarea)}
+            disabled={updatingTaskId === tarea.id}
+          >
+            {updatingTaskId === tarea.id
+              ? "Actualizando..."
+              : isTaskCompleted(tarea)
+                ? "Marcar pendiente"
+                : "Marcar completada"}
+          </button>
+        ) : (
+          <span className="task-owner-note">Solo el responsable puede completar esta tarea</span>
+        )}
+      </div>
+    </article>
+  );
 
   return (
     <div className="module-page">
@@ -410,39 +449,29 @@ export default function Tareas() {
             <h3>Tareas de {hogarActual.nombre}</h3>
             {tareasDelHogar.length === 0 ? (
               <div className="sin-resultados"><p>No hay tareas asociadas a este hogar.</p></div>
-            ) : tareasDelHogar.map((tarea) => (
-              <article className="module-item" key={tarea.id}>
-                <div className="section-heading-row">
-                  <h4>{tarea.titulo}</h4>
-                  <span className={isTaskCompleted(tarea) ? "status-pill success" : "status-pill"}>
-                    {isTaskCompleted(tarea) ? "Completada" : "Pendiente"}
-                  </span>
-                </div>
-                <p>{tarea.descripcion}</p>
-                <span>Encargado: {tarea.encargado} · Fecha limite: {tarea.fecha}</span>
-                {(canManage || isTaskAssignedToCurrentUser(tarea, user || undefined)) && (
-                  <div className="item-actions">
-                    {canManage && (
-                      <button className="btn btn-outline-success btn-sm" type="button" onClick={() => startEdit(tarea)}>
-                        Editar
-                      </button>
-                    )}
-                    <button
-                      className={isTaskCompleted(tarea) ? "btn btn-outline-success btn-sm" : "btn btn-success btn-sm"}
-                      type="button"
-                      onClick={() => toggleTaskStatus(tarea)}
-                      disabled={updatingTaskId === tarea.id}
-                    >
-                      {updatingTaskId === tarea.id
-                        ? "Actualizando..."
-                        : isTaskCompleted(tarea)
-                          ? "Marcar pendiente"
-                          : "Marcar completada"}
-                    </button>
+            ) : (
+              <>
+                <div className="history-section">
+                  <div className="section-heading-row">
+                    <h4>Tareas pendientes</h4>
+                    <span className="status-pill">{tareasActivas.length}</span>
                   </div>
-                )}
-              </article>
-            ))}
+                  {tareasActivas.length === 0 ? (
+                    <div className="sin-resultados"><p>No hay tareas pendientes.</p></div>
+                  ) : tareasActivas.map(renderTarea)}
+                </div>
+
+                <div className="history-section">
+                  <div className="section-heading-row">
+                    <h4>Historial de tareas</h4>
+                    <span className="status-pill success">{tareasCompletadas.length}</span>
+                  </div>
+                  {tareasCompletadas.length === 0 ? (
+                    <div className="sin-resultados"><p>Aun no hay tareas completadas.</p></div>
+                  ) : tareasCompletadas.map(renderTarea)}
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}

@@ -101,9 +101,6 @@ export default function Configuracion() {
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" type="button" onClick={() => navigate("/mi-perfil")}>
-            Mi perfil
-          </button>
           <button className="btn btn-outline-success" type="button" onClick={() => navigate("/home")}>
             Inicio
           </button>

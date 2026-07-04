@@ -511,7 +511,6 @@ export default function CrearPublicacion() {
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Cancelar</button>
           <LogoutButton />
         </div>

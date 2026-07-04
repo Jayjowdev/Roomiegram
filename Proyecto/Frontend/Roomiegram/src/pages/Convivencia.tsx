@@ -423,7 +423,6 @@ export default function Convivencia() {
           <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         </div>
         <div className="dashboard-actions">
-          <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/hogares")}>Mis hogares</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Inicio</button>
           <NotificationBell />

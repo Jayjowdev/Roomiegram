@@ -608,6 +608,68 @@ p {
   color: #888;
 }
 
+.task-owner-note,
+.whatsapp-note,
+.pet-preference-helper {
+  color: #66706d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.task-owner-note {
+  background: #f8fbfa;
+  border: 1px solid #dcebe7;
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.whatsapp-note {
+  background: #e6f4f1;
+  border: 1px solid #c8eadb;
+  border-radius: 999px;
+  color: #1f7a63;
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+}
+
+.pet-preference-badge {
+  align-self: flex-start;
+  border: 1px solid #c8eadb;
+  border-radius: 999px;
+  color: #1f7a63;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 8px;
+  padding: 6px 10px;
+}
+
+.pet-preference-inline {
+  margin: 8px 0 0;
+}
+
+.pet-preference-mascotas {
+  background: #e6f4f1;
+}
+
+.pet-preference-sin_mascotas {
+  background: #fff7e6;
+  border-color: #efd995;
+  color: #8a6416;
+}
+
+.pet-preference-indiferente_mascotas {
+  background: #edf7ff;
+  border-color: #b7d8f0;
+  color: #276783;
+}
+
+.pet-preference-helper {
+  display: block;
+  margin-top: 6px;
+}
+
 /* ---------- HOME ---------- */
 
 .home-page {
@@ -642,6 +704,75 @@ p {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.session-menu {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.session-user {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dcebe7;
+  border-radius: 999px;
+  color: #234238;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 9px;
+  min-height: 38px;
+  padding: 5px 10px 5px 5px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.session-user:hover {
+  border-color: #1f7a63;
+  box-shadow: 0 8px 18px rgba(31, 122, 99, 0.12);
+  transform: translateY(-1px);
+}
+
+.session-avatar {
+  align-items: center;
+  background: #1f7a63;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  overflow: hidden;
+  width: 28px;
+}
+
+.session-avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.session-copy {
+  display: grid;
+  gap: 1px;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.session-copy small {
+  color: #66706d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.session-copy strong {
+  color: #1f7a63;
+  font-size: 13px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notification-bell {
@@ -2890,6 +3021,18 @@ button.compact-row:hover {
 .module-list h3 {
   margin-bottom: 4px;
   color: #222;
+}
+
+.history-section {
+  border-top: 1px solid #e5efeb;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.history-section:first-of-type {
+  border-top: 0;
+  margin-top: 10px;
+  padding-top: 8px;
 }
 
 .module-list.full {
@@ -6147,6 +6290,71 @@ body.theme-dark .member-check {
 body.theme-dark .member-picker h4,
 body.theme-dark .member-check strong {
   color: var(--rg-text);
+}
+
+body.theme-dark .register-box,
+body.theme-dark .register-form input,
+body.theme-dark .register-form select {
+  background: var(--rg-surface);
+  border-color: var(--rg-border);
+  color: var(--rg-text);
+}
+
+body.theme-dark .register-box h2,
+body.theme-dark .role-label {
+  color: var(--rg-text);
+}
+
+body.theme-dark .register-legal,
+body.theme-dark .hint-pending {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .role-info,
+body.theme-dark .password-hints,
+body.theme-dark .task-owner-note,
+body.theme-dark .whatsapp-note,
+body.theme-dark .pet-preference-badge {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-border);
+  color: var(--rg-text-soft);
+}
+
+body.theme-dark .hint-ok,
+body.theme-dark .pet-preference-mascotas,
+body.theme-dark .whatsapp-note {
+  color: #b8f3df;
+}
+
+body.theme-dark .pet-preference-sin_mascotas {
+  color: #fde68a;
+}
+
+body.theme-dark .pet-preference-indiferente_mascotas {
+  color: #bae6fd;
+}
+
+body.theme-dark .pet-preference-helper {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .session-user {
+  background: var(--rg-surface);
+  border-color: var(--rg-border-strong);
+  color: var(--rg-text);
+}
+
+body.theme-dark .session-user:hover {
+  background: var(--rg-surface-2);
+  border-color: var(--rg-accent);
+}
+
+body.theme-dark .session-copy small {
+  color: var(--rg-text-muted);
+}
+
+body.theme-dark .session-copy strong {
+  color: var(--rg-accent);
 }
 
 @media (max-width: 640px) {

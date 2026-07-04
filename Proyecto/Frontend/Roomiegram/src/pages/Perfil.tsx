@@ -20,6 +20,7 @@ import {
   rechazarInvitacionHogar,
   rechazarSolicitudIngreso,
 } from "../utils/notificacionActions";
+import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel, getMascotasPreferenceValue } from "../utils/preferenciasCompatibilidad";
 
 function isGenericTitle(titulo?: string) {
   return !titulo?.trim() || /^perfil de\s+/i.test(titulo);
@@ -271,6 +272,8 @@ export default function Perfil() {
     () => getPublicacionCasaDelHogar(hogarDelPerfil, publicaciones),
     [hogarDelPerfil, publicaciones],
   );
+  const mascotasPreferencia = getMascotasPreferenceValue(usuarioPerfil?.preferenciasCompatibilidad?.mascotas)
+    || getMascotasPreferenceFromValues(perfil?.habitos);
 
   useEffect(() => {
     if (!perfilUsuarioId) {
@@ -542,8 +545,18 @@ export default function Perfil() {
               </p>
             </div>
 
+            {mascotasPreferencia && (
+              <div className="perfil-section contact-info-panel">
+                <h3>Preferencia de mascotas</h3>
+                <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotasPreferencia}`}>
+                  {getMascotasPreferenceLabel(mascotasPreferencia)}
+                </span>
+              </div>
+            )}
+
             <div className="perfil-section contact-info-panel">
               <h3>Contacto</h3>
+              <p className="whatsapp-note">Me puedes contactar por WhatsApp</p>
               <p><strong>Teléfono:</strong> {getTelefonoContacto(usuarioPerfil?.telefono || perfil.telefono)}</p>
             </div>
 

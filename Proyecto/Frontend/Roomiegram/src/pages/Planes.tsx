@@ -198,9 +198,6 @@ export default function Planes() {
       <header className="home-header">
         <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/home")} />
         <div className="home-header-actions">
-          <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>
-            Mi perfil
-          </button>
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/home")}>
             Inicio
           </button>

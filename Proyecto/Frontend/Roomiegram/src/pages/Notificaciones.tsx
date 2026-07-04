@@ -52,6 +52,10 @@ function getTelefonoContacto(telefono?: string) {
   return value || "Teléfono no informado";
 }
 
+function getReadHistoryKey(userId?: number) {
+  return userId ? `roomiegram:notificaciones-leidas:${userId}` : "";
+}
+
 export default function Notificaciones() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -64,6 +68,7 @@ export default function Notificaciones() {
   const [filters, setFilters] = useState(filterDefaults);
   const [message, setMessage] = useState("");
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [readHistory, setReadHistory] = useState<Notificacion[]>([]);
 
   useEffect(() => {
     Promise.allSettled([
@@ -89,10 +94,45 @@ export default function Notificaciones() {
       .catch(() => setMessage("Servicio no disponible. Intenta nuevamente."));
   }, []);
 
+  useEffect(() => {
+    const key = getReadHistoryKey(user?.id);
+    if (!key) {
+      setReadHistory([]);
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(key);
+      setReadHistory(stored ? JSON.parse(stored) : []);
+    } catch {
+      setReadHistory([]);
+    }
+  }, [user?.id]);
+
+  const guardarEnHistorial = (notificacion: Notificacion, estado: string) => {
+    const key = getReadHistoryKey(user?.id);
+    if (!key) return;
+
+    const item = { ...notificacion, estado };
+    setReadHistory((current) => {
+      const next = [item, ...current.filter((historial) => historial.id !== notificacion.id)].slice(0, 50);
+      window.localStorage.setItem(key, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const notificacionesVisibles = useMemo(() => {
+    const idsActivos = new Set(notificaciones.map((notificacion) => notificacion.id).filter(Boolean));
+    return [
+      ...notificaciones,
+      ...readHistory.filter((notificacion) => !notificacion.id || !idsActivos.has(notificacion.id)),
+    ];
+  }, [notificaciones, readHistory]);
+
   const misNotificaciones = useMemo(() => {
     if (!user?.id) return [];
-    return notificaciones.filter((notificacion) => notificacion.usuarioReceptorId === user.id);
-  }, [notificaciones, user?.id]);
+    return notificacionesVisibles.filter((notificacion) => notificacion.usuarioReceptorId === user.id);
+  }, [notificacionesVisibles, user?.id]);
 
   const invitacionesPendientes = useMemo(() => {
     return misNotificaciones.filter((notificacion) =>
@@ -231,6 +271,16 @@ export default function Notificaciones() {
   const hasActiveFilters =
     Boolean(filters.busqueda.trim()) || filters.tipo !== "todos" || filters.estado !== "todos";
 
+  const notificacionesNoLeidas = useMemo(
+    () => notificacionesFiltradas.filter((notificacion) => notificacion.estado === "PENDIENTE"),
+    [notificacionesFiltradas],
+  );
+
+  const notificacionesLeidas = useMemo(
+    () => notificacionesFiltradas.filter((notificacion) => notificacion.estado !== "PENDIENTE"),
+    [notificacionesFiltradas],
+  );
+
   const aceptarNotificacionPendiente = async (notificacion: Notificacion) => {
     if (!user?.id || !notificacion.id) return;
     const hogar = getHogarNotificacion(notificacion);
@@ -263,6 +313,7 @@ export default function Notificaciones() {
         setMessage(resultado.message);
       }
 
+      guardarEnHistorial(notificacion, "ACEPTADA");
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo aceptar la solicitud.");
@@ -292,6 +343,7 @@ export default function Notificaciones() {
         await rechazarInvitacionHogar({ notificacionId: notificacion.id });
       }
 
+      guardarEnHistorial(notificacion, "RECHAZADA");
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
       setMessage(esSolicitudRecibida(notificacion) ? "Solicitud rechazada." : "Invitación rechazada.");
     } catch {
@@ -307,8 +359,9 @@ export default function Notificaciones() {
     try {
       setProcessingId(notificacion.id);
       await notificacionService.eliminar(notificacion.id);
+      guardarEnHistorial(notificacion, "LEIDA");
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
-      setMessage("Notificación marcada como leída.");
+      setMessage("Notificación marcada como leída y guardada en historial.");
     } catch {
       setMessage("No se pudo actualizar la notificación de tarea.");
     } finally {
@@ -322,13 +375,64 @@ export default function Notificaciones() {
     try {
       setProcessingId(notificacion.id);
       await notificacionService.eliminar(notificacion.id);
+      guardarEnHistorial(notificacion, "LEIDA");
       setNotificaciones((current) => current.filter((item) => item.id !== notificacion.id));
-      setMessage("Notificación descartada.");
+      setMessage("Notificación guardada en historial.");
     } catch {
       setMessage("No se pudo completar la acción. Intenta nuevamente.");
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const renderAviso = (notificacion: Notificacion) => {
+    const esInteres = notificacion.tipo === "INTERES_ROOMIE";
+    const emisor = esInteres ? getUsuario(notificacion.usuarioEmisorId) : undefined;
+
+    return (
+      <article className="module-item" key={notificacion.id || `${notificacion.titulo}-${notificacion.fechaCreacion}`}>
+        <h4>{notificacion.titulo}</h4>
+        <p>{notificacion.mensaje}</p>
+        {esInteres && (
+          <div className="notification-context-grid mt-2">
+            <span><strong>Persona:</strong> {emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`}</span>
+            <span><strong>Teléfono:</strong> {getTelefonoContacto(emisor?.telefono)}</span>
+          </div>
+        )}
+        <span>{formatLabel(notificacion.tipo)} - {formatLabel(notificacion.estado)} - {formatDate(notificacion.fechaCreacion)}</span>
+        {esInteres && notificacion.estado === "PENDIENTE" && (
+          <div className="dashboard-actions mt-3">
+            <button
+              className="btn btn-outline-success btn-sm"
+              type="button"
+              onClick={() => navigate(`/perfil-publico/${notificacion.usuarioEmisorId}?${buildInterestParams(notificacion)}`)}
+            >
+              Ver perfil
+            </button>
+            <button
+              className="btn btn-outline-danger btn-sm"
+              type="button"
+              disabled={processingId === notificacion.id}
+              onClick={() => descartarNotificacion(notificacion)}
+            >
+              Descartar
+            </button>
+          </div>
+        )}
+        {!esInteres && notificacion.estado === "PENDIENTE" && (
+          <div className="dashboard-actions mt-3">
+            <button
+              className="btn btn-outline-danger btn-sm"
+              type="button"
+              disabled={processingId === notificacion.id}
+              onClick={() => descartarNotificacion(notificacion)}
+            >
+              Descartar
+            </button>
+          </div>
+        )}
+      </article>
+    );
   };
 
   return (
@@ -337,7 +441,6 @@ export default function Notificaciones() {
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/home")}>Inicio</button>
-          <button className="btn btn-outline-success" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <LogoutButton />
         </div>
       </header>
@@ -577,55 +680,29 @@ export default function Notificaciones() {
           <div className="sin-resultados"><p>No tienes notificaciones por ahora.</p></div>
         ) : notificacionesFiltradas.length === 0 ? (
           <div className="sin-resultados"><p>No se encontraron avisos con esos filtros.</p></div>
-        ) : notificacionesFiltradas.map((notificacion) => {
-          const esInteres = notificacion.tipo === "INTERES_ROOMIE";
-          const emisor = esInteres ? getUsuario(notificacion.usuarioEmisorId) : undefined;
+        ) : (
+          <>
+            <div className="history-section">
+              <div className="section-heading-row">
+                <h4>No leídas</h4>
+                <span className="status-pill">{notificacionesNoLeidas.length}</span>
+              </div>
+              {notificacionesNoLeidas.length === 0 ? (
+                <div className="sin-resultados"><p>No hay avisos no leídos en esta vista.</p></div>
+              ) : notificacionesNoLeidas.map(renderAviso)}
+            </div>
 
-          return (
-            <article className="module-item" key={notificacion.id || notificacion.titulo}>
-              <h4>{notificacion.titulo}</h4>
-              <p>{notificacion.mensaje}</p>
-              {esInteres && (
-                <div className="notification-context-grid mt-2">
-                  <span><strong>Persona:</strong> {emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`}</span>
-                  <span><strong>Teléfono:</strong> {getTelefonoContacto(emisor?.telefono)}</span>
-                </div>
-              )}
-              <span>{formatLabel(notificacion.tipo)} - {formatLabel(notificacion.estado)} - {formatDate(notificacion.fechaCreacion)}</span>
-              {esInteres && (
-                <div className="dashboard-actions mt-3">
-                  <button
-                    className="btn btn-outline-success btn-sm"
-                    type="button"
-                    onClick={() => navigate(`/perfil-publico/${notificacion.usuarioEmisorId}?${buildInterestParams(notificacion)}`)}
-                  >
-                    Ver perfil
-                  </button>
-                  <button
-                    className="btn btn-outline-danger btn-sm"
-                    type="button"
-                    disabled={processingId === notificacion.id}
-                    onClick={() => descartarNotificacion(notificacion)}
-                  >
-                    Descartar
-                  </button>
-                </div>
-              )}
-              {!esInteres && (
-                <div className="dashboard-actions mt-3">
-                  <button
-                    className="btn btn-outline-danger btn-sm"
-                    type="button"
-                    disabled={processingId === notificacion.id}
-                    onClick={() => descartarNotificacion(notificacion)}
-                  >
-                    Descartar
-                  </button>
-                </div>
-              )}
-            </article>
-          );
-        })}
+            <div className="history-section">
+              <div className="section-heading-row">
+                <h4>Historial</h4>
+                <span className="status-pill success">{notificacionesLeidas.length}</span>
+              </div>
+              {notificacionesLeidas.length === 0 ? (
+                <div className="sin-resultados"><p>Aun no hay avisos leídos en esta vista.</p></div>
+              ) : notificacionesLeidas.map(renderAviso)}
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

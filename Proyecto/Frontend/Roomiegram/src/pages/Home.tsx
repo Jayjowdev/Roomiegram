@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { publicacionService, type Historia } from "../services/publicacionService";
 import type { Publicacion } from "../types/Publicacion";
 import { deleteLocalPublicacion, getLocalPublicaciones, isGeneratedProfile } from "../utils/localPublicaciones";
+import { getMascotasPreferenceFromValues, getMascotasPreferenceLabel } from "../utils/preferenciasCompatibilidad";
 import { getPublicacionImage } from "../utils/publicacionImages";
 import { COMUNAS_SANTIAGO } from "../utils/ubicaciones";
 
@@ -51,6 +52,7 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     precio: pub.precio || pub.precioMensual || 0,
     ubicacion: pub.ubicacion,
     descripcion: pub.descripcion,
+    habitos: pub.habitos,
     amenidades: tipo === "ofrezco_casa"
       ? [
           `${pub.numeroHabitaciones || 1} habitación(es)`,
@@ -61,6 +63,17 @@ function mapBackendPublicacion(pub: Publicacion): Publicacion {
     imagen,
     galeria,
   };
+}
+
+function renderMascotasBadge(pub: Publicacion) {
+  const mascotas = getMascotasPreferenceFromValues(pub.habitos);
+  if (!mascotas) return null;
+
+  return (
+    <span className={`pet-preference-badge pet-preference-inline pet-preference-${mascotas}`}>
+      {getMascotasPreferenceLabel(mascotas)}
+    </span>
+  );
 }
 
 const beneficiosHome = [
@@ -230,7 +243,6 @@ export default function Home() {
       <header className="home-header">
         <img src={logo} alt="RoomieGram" className="home-logo" onClick={() => navigate("/home")} />
         <div className="home-header-actions">
-          <button className="btn btn-outline-success me-2" onClick={() => navigate("/mi-perfil")}>Mi perfil</button>
           <button className="btn btn-outline-success me-2" onClick={() => navigate("/planes")}>Planes</button>
           <NotificationBell className="me-2" />
           {/* <button className="btn btn-outline-success me-2" onClick={() => navigate("/compatibilidad")}>Buscar compatibilidad</button> */}
@@ -327,6 +339,7 @@ export default function Home() {
                       <p className="home-ubicacion">Ubicación: {getLocation(pub)}</p>
                     </div>
                     <p className="home-desc">{pub.descripcion}</p>
+                    {renderMascotasBadge(pub)}
                     {pub.intereses && <div className="home-tags">{pub.intereses.map((tag) => <span key={tag} className="home-tag">{tag}</span>)}</div>}
                     <button
                       className="btn btn-success w-100 mt-4"
@@ -348,6 +361,7 @@ export default function Home() {
                     </div>
                     <p className="home-desc-oferta"><strong>Ofrecido por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} años)` : ""}</p>
                     <p className="home-desc">{pub.descripcion}</p>
+                    {renderMascotasBadge(pub)}
                     {pub.amenidades && <div className="home-tags">{pub.amenidades.map((amenidad) => <span key={amenidad} className="home-tag amenidad-tag">{amenidad}</span>)}</div>}
                     <button className="btn btn-outline-success w-100 mt-4" onClick={() => navigate(`/detalle-publicacion/${pub.id}`)}>Ver detalles</button>
                     {puedeEliminarPublicacion(pub) && <button className="btn btn-outline-danger w-100 mt-2" onClick={() => handleDelete(pub)}>Eliminar</button>}

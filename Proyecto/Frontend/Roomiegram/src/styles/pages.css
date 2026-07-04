@@ -75,6 +75,19 @@
   border-color: #1f7a63;
 }
 
+.status-pill.danger {
+  background: #fdeaea;
+  color: #c0392b;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
 .plan-card-activo {
   background: #eef8f5;
 }

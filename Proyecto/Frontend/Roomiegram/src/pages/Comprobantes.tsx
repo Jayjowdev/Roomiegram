@@ -7,8 +7,10 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { usuarioService } from "../services/usuarioService";
 import type { Comprobante, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+import type { UsuarioResumen } from "../types/Usuario";
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
   if (!userId) return false;
@@ -46,6 +48,7 @@ export default function Comprobantes() {
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [gastos, setGastos] = useState<HogarCuenta[]>([]);
   const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [hogarCuentaId, setHogarCuentaId] = useState("");
   const [montoPagado, setMontoPagado] = useState("");
   const [nombreArchivo, setNombreArchivo] = useState("");
@@ -62,11 +65,12 @@ export default function Comprobantes() {
   }, [location.search]);
 
   useEffect(() => {
-    Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar()])
-      .then(([hogaresResult, gastosResult, comprobantesResult]) => {
+    Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, gastosResult, comprobantesResult, usuariosResult]) => {
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setGastos(gastosResult.status === "fulfilled" ? gastosResult.value : []);
         setComprobantes(comprobantesResult.status === "fulfilled" ? comprobantesResult.value : []);
+        setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
 
         if (hogaresResult.status === "rejected" || gastosResult.status === "rejected" || comprobantesResult.status === "rejected") {
           setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios esten activos.");
@@ -130,6 +134,7 @@ export default function Comprobantes() {
         hogarCuentaId: Number(hogarCuentaId),
         usuarioId: user?.id || 1,
         nombreArchivo: nombreArchivoLimpio,
+        tituloGasto: selectedGasto?.descripcion || "Gasto del hogar",
         tipoContenido: archivo?.type || "text/plain",
         tamanoArchivo: archivo?.size || nombreArchivoLimpio.length,
         montoPagado: Number(montoPagado),
@@ -251,11 +256,20 @@ export default function Comprobantes() {
                 <div className="sin-resultados"><p>No hay comprobantes registrados para este hogar.</p></div>
               ) : comprobantesDelHogar.map((comprobante) => {
                 const gasto = gastosDelHogar.find((item) => item.id === comprobante.hogarCuentaId);
+                const tituloGasto = comprobante.tituloGasto || gasto?.descripcion || "Gasto del hogar";
                 return (
                   <article className="module-item" key={comprobante.id || comprobante.nombreArchivo}>
                     <h4>{comprobante.nombreArchivo}</h4>
                     <p>{formatCurrency(comprobante.montoPagado)}</p>
-                    <span>{gasto?.descripcion || "Gasto del hogar"} - Integrante del hogar - {formatDate(comprobante.fechaSubida)}</span>
+                    <span>
+                      {tituloGasto} -{" "}
+                      {comprobante.usuarioId === user?.id
+                        ? user?.nombre || user?.usuario || "Tú"
+                        : usuarios.find((u) => u.id === comprobante.usuarioId)?.nombre ||
+                          usuarios.find((u) => u.id === comprobante.usuarioId)?.usuario ||
+                          "Integrante del hogar"}{" "}
+                      - {formatDate(comprobante.fechaSubida)}
+                    </span>
                     {comprobante.observacion && <p>{comprobante.observacion}</p>}
                     <div className="item-actions">
                       <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarComprobante(comprobante)}>Eliminar</button>

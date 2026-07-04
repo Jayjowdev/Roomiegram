@@ -27,8 +27,10 @@ import com.roomiegram.hogar.dto.AdminActionRequest;
 import com.roomiegram.hogar.dto.CreateHogarRequest;
 import com.roomiegram.hogar.dto.RecursoHogarRequest;
 import com.roomiegram.hogar.dto.UsuarioRequest;
+import com.roomiegram.hogar.model.EstadoVisita;
 import com.roomiegram.hogar.model.Hogar;
 import com.roomiegram.hogar.repository.HogarRepository;
+import com.roomiegram.hogar.repository.VisitaRepository;
 
 @ExtendWith(MockitoExtension.class)
 class HogarServiceTest {
@@ -38,6 +40,9 @@ class HogarServiceTest {
 
     @Mock
     private NotificationPublisher notificationPublisher;
+
+    @Mock
+    private VisitaRepository visitaRepository;
 
     @Mock
     private RestTemplate restTemplate;
@@ -101,6 +106,8 @@ class HogarServiceTest {
         Hogar hogar = crearHogarPersistido();
         when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
         when(hogarRepository.save(any(Hogar.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(visitaRepository.existsByHogarIdAndUsuarioVisitanteIdAndEstado(1L, 2L, EstadoVisita.REALIZADA))
+                .thenReturn(true);
 
         Hogar actualizado = hogarService.solicitarIngreso(1L, new UsuarioRequest(2L));
 
@@ -114,6 +121,8 @@ class HogarServiceTest {
         Hogar hogar = crearHogarPersistido();
         when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
         when(hogarRepository.save(any(Hogar.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(visitaRepository.existsByHogarIdAndUsuarioVisitanteIdAndEstado(1L, 2L, EstadoVisita.REALIZADA))
+                .thenReturn(true);
         org.mockito.Mockito.doThrow(new IllegalStateException("fallo notificacion"))
                 .when(notificationPublisher)
                 .publicarSolicitudIngreso(hogar, 2L);
@@ -124,6 +133,23 @@ class HogarServiceTest {
         assertEquals("No se pudo notificar al administrador del hogar", exception.getMessage());
         assertTrue(!hogar.getSolicitudesPendientesIds().contains(2L));
         verify(hogarRepository, org.mockito.Mockito.times(2)).save(hogar);
+    }
+
+    @Test
+    void solicitarIngresoDebeFallarCuandoNoExisteVisitaRealizada() {
+        Hogar hogar = crearHogarPersistido();
+        when(hogarRepository.findById(1L)).thenReturn(Optional.of(hogar));
+        when(visitaRepository.existsByHogarIdAndUsuarioVisitanteIdAndEstado(1L, 2L, EstadoVisita.REALIZADA))
+                .thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> hogarService.solicitarIngreso(1L, new UsuarioRequest(2L)));
+
+        assertEquals(
+                "Debes completar una visita al hogar antes de solicitar ingreso. Agenda tu visita desde el panel de hogares.",
+                exception.getMessage());
+        verify(hogarRepository, never()).save(any(Hogar.class));
+        verify(notificationPublisher, never()).publicarSolicitudIngreso(any(Hogar.class), any(Long.class));
     }
 
     @Test

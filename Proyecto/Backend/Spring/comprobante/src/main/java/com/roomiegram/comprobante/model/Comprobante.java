@@ -33,6 +33,9 @@ public class Comprobante {
     @Column(nullable = false, length = 255)
     private String nombreArchivo;
 
+    @Column(name = "titulo_gasto", nullable = false, length = 255)
+    private String tituloGasto;
+
     @Column(nullable = false, length = 100)
     private String tipoContenido;
 
@@ -70,6 +73,9 @@ public class Comprobante {
 
     public String getNombreArchivo() { return nombreArchivo; }
     public void setNombreArchivo(String nombreArchivo) { this.nombreArchivo = nombreArchivo; }
+
+    public String getTituloGasto() { return tituloGasto; }
+    public void setTituloGasto(String tituloGasto) { this.tituloGasto = tituloGasto; }
 
     public String getTipoContenido() { return tipoContenido; }
     public void setTipoContenido(String tipoContenido) { this.tipoContenido = tipoContenido; }

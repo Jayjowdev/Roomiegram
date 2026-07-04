@@ -67,6 +67,7 @@ class ComprobanteServiceTest {
         comprobante.setHogarCuentaId(10L);
         comprobante.setUsuarioId(20L);
         comprobante.setNombreArchivo(nombreArchivo);
+        comprobante.setTituloGasto("Internet y servicios basicos");
         comprobante.setTipoContenido("application/pdf");
         comprobante.setTamanoArchivo(2048L);
         comprobante.setMontoPagado(new BigDecimal(montoPagado));

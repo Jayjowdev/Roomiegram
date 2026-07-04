@@ -19,6 +19,10 @@ public class ComprobanteService {
 
 	public Comprobante crearComprobante(Comprobante comprobante) {
 		comprobante.setId(null);
+		if (comprobante.getTituloGasto() == null || comprobante.getTituloGasto().isBlank()) {
+			throw new IllegalArgumentException("El titulo del gasto es obligatorio para identificar el comprobante");
+		}
+		comprobante.setTituloGasto(comprobante.getTituloGasto().trim());
 		return comprobanteRepository.save(comprobante);
 	}
 
@@ -37,6 +41,7 @@ public class ComprobanteService {
 		comprobanteExistente.setHogarCuentaId(comprobanteActualizado.getHogarCuentaId());
 		comprobanteExistente.setUsuarioId(comprobanteActualizado.getUsuarioId());
 		comprobanteExistente.setNombreArchivo(comprobanteActualizado.getNombreArchivo());
+		comprobanteExistente.setTituloGasto(comprobanteActualizado.getTituloGasto());
 		comprobanteExistente.setTipoContenido(comprobanteActualizado.getTipoContenido());
 		comprobanteExistente.setTamanoArchivo(comprobanteActualizado.getTamanoArchivo());
 		comprobanteExistente.setMontoPagado(comprobanteActualizado.getMontoPagado());

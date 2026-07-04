@@ -174,7 +174,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8087/tareas/guardar" `
 | `POST` | `/hogares` | Crear hogar |
 | `GET` | `/hogares` | Listar hogares |
 | `GET` | `/hogares/{id}` | Obtener hogar |
-| `POST` | `/hogares/{id}/solicitudes` | Solicitar ingreso |
+| `POST` | `/hogares/{id}/solicitudes` | Solicitar ingreso (requiere visita realizada) |
 | `POST` | `/hogares/{id}/solicitudes/{usuarioId}/aprobar` | Aprobar solicitud |
 | `POST` | `/hogares/{id}/solicitudes/{usuarioId}/rechazar` | Rechazar solicitud |
 | `DELETE` | `/hogares/{id}/integrantes/{usuarioId}?administradorId={idAdmin}` | Remover integrante |
@@ -183,6 +183,12 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8087/tareas/guardar" `
 | `POST` | `/hogares/{id}/comprobantes` | Asociar comprobante |
 | `POST` | `/hogares/{id}/publicaciones` | Asociar publicacion |
 | `DELETE` | `/hogares/{id}?administradorId={idAdmin}` | Eliminar hogar |
+| `POST` | `/hogares/{id}/visitas` | Agendar visita / inspeccion |
+| `GET` | `/hogares/{id}/visitas` | Listar visitas de un hogar |
+| `GET` | `/hogares/{id}/visitas/mis-visitas?usuarioVisitanteId={id}` | Listar mis visitas de un hogar |
+| `GET` | `/hogares/visitas/mis-visitas?usuarioVisitanteId={id}` | Listar todas mis visitas |
+| `PUT` | `/hogares/{id}/visitas/{visitaId}` | Actualizar estado de visita (admin) |
+| `GET` | `/hogares/{id}/visitas/{visitaId}` | Obtener una visita |
 
 Ejemplo crear hogar:
 
@@ -222,7 +228,7 @@ Ejemplo crear comprobante:
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8082/comprobantes" `
   -ContentType "application/json" `
-  -Body '{"hogarCuentaId":1,"usuarioId":1,"nombreArchivo":"pago-demo.txt","tipoContenido":"text/plain","tamanoArchivo":12,"montoPagado":12000,"observacion":"Pago de prueba","archivo":"cGFnbw=="}'
+  -Body '{"hogarCuentaId":1,"usuarioId":1,"nombreArchivo":"pago-demo.txt","tituloGasto":"Internet mensual","tipoContenido":"text/plain","tamanoArchivo":12,"montoPagado":12000,"observacion":"Pago de prueba","archivo":"cGFnbw=="}'
 ```
 
 ### notificacion - puerto 8085
@@ -236,7 +242,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8082/comprobantes" `
 
 Valores permitidos:
 
-- `tipo`: `INVITACION_HOGAR`, `CUENTA_HOGAR`, `TAREA_HOGAR`
+- `tipo`: `INVITACION_HOGAR`, `CUENTA_HOGAR`, `TAREA_HOGAR`, `VISITA_HOGAR`
 - `estado`: `PENDIENTE`, `LEIDA`, `ACEPTADA`, `RECHAZADA`
 
 Ejemplo crear notificacion:

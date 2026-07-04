@@ -1,5 +1,6 @@
 import { getApiErrorMessage, hogarApi } from "../config/api"
 import type { CreateHogarPayload, Hogar } from "../types/Hogar"
+import type { ActualizarVisitaPayload, CrearVisitaPayload, Visita } from "../types/Visita"
 
 export async function listarHogares() {
   try {
@@ -72,6 +73,57 @@ export async function agregarPublicacionHogar(hogarId: number, administradorId: 
   }
 }
 
+// Visitas / inspecciones
+
+export async function crearVisita(hogarId: number, payload: CrearVisitaPayload) {
+  try {
+    const { data } = await hogarApi.post<Visita>(`/hogares/${hogarId}/visitas`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function listarVisitasPorHogar(hogarId: number) {
+  try {
+    const { data } = await hogarApi.get<Visita[]>(`/hogares/${hogarId}/visitas`)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function listarMisVisitasPorHogar(hogarId: number, usuarioVisitanteId: number) {
+  try {
+    const { data } = await hogarApi.get<Visita[]>(`/hogares/${hogarId}/visitas/mis-visitas`, {
+      params: { usuarioVisitanteId },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function listarMisVisitas(usuarioVisitanteId: number) {
+  try {
+    const { data } = await hogarApi.get<Visita[]>("/hogares/visitas/mis-visitas", {
+      params: { usuarioVisitanteId },
+    })
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function actualizarVisita(hogarId: number, visitaId: number, payload: ActualizarVisitaPayload) {
+  try {
+    const { data } = await hogarApi.put<Visita>(`/hogares/${hogarId}/visitas/${visitaId}`, payload)
+    return data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
 export const hogarService = {
   listar: listarHogares,
   crear: crearHogar,
@@ -95,4 +147,9 @@ export const hogarService = {
       .then(({ data }) => data),
   agregarPublicacion: agregarPublicacionHogar,
   eliminar: eliminarHogar,
+  crearVisita,
+  listarVisitasPorHogar,
+  listarMisVisitasPorHogar,
+  listarMisVisitas,
+  actualizarVisita,
 }

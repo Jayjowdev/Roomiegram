@@ -8,17 +8,21 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.roomiegram.hogar.dto.ActualizarVisitaAdminRequest;
 import com.roomiegram.hogar.dto.AdminActionRequest;
+import com.roomiegram.hogar.dto.CrearVisitaRequest;
 import com.roomiegram.hogar.dto.CreateHogarRequest;
 import com.roomiegram.hogar.dto.RecursoHogarRequest;
 import com.roomiegram.hogar.dto.UsuarioRequest;
 import com.roomiegram.hogar.model.Hogar;
+import com.roomiegram.hogar.model.Visita;
 import com.roomiegram.hogar.service.HogarService;
 
 @RestController
@@ -125,6 +129,81 @@ public class HogarController {
         try {
             hogarService.eliminarHogar(id, administradorId);
             return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    // Endpoints de visitas / inspecciones
+
+    @PostMapping("/{id}/visitas")
+    public ResponseEntity<?> crearVisita(@PathVariable Long id, @RequestBody CrearVisitaRequest request) {
+        try {
+            CrearVisitaRequest payload = new CrearVisitaRequest(
+                    id,
+                    request.usuarioVisitanteId(),
+                    request.fechaVisita(),
+                    request.comentarios());
+            Visita visita = hogarService.crearVisita(payload);
+            return ResponseEntity.status(HttpStatus.CREATED).body(visita);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/visitas")
+    public ResponseEntity<?> listarVisitasPorHogar(@PathVariable Long id) {
+        try {
+            List<Visita> visitas = hogarService.listarVisitasPorHogar(id);
+            return ResponseEntity.ok(visitas);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/visitas/mis-visitas")
+    public ResponseEntity<?> listarMisVisitasPorHogar(
+            @PathVariable Long id,
+            @RequestParam Long usuarioVisitanteId) {
+        try {
+            List<Visita> visitas = hogarService.listarVisitasPorHogarYVisitante(id, usuarioVisitanteId);
+            return ResponseEntity.ok(visitas);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/visitas/mis-visitas")
+    public ResponseEntity<?> listarMisVisitas(@RequestParam Long usuarioVisitanteId) {
+        try {
+            List<Visita> visitas = hogarService.listarVisitasPorVisitante(usuarioVisitanteId);
+            return ResponseEntity.ok(visitas);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/visitas/{visitaId}")
+    public ResponseEntity<?> obtenerVisita(@PathVariable Long id, @PathVariable Long visitaId) {
+        try {
+            Visita visita = hogarService.obtenerVisita(visitaId);
+            if (!visita.getHogarId().equals(id)) {
+                throw new IllegalArgumentException("La visita no pertenece al hogar indicado");
+            }
+            return ResponseEntity.ok(visita);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/visitas/{visitaId}")
+    public ResponseEntity<?> actualizarEstadoVisita(
+            @PathVariable Long id,
+            @PathVariable Long visitaId,
+            @RequestBody ActualizarVisitaAdminRequest request) {
+        try {
+            Visita visita = hogarService.actualizarEstadoVisita(visitaId, request);
+            return ResponseEntity.ok(visita);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }

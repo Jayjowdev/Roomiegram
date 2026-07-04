@@ -19,6 +19,8 @@ import Gastos from "./pages/Gastos"
 import Comprobantes from "./pages/Comprobantes"
 import Notificaciones from "./pages/Notificaciones"
 import Hogares from "./pages/Hogares"
+import SolicitudesHogar from "./pages/SolicitudesHogar"
+import VisitasHogar from "./pages/VisitasHogar"
 
 export default function App() {
   return (
@@ -42,6 +44,8 @@ export default function App() {
         <Route path="/comprobantes" element={<ProtectedRoute><Comprobantes /></ProtectedRoute>} />
         <Route path="/notificaciones" element={<ProtectedRoute><Notificaciones /></ProtectedRoute>} />
         <Route path="/hogares" element={<ProtectedRoute><Hogares /></ProtectedRoute>} />
+        <Route path="/hogares/:id/visitas" element={<ProtectedRoute><VisitasHogar /></ProtectedRoute>} />
+        <Route path="/solicitudes" element={<ProtectedRoute><SolicitudesHogar /></ProtectedRoute>} />
         <Route path="/planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>

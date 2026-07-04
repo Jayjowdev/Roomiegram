@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
@@ -9,6 +9,7 @@ import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Hogar } from "../types/Hogar";
 import type { UsuarioResumen } from "../types/Usuario";
+import type { Visita } from "../types/Visita";
 import { deleteLocalPublicacion } from "../utils/localPublicaciones";
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
@@ -57,6 +58,7 @@ export default function Hogares() {
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
+  const [visitas, setVisitas] = useState<Visita[]>([]);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [message, setMessage] = useState("");
@@ -64,16 +66,42 @@ export default function Hogares() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingRequest, setProcessingRequest] = useState("");
 
-  const loadHogares = () => {
+  const loadHogares = useCallback(() => {
     setIsLoading(true);
-    Promise.allSettled([hogarService.listar(), usuarioService.listar()])
-      .then(([hogaresResult, usuariosResult]) => {
+
+    if (!user?.id) {
+      Promise.allSettled([hogarService.listar(), usuarioService.listar()])
+        .then(([hogaresResult, usuariosResult]) => {
+          const hogaresData = hogaresResult.status === "fulfilled"
+            ? hogaresResult.value.filter((hogar) => !isSeedHogar(hogar))
+            : [];
+
+          setHogares(hogaresData);
+          setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
+
+          if (hogaresResult.status === "rejected") {
+            setMessage("Servicio no disponible. Intenta nuevamente.");
+          } else {
+            setMessage(hogaresData.length ? "" : "No hay hogares registrados.");
+          }
+        })
+        .finally(() => setIsLoading(false));
+      return;
+    }
+
+    Promise.allSettled([
+      hogarService.listar(),
+      usuarioService.listar(),
+      hogarService.listarMisVisitas(user.id),
+    ])
+      .then(([hogaresResult, usuariosResult, visitasResult]) => {
         const hogaresData = hogaresResult.status === "fulfilled"
           ? hogaresResult.value.filter((hogar) => !isSeedHogar(hogar))
           : [];
 
         setHogares(hogaresData);
         setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
+        setVisitas(visitasResult.status === "fulfilled" ? visitasResult.value : []);
 
         if (hogaresResult.status === "rejected") {
           setMessage("Servicio no disponible. Intenta nuevamente.");
@@ -82,9 +110,11 @@ export default function Hogares() {
         }
       })
       .finally(() => setIsLoading(false));
-  };
+  }, [user?.id]);
 
-  useEffect(loadHogares, []);
+  useEffect(() => {
+    loadHogares();
+  }, [loadHogares]);
 
   const misHogares = useMemo(() => {
     return hogares.filter((hogar) => userBelongsToHogar(hogar, user?.id));
@@ -105,6 +135,16 @@ export default function Hogares() {
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
+
+  const visitasRealizadasPorHogar = useMemo(() => {
+    const map = new Map<number, boolean>();
+    visitas.forEach((visita) => {
+      if (visita.estado === "REALIZADA" && visita.usuarioVisitanteId === user?.id) {
+        map.set(visita.hogarId, true);
+      }
+    });
+    return map;
+  }, [visitas, user?.id]);
 
   const updateHogar = (hogarActualizado: Hogar) => {
     setHogares((current) => current.map((hogar) => (hogar.id === hogarActualizado.id ? hogarActualizado : hogar)));
@@ -146,8 +186,8 @@ export default function Hogares() {
       setMessage("Hogar creado correctamente.");
       setNombre("");
       setDescripcion("");
-    } catch {
-      setMessage("Servicio no disponible. Intenta nuevamente.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Servicio no disponible. Intenta nuevamente.");
     } finally {
       setIsSaving(false);
     }
@@ -156,6 +196,11 @@ export default function Hogares() {
   const solicitarIngreso = async (hogarId: number) => {
     if (!user?.id) {
       setMessage("Debes iniciar sesion para solicitar ingreso.");
+      return;
+    }
+
+    if (!visitasRealizadasPorHogar.get(hogarId)) {
+      setMessage("Debes agendar y completar una visita al hogar antes de solicitar ingreso.");
       return;
     }
 
@@ -188,8 +233,8 @@ export default function Hogares() {
         : correoEnviado
           ? "Solicitud enviada correctamente. Se notifico al administrador del hogar y se envio el correo."
           : "Solicitud enviada correctamente. Se notifico al administrador del hogar, pero no se pudo enviar el correo.");
-    } catch {
-      setMessage("No se pudo enviar la solicitud. Revisa que el servicio este disponible.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo enviar la solicitud. Revisa que el servicio este disponible.");
     } finally {
       setProcessingRequest("");
     }
@@ -376,14 +421,24 @@ export default function Hogares() {
 
         {mode === "available" && (
           <div className="item-actions">
-            <button
-              className="btn btn-outline-success btn-sm"
-              type="button"
-              disabled={Boolean(processingRequest)}
-              onClick={() => solicitarIngreso(hogar.id)}
-            >
-              {processingRequest === `solicitar-${hogar.id}` ? "Enviando..." : "Solicitar ingreso"}
-            </button>
+            {visitasRealizadasPorHogar.get(hogar.id) ? (
+              <button
+                className="btn btn-outline-success btn-sm"
+                type="button"
+                disabled={Boolean(processingRequest)}
+                onClick={() => solicitarIngreso(hogar.id)}
+              >
+                {processingRequest === `solicitar-${hogar.id}` ? "Enviando..." : "Solicitar ingreso"}
+              </button>
+            ) : (
+              <button
+                className="btn btn-outline-success btn-sm"
+                type="button"
+                onClick={() => navigate(`/hogares/${hogar.id}/visitas`)}
+              >
+                Agendar visita
+              </button>
+            )}
           </div>
         )}
       </article>
@@ -420,6 +475,9 @@ export default function Hogares() {
       <header className="module-header">
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
+          <button className="btn btn-outline-success" type="button" onClick={() => navigate("/solicitudes")}>
+            Solicitudes
+          </button>
           <button className="btn btn-outline-success" type="button" onClick={() => navigate("/convivencia")}>
             Panel convivencia
           </button>

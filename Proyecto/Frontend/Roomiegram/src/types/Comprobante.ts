@@ -3,6 +3,7 @@ export type Comprobante = {
   hogarCuentaId: number
   usuarioId: number
   nombreArchivo: string
+  tituloGasto: string
   tipoContenido: string
   tamanoArchivo: number
   montoPagado: number
@@ -14,6 +15,7 @@ export type CreateComprobantePayload = {
   hogarCuentaId: number
   usuarioId: number
   nombreArchivo: string
+  tituloGasto: string
   tipoContenido: string
   tamanoArchivo: number
   montoPagado: number

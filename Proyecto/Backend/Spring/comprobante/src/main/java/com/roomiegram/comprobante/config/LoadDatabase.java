@@ -22,6 +22,7 @@ public class LoadDatabase {
 				comprobante.setHogarCuentaId(1L);
 				comprobante.setUsuarioId(1L);
 				comprobante.setNombreArchivo("comprobante-arriendo.pdf");
+				comprobante.setTituloGasto("Arriendo mensual");
 				comprobante.setTipoContenido("application/pdf");
 				comprobante.setTamanoArchivo(2048L);
 				comprobante.setMontoPagado(new BigDecimal("350000.00"));

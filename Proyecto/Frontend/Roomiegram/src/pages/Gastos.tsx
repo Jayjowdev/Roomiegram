@@ -7,8 +7,10 @@ import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { usuarioService } from "../services/usuarioService";
 import type { CuentaDeudor, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
+import type { UsuarioResumen } from "../types/Usuario";
 
 function userBelongsToHogar(hogar: Hogar, userId?: number) {
   if (!userId) return false;
@@ -19,9 +21,10 @@ function isHogarAdmin(hogar?: Hogar, userId?: number) {
   return !!hogar && !!userId && (hogar.usuarioAdministradorId === userId || hogar.usuarioCreadorId === userId);
 }
 
-function formatMemberName(usuarioId: number, currentUser?: { id: number; nombre?: string; usuario?: string }) {
+function formatMemberName(usuarioId: number, currentUser?: { id: number; nombre?: string; usuario?: string }, usuarios?: UsuarioResumen[]) {
   if (usuarioId === currentUser?.id) return currentUser.nombre || currentUser.usuario || "Tú";
-  return "Integrante del hogar";
+  const found = usuarios?.find((u) => u.id === usuarioId);
+  return found?.nombre || found?.usuario || "Integrante del hogar";
 }
 
 function formatCurrency(value?: number) {
@@ -38,6 +41,7 @@ export default function Gastos() {
   const { user } = useAuth();
   const [hogares, setHogares] = useState<Hogar[]>([]);
   const [gastos, setGastos] = useState<HogarCuenta[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioResumen[]>([]);
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
   const [deudoresIds, setDeudoresIds] = useState<number[]>([]);
@@ -46,10 +50,11 @@ export default function Gastos() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.allSettled([hogarService.listar(), gastoService.listar()])
-      .then(([hogaresResult, gastosResult]) => {
+    Promise.allSettled([hogarService.listar(), gastoService.listar(), usuarioService.listar()])
+      .then(([hogaresResult, gastosResult, usuariosResult]) => {
         setHogares(hogaresResult.status === "fulfilled" ? hogaresResult.value : []);
         setGastos(gastosResult.status === "fulfilled" ? gastosResult.value : []);
+        setUsuarios(usuariosResult.status === "fulfilled" ? usuariosResult.value : []);
 
         if (hogaresResult.status === "rejected" || gastosResult.status === "rejected") {
           setMessage("Algunos datos no se pudieron cargar. Revisa que los servicios estén activos.");
@@ -167,7 +172,7 @@ export default function Gastos() {
               {integrantes.map((usuarioId) => (
                 <label className="member-check" key={usuarioId}>
                   <input type="checkbox" checked={deudoresIds.includes(usuarioId)} onChange={() => toggleDeudor(usuarioId)} disabled={!canManage} />
-                  <span>{formatMemberName(usuarioId, user || undefined)}</span>
+                  <span>{formatMemberName(usuarioId, user || undefined, usuarios)}</span>
                 </label>
               ))}
             </div>
@@ -183,7 +188,12 @@ export default function Gastos() {
               <article className="module-item" key={gasto.id}>
                 <h4>{gasto.descripcion}</h4>
                 <p>{formatCurrency(gasto.monto)}</p>
-                <span>{gasto.deudores?.length || 0} deudor(es){gasto.montoPorPersona ? ` · ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}</span>
+                <span>
+                  {gasto.deudores?.length
+                    ? gasto.deudores.map((d) => formatMemberName(d.usuarioId, user || undefined, usuarios)).join(" · ")
+                    : "Sin deudores"}
+                  {gasto.montoPorPersona ? ` — ${formatCurrency(gasto.montoPorPersona)} por persona` : ""}
+                </span>
                 <div className="item-actions">
                   <button className="btn btn-outline-success btn-sm" onClick={() => navigate(`/comprobantes?gasto=${gasto.id}`)}>
                     Subir comprobante

@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS hogar_publicaciones;
 DROP TABLE IF EXISTS hogar_comprobantes;
 DROP TABLE IF EXISTS hogar_cuentas;
 DROP TABLE IF EXISTS hogar_tareas;
+DROP TABLE IF EXISTS visitas;
 DROP TABLE IF EXISTS hogar_solicitudes_pendientes;
 DROP TABLE IF EXISTS hogar_integrantes;
 DROP TABLE IF EXISTS publicacion_galeria;
@@ -126,6 +127,25 @@ CREATE TABLE hogar_solicitudes_pendientes (
     ON DELETE CASCADE
 );
 
+CREATE TABLE visitas (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  hogar_id BIGINT NOT NULL,
+  usuario_visitante_id BIGINT NOT NULL,
+  fecha_visita DATETIME NOT NULL,
+  estado ENUM('PENDIENTE', 'REALIZADA', 'CANCELADA') NOT NULL DEFAULT 'PENDIENTE',
+  comentarios VARCHAR(1000) NULL,
+  fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_visitas_hogar_id (hogar_id),
+  KEY idx_visitas_usuario_visitante_id (usuario_visitante_id),
+  CONSTRAINT fk_visitas_hogar
+    FOREIGN KEY (hogar_id) REFERENCES hogares (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_visitas_usuario
+    FOREIGN KEY (usuario_visitante_id) REFERENCES `register` (id)
+    ON DELETE CASCADE
+);
+
 CREATE TABLE tareas (
   id BIGINT NOT NULL AUTO_INCREMENT,
   titulo VARCHAR(100) NOT NULL,
@@ -185,6 +205,7 @@ CREATE TABLE comprobante (
   hogar_cuenta_id BIGINT NOT NULL,
   usuario_id BIGINT NOT NULL,
   nombre_archivo VARCHAR(255) NOT NULL,
+  titulo_gasto VARCHAR(255) NOT NULL,
   tipo_contenido VARCHAR(100) NOT NULL,
   tamano_archivo BIGINT NOT NULL,
   monto_pagado DECIMAL(12,2) NOT NULL,
@@ -228,7 +249,7 @@ CREATE TABLE notificacion (
   usuario_receptor_id BIGINT NOT NULL,
   hogar_id BIGINT NOT NULL,
   referencia_id BIGINT NULL,
-  tipo ENUM('INVITACION_HOGAR', 'CUENTA_HOGAR', 'TAREA_HOGAR') NOT NULL,
+  tipo ENUM('INVITACION_HOGAR', 'CUENTA_HOGAR', 'TAREA_HOGAR', 'VISITA_HOGAR') NOT NULL,
   estado ENUM('PENDIENTE', 'LEIDA', 'ACEPTADA', 'RECHAZADA') NOT NULL DEFAULT 'PENDIENTE',
   titulo VARCHAR(150) NOT NULL,
   mensaje VARCHAR(500) NOT NULL,
@@ -360,6 +381,7 @@ CREATE PROCEDURE sp_registrar_comprobante(
   IN p_hogar_cuenta_id BIGINT,
   IN p_usuario_id BIGINT,
   IN p_nombre_archivo VARCHAR(255),
+  IN p_titulo_gasto VARCHAR(255),
   IN p_tipo_contenido VARCHAR(100),
   IN p_monto_pagado DECIMAL(12,2),
   IN p_observacion VARCHAR(500),
@@ -367,14 +389,24 @@ CREATE PROCEDURE sp_registrar_comprobante(
 )
 BEGIN
   DECLARE v_comprobante_id BIGINT;
+  DECLARE v_titulo_gasto VARCHAR(255);
+
+  IF p_titulo_gasto IS NULL OR TRIM(p_titulo_gasto) = '' THEN
+    SELECT descripcion INTO v_titulo_gasto
+    FROM hogar_cuenta
+    WHERE id = p_hogar_cuenta_id;
+  ELSE
+    SET v_titulo_gasto = TRIM(p_titulo_gasto);
+  END IF;
 
   INSERT INTO comprobante (
-    hogar_cuenta_id, usuario_id, nombre_archivo, tipo_contenido,
+    hogar_cuenta_id, usuario_id, nombre_archivo, titulo_gasto, tipo_contenido,
     tamano_archivo, monto_pagado, observacion, fecha_subida, archivo
   ) VALUES (
     p_hogar_cuenta_id,
     p_usuario_id,
     p_nombre_archivo,
+    COALESCE(v_titulo_gasto, 'Gasto del hogar'),
     p_tipo_contenido,
     OCTET_LENGTH(FROM_BASE64(p_archivo_base64)),
     p_monto_pagado,
@@ -490,7 +522,7 @@ INSERT INTO cuenta_deudor (id, usuario_id, monto_adeudado, hogar_cuenta_id) VALU
   (6, 3, 18000.00, 2);
 
 INSERT INTO comprobante (
-  id, hogar_cuenta_id, usuario_id, nombre_archivo, tipo_contenido,
+  id, hogar_cuenta_id, usuario_id, nombre_archivo, titulo_gasto, tipo_contenido,
   tamano_archivo, monto_pagado, observacion, fecha_subida, archivo
 ) VALUES
   (
@@ -498,6 +530,7 @@ INSERT INTO comprobante (
     1,
     2,
     'transferencia_internet_mayo.txt',
+    'Internet y servicios basicos',
     'text/plain',
     28,
     24000.00,
@@ -525,5 +558,5 @@ INSERT INTO notificacion (
 -- CALL sp_crear_hogar('Depto Valparaiso', 'Nuevo hogar de prueba', 1);
 -- CALL sp_registrar_tarea(1, 'Limpiar bano', 'Juan Barber', 'Aseo completo del bano comun.', '2026-05-20');
 -- CALL sp_registrar_gasto(1, 'Gas mensual', 45000.00, JSON_ARRAY(1, 2, 3));
--- CALL sp_registrar_comprobante(1, 1, 1, 'pago_gas.txt', 'text/plain', 15000.00, 'Pago del tercio correspondiente', TO_BASE64('Pago registrado manualmente'));
+-- CALL sp_registrar_comprobante(1, 1, 1, 'pago_gas.txt', 'Gas mensual', 'text/plain', 15000.00, 'Pago del tercio correspondiente', TO_BASE64('Pago registrado manualmente'));
 -- CALL sp_crear_notificacion(1, 3, 1, 2, 'CUENTA_HOGAR', 'PENDIENTE', 'Recordatorio de pago', 'Recuerda pagar tu parte del gasto registrado.');

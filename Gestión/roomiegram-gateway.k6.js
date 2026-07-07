@@ -93,6 +93,21 @@ export function setup() {
     __ENV.TEST_PASSWORD || "password123",
   );
 
+  // Suscribir al admin con plan PREMIUM_HOGAR para habilitar creacion de hogares
+  const suscripcionResp = http.post(
+    `${BASE_URL}/auth/membresias/suscribir`,
+    JSON.stringify({
+      usuarioId: admin.id,
+      plan: "PREMIUM_HOGAR",
+      renovacionAutomatica: false,
+    }),
+    { headers: jsonHeaders, responseType: "text" },
+  );
+
+  if (suscripcionResp.status !== 200 && suscripcionResp.status !== 201) {
+    console.warn(`No se pudo suscribir al admin a PREMIUM_HOGAR: ${suscripcionResp.status} ${suscripcionResp.body}`);
+  }
+
   return { admin, cliente };
 }
 
@@ -162,6 +177,7 @@ export function userFlowScenario(data) {
 
   const publicacionPayload = {
     usuarioCreador: data.admin.usuario,
+    usuarioId: data.admin.id,
     titulo: `k6-publicacion-${suffix}`,
     ubicacion: "Santiago Centro",
     descripcion: "Publicacion temporal creada por k6 via gateway",

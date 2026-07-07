@@ -92,7 +92,7 @@ public class MembresiaService {
                                 "Perfil y publicaciones con estado Premium",
                                 "Compatibilidad y preferencias destacadas",
                                 "Reputación y reseñas visibles",
-                                "Acceso a solicitudes e invitaciones del hogar",
+                                "Mayor visibilidad en busqueda y resultados",
                                 "Beneficios destacados para encontrar mejores matches")),
                 Map.of(
                         "id", "PREMIUM_HOGAR",
@@ -100,11 +100,34 @@ public class MembresiaService {
                         "precio", 8990,
                         "descripcion", "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
                         "beneficios", List.of(
-                                "Todo lo de Premium Individual",
+                                "Beneficio grupal para integrantes actuales",
                                 "Reportes avanzados del hogar",
                                 "Resumen de tareas, gastos y deuda",
                                 "Seguimiento de comprobantes y actividad del hogar",
                                 "Recomendaciones de convivencia")));
+    }
+
+    public Map<String, Object> obtenerBeneficios(Long usuarioId) {
+        Suscripcion suscripcion = obtenerActiva(usuarioId);
+        Plan plan = suscripcion.getPlan() == null ? Plan.GRATIS : suscripcion.getPlan();
+        boolean premiumIndividual = plan == Plan.PREMIUM_INDIVIDUAL;
+        boolean premiumHogar = plan == Plan.PREMIUM_HOGAR;
+
+        return Map.ofEntries(
+                Map.entry("usuarioId", usuarioId),
+                Map.entry("plan", plan.name()),
+                Map.entry("busquedaBasica", true),
+                Map.entry("compatibilidadBasica", true),
+                Map.entry("resenasBasicas", true),
+                Map.entry("crudBasico", true),
+                Map.entry("compatibilidadDetallada", premiumIndividual),
+                Map.entry("perfilDestacado", premiumIndividual),
+                Map.entry("publicacionesDestacadas", premiumIndividual),
+                Map.entry("resenasDestacadas", premiumIndividual),
+                Map.entry("mejoresMatches", premiumIndividual),
+                Map.entry("reportesHogarAvanzados", premiumHogar),
+                Map.entry("actividadHogarAvanzada", premiumHogar),
+                Map.entry("recomendacionesConvivencia", premiumHogar));
     }
 
     private void validarUsuario(Long usuarioId) {

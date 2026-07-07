@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { isPremiumHogar, membresiaService, type PlanId } from "../services/membresiaService";
 import { usuarioService } from "../services/usuarioService";
 import type { CategoriaGasto, Comprobante, CuentaDeudor, EstadoGasto, HogarCuenta } from "../types/Backend";
 import type { Hogar } from "../types/Hogar";
@@ -116,6 +117,7 @@ export default function Gastos() {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingGastoId, setDeletingGastoId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
 
   useEffect(() => {
     Promise.allSettled([hogarService.listar(), gastoService.listar(), comprobanteService.listar(), usuarioService.listar()])
@@ -142,6 +144,32 @@ export default function Gastos() {
       (id): id is number => typeof id === "number" && id > 0
     );
   }, [hogarActual]);
+
+  useEffect(() => {
+    if (!integrantes.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(integrantes.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = integrantes[index];
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setPlanesIntegrantes(planes);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes]);
 
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
@@ -172,6 +200,7 @@ export default function Gastos() {
   }, 0);
 
   const canManage = isHogarAdmin(hogarActual, user?.id);
+  const tienePremiumHogar = integrantes.some((usuarioId) => isPremiumHogar(planesIntegrantes[usuarioId]));
 
   const gastosConDetalle = useMemo(() => {
     return gastosDelHogar.map((gasto) => ({
@@ -459,6 +488,8 @@ export default function Gastos() {
       ) : (
         <>
           <section className="household-summary">
+            {tienePremiumHogar ? (
+              <>
             <article className="household-stat">
               <span>Total registrado en gastos</span>
               <strong>{formatCurrency(totalGastos)}</strong>
@@ -475,6 +506,27 @@ export default function Gastos() {
               <span>Monto respaldado con comprobantes</span>
               <strong>{formatCurrency(totalRespaldado)}</strong>
             </article>
+              </>
+            ) : (
+              <>
+                <article className="household-stat">
+                  <span>Gastos registrados</span>
+                  <strong>{gastosDelHogar.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Integrantes</span>
+                  <strong>{integrantes.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Arriendos</span>
+                  <strong>{arriendosDelHogar.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Otros gastos activos</span>
+                  <strong>{otrosGastosProgramados.length}</strong>
+                </article>
+              </>
+            )}
           </section>
           <p className="form-helper">
             Resumen documental del hogar. No descuenta saldos individuales automáticamente.

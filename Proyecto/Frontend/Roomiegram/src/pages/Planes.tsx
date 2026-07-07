@@ -20,30 +20,30 @@ const PLAN_COLOR_CLASS: Record<PlanId, string> = {
   PREMIUM_HOGAR: "plan-card-hogar",
 }
 
-const BENEFICIOS_PLANES = [
+const MATRIZ_PLANES_REALES = [
   {
-    beneficio: "Búsqueda y publicaciones básicas",
+    beneficio: "Busqueda y publicaciones basicas",
     GRATIS: "Incluido",
-    PREMIUM_INDIVIDUAL: "Incluido + perfil destacado",
+    PREMIUM_INDIVIDUAL: "Incluido + visibilidad destacada",
     PREMIUM_HOGAR: "Incluido",
   },
   {
-    beneficio: "Compatibilidad, reputación y reseñas",
-    GRATIS: "Vista básica",
-    PREMIUM_INDIVIDUAL: "Destacado",
-    PREMIUM_HOGAR: "Incluido para integrantes",
+    beneficio: "Compatibilidad, reputacion y resenas",
+    GRATIS: "Basico",
+    PREMIUM_INDIVIDUAL: "Detallado y destacado",
+    PREMIUM_HOGAR: "Basico",
   },
   {
-    beneficio: "Gastos, comprobantes y actividad del hogar",
-    GRATIS: "Gestión básica",
-    PREMIUM_INDIVIDUAL: "Gestión básica",
-    PREMIUM_HOGAR: "Reportes avanzados para el grupo",
+    beneficio: "Tareas, gastos y comprobantes",
+    GRATIS: "CRUD basico",
+    PREMIUM_INDIVIDUAL: "CRUD basico",
+    PREMIUM_HOGAR: "CRUD basico + analisis avanzado",
   },
   {
-    beneficio: "Reportes de convivencia",
-    GRATIS: "Bloqueado",
-    PREMIUM_INDIVIDUAL: "Bloqueado",
-    PREMIUM_HOGAR: "Completo para integrantes actuales",
+    beneficio: "Reportes y recomendaciones de convivencia",
+    GRATIS: "No incluido",
+    PREMIUM_INDIVIDUAL: "No incluido",
+    PREMIUM_HOGAR: "Incluido para integrantes actuales",
   },
 ] satisfies Array<{ beneficio: string } & Record<PlanId, string>>
 
@@ -314,7 +314,7 @@ export default function Planes() {
 
       <section className="module-list planes-benefits-matrix">
         <h3>Qué desbloquea cada plan</h3>
-        {BENEFICIOS_PLANES.map((item) => (
+        {MATRIZ_PLANES_REALES.map((item) => (
           <article className="module-item" key={item.beneficio}>
             <h4>{item.beneficio}</h4>
             <div className="notification-context-grid">

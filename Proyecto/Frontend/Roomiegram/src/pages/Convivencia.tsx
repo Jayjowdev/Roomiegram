@@ -468,6 +468,8 @@ export default function Convivencia() {
               <span>Tareas activas</span>
               <strong>{tareasActivas}</strong>
             </article>
+            {tienePremiumHogar ? (
+              <>
             <article className="household-stat">
               <span>Gastos del hogar</span>
               <strong>{formatCurrency(totalGastos)}</strong>
@@ -488,6 +490,23 @@ export default function Convivencia() {
               <span>Actividad reciente</span>
               <strong>{actividadHogar.length}</strong>
             </article>
+              </>
+            ) : (
+              <>
+                <article className="household-stat">
+                  <span>Gastos registrados</span>
+                  <strong>{gastosDelHogar.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Comprobantes</span>
+                  <strong>{comprobantesRegistrados}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Solicitudes</span>
+                  <strong>{hogarActual.solicitudesPendientesIds?.length || 0}</strong>
+                </article>
+              </>
+            )}
           </section>
 
           <section className="dashboard-content">
@@ -534,7 +553,7 @@ export default function Convivencia() {
                   <h4>Reportes avanzados bloqueados</h4>
                   <p>
                     Los reportes del hogar son un beneficio de Premium Hogar. Puedes seguir usando integrantes,
-                    tareas, gastos, comprobantes y actividad del hogar con normalidad.
+                    tareas, gastos y comprobantes basicos con normalidad. La actividad avanzada queda reservada para Premium Hogar.
                   </p>
                   <button className="btn btn-success" onClick={() => navigate("/planes")}>
                     Mejorar a Premium Hogar
@@ -544,13 +563,19 @@ export default function Convivencia() {
             </div>
 
             <div className="dashboard-profile">
-              <h4>Indicadores incluidos</h4>
+              <h4>{tienePremiumHogar ? "Indicadores incluidos" : "Indicadores basicos"}</h4>
               <p><strong>Integrantes:</strong> {integrantes.length}</p>
               <p><strong>Tareas activas:</strong> {tareasActivas}</p>
               <p><strong>Comprobantes:</strong> {comprobantesRegistrados}</p>
-              <p><strong>Respaldo registrado:</strong> {formatCurrency(totalRespaldado)}</p>
-              <p><strong>Gastos pendientes:</strong> {gastosPendientes.length}</p>
-              <p><strong>Actividad reciente:</strong> {actividadHogar.length}</p>
+              {tienePremiumHogar ? (
+                <>
+                  <p><strong>Respaldo registrado:</strong> {formatCurrency(totalRespaldado)}</p>
+                  <p><strong>Gastos pendientes:</strong> {gastosPendientes.length}</p>
+                  <p><strong>Actividad reciente:</strong> {actividadHogar.length}</p>
+                </>
+              ) : (
+                <p><strong>Premium Hogar:</strong> reportes, recomendaciones y actividad avanzada no incluidos.</p>
+              )}
             </div>
           </section>
 
@@ -661,9 +686,16 @@ export default function Convivencia() {
             <article className="household-panel">
               <div className="section-heading-row">
                 <h3>Actividad reciente del hogar</h3>
-                <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver actividad</button>
+                {tienePremiumHogar && (
+                  <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver actividad</button>
+                )}
               </div>
-              {actividadHogar.length ? (
+              {!tienePremiumHogar ? (
+                <div className="empty-state">
+                  <p>La actividad avanzada del hogar es un beneficio de Premium Hogar. Las notificaciones basicas siguen disponibles.</p>
+                  <button className="btn btn-outline-success btn-sm" onClick={() => navigate("/notificaciones")}>Ver notificaciones</button>
+                </div>
+              ) : actividadHogar.length ? (
                 actividadHogar.map((actividad) => (
                   <button className="compact-row" key={`${actividad.titulo}-${actividad.detalle}`} onClick={() => navigate(actividad.ruta)}>
                     <div>

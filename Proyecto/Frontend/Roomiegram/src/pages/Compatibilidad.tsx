@@ -5,6 +5,7 @@ import avatar4 from "../assets/avatar4.svg";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
+import { beneficiosFallback, membresiaService, PLAN_BADGE_CLASS, type BeneficiosPlan } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
@@ -31,6 +32,7 @@ type MatchCandidate = {
   publicacionCasa?: Publicacion
   hogarDisponible?: Hogar
   perteneceAHogar?: Hogar
+  beneficios: BeneficiosPlan
 }
 
 function scoreMatch(preferencias: PreferenciasCompatibilidad, candidato: PreferenciasCompatibilidad) {
@@ -133,6 +135,7 @@ export default function Compatibilidad() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [beneficiosUsuarios, setBeneficiosUsuarios] = useState<Record<number, BeneficiosPlan>>({});
 
   useEffect(() => {
     Promise.allSettled([usuarioService.listar(), publicacionService.listar(), hogarService.listar()])
@@ -156,6 +159,35 @@ export default function Compatibilidad() {
       setSelectedHogarId(String(hogaresAdministrables[0].id));
     }
   }, [hogaresAdministrables, selectedHogarId]);
+
+  useEffect(() => {
+    const ids = [...new Set([user?.id, ...usuarios.map((usuario) => usuario.id)].filter((id): id is number => !!id))];
+    if (!ids.length) {
+      setBeneficiosUsuarios({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(ids.map((usuarioId) => membresiaService.obtenerBeneficios(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const beneficios = results.reduce<Record<number, BeneficiosPlan>>((acc, result, index) => {
+          const usuarioId = ids[index];
+          acc[usuarioId] = result.status === "fulfilled"
+            ? result.value
+            : beneficiosFallback(usuarioId);
+          return acc;
+        }, {});
+
+        setBeneficiosUsuarios(beneficios);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, usuarios]);
 
   const candidatos = useMemo<MatchCandidate[]>(() => {
     return usuarios
@@ -185,6 +217,7 @@ export default function Compatibilidad() {
           ? hogares.find((hogar) => hogar.publicacionIds?.includes(publicacionCasa.id))
           : undefined;
         const { coincidencias, diferencias } = evaluarCoincidencias(compatibilidad, preferencias);
+        const beneficios = beneficiosUsuarios[usuarioData.id] ?? beneficiosFallback(usuarioData.id);
 
         return {
           id: usuarioData.id,
@@ -203,10 +236,11 @@ export default function Compatibilidad() {
           publicacionCasa,
           hogarDisponible,
           perteneceAHogar,
+          beneficios,
         };
       })
-      .sort((a, b) => b.score - a.score);
-  }, [compatibilidad, hogares, publicaciones, user?.id, usuarios]);
+      .sort((a, b) => Number(b.beneficios.perfilDestacado) - Number(a.beneficios.perfilDestacado) || b.score - a.score);
+  }, [beneficiosUsuarios, compatibilidad, hogares, publicaciones, user?.id, usuarios]);
 
   const guardarPreferencias = async () => {
     setMessage("");
@@ -276,6 +310,11 @@ export default function Compatibilidad() {
     }
   };
 
+  const beneficiosUsuarioActual = user?.id ? beneficiosUsuarios[user.id] ?? beneficiosFallback(user.id) : beneficiosFallback(0);
+  const compatibilidadDetallada = beneficiosUsuarioActual.compatibilidadDetallada;
+  const limiteCoincidencias = compatibilidadDetallada ? 6 : 4;
+  const limiteDiferencias = compatibilidadDetallada ? 4 : 2;
+
   return (
     <div className="module-page">
       <header className="module-header">
@@ -295,9 +334,9 @@ export default function Compatibilidad() {
 
       <section className="compatibility-panel compatibility-panel-upgraded">
         <div className="compatibility-form">
-          <span className="compatibility-kicker">Match inteligente</span>
+          <span className="compatibility-kicker">{compatibilidadDetallada ? "Match Premium Individual" : "Match basico"}</span>
           <h3>Tus preferencias</h3>
-          <p>Ajusta tus hábitos para buscar usuarios compatibles.</p>
+          <p>Ajusta tus hábitos para buscar usuarios compatibles. Gratis mantiene la vista basica; Premium Individual muestra mas detalle.</p>
           <div className="compatibility-grid">
             <select className="form-control" value={compatibilidad.limpieza} onChange={(e) => setCompatibilidad({ ...compatibilidad, limpieza: e.target.value })}>
               <option value="ordenado">Muy ordenado</option>
@@ -367,6 +406,9 @@ export default function Compatibilidad() {
                     <div className="match-topline">
                       <span className="match-name">{candidato.nombre}</span>
                       <strong>{candidato.score}% compatible</strong>
+                      {candidato.beneficios.perfilDestacado && (
+                        <span className={`plan-badge ${PLAN_BADGE_CLASS.PREMIUM_INDIVIDUAL}`}>Premium destacado</span>
+                      )}
                       <div className="match-score-bar">
                         <span style={{ width: `${candidato.score}%` }} />
                       </div>
@@ -385,19 +427,24 @@ export default function Compatibilidad() {
                       <div>
                         <span className="match-insight-title">Coincidencias</span>
                         <div className="match-tags">
-                          {candidato.coincidencias.slice(0, 4).map((tag) => <em key={tag}>{tag}</em>)}
-                          {candidato.intereses.slice(0, 2).map((interes) => <em key={interes}>{interes}</em>)}
+                          {candidato.coincidencias.slice(0, limiteCoincidencias).map((tag) => <em key={tag}>{tag}</em>)}
+                          {candidato.intereses.slice(0, compatibilidadDetallada ? 4 : 2).map((interes) => <em key={interes}>{interes}</em>)}
                         </div>
                       </div>
                       {candidato.diferencias.length > 0 && (
                         <div>
                           <span className="match-insight-title">Diferencias</span>
                           <div className="match-tags match-tags-muted">
-                            {candidato.diferencias.slice(0, 2).map((tag) => <em key={tag}>{tag}</em>)}
+                            {candidato.diferencias.slice(0, limiteDiferencias).map((tag) => <em key={tag}>{tag}</em>)}
                           </div>
                         </div>
                       )}
                     </div>
+                    {compatibilidadDetallada && (
+                      <p className="form-helper">
+                        Lectura Premium: este match se prioriza por coincidencias, diferencias e intereses visibles para comparar antes de invitar o solicitar ingreso.
+                      </p>
+                    )}
 
                     <div className="match-actions">
                       <button className="btn btn-outline-success btn-sm" type="button" onClick={() => navigate(`/perfil-publico/${candidato.id}`)}>

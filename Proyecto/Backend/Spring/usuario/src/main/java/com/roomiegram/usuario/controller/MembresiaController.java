@@ -72,6 +72,15 @@ public class MembresiaController {
         }
     }
 
+    @GetMapping("/usuario/{usuarioId}/beneficios")
+    public ResponseEntity<?> obtenerBeneficios(@PathVariable Long usuarioId) {
+        try {
+            return ResponseEntity.ok(membresiaService.obtenerBeneficios(usuarioId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensaje", e.getMessage()));
+        }
+    }
+
     @GetMapping("/usuario/{usuarioId}/historial")
     public ResponseEntity<?> historial(@PathVariable Long usuarioId) {
         try {

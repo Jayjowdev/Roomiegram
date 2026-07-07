@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
 import {
   isPremiumHogar,
+  isPremiumIndividual,
   isPremiumPlan,
   membresiaService,
   PLAN_ACTIVE_BENEFIT,
@@ -271,11 +272,11 @@ export default function MiPerfil() {
               ? `Beneficio compartido: ${titularPremiumHogarNombre} es titular de Premium Hogar. Tu cuenta no aparece como pagadora, solo recibe los reportes del grupo.`
               : planEfectivo === "GRATIS"
               ? "Tu cuenta gratis mantiene búsqueda, publicaciones y convivencia básica. Mejora de plan cuando quieras destacar tu perfil o activar reportes del hogar."
-              : planEfectivo === "PREMIUM_INDIVIDUAL"
+              : isPremiumIndividual(planActual)
                 ? "Tu perfil está destacado: aprovecha compatibilidad, reputación y reseñas para coordinar mejores matches."
                 : "Tu hogar tiene reportes completos: revisa gastos, comprobantes, actividad reciente y recomendaciones de convivencia."}
           </p>
-          {planEfectivo === "PREMIUM_INDIVIDUAL" && (
+          {isPremiumIndividual(planActual) && (
             <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/compatibilidad")}>
               Revisar compatibilidad y reputación
             </button>

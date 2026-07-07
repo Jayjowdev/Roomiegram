@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { isPremiumHogar, membresiaService, type PlanId } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { CategoriaGasto, Comprobante, EstadoGasto, HogarCuenta } from "../types/Backend";
@@ -114,6 +115,7 @@ export default function Comprobantes() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -141,6 +143,39 @@ export default function Comprobantes() {
     return hogares.find((hogar) => userBelongsToHogar(hogar, user?.id));
   }, [hogares, user?.id]);
 
+  const integrantes = useMemo(() => {
+    if (!hogarActual) return [];
+    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])].filter(
+      (id): id is number => typeof id === "number" && id > 0
+    );
+  }, [hogarActual]);
+
+  useEffect(() => {
+    if (!integrantes.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(integrantes.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = integrantes[index];
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setPlanesIntegrantes(planes);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes]);
+
   const gastosDelHogar = useMemo(() => {
     if (!hogarActual?.hogarCuentaIds?.length) return [];
     return gastos.filter((gasto) => gasto.id && hogarActual.hogarCuentaIds.includes(gasto.id));
@@ -157,6 +192,7 @@ export default function Comprobantes() {
   }, [comprobantes, gastoIds]);
 
   const canAssociateComprobante = isHogarAdmin(hogarActual, user?.id);
+  const tienePremiumHogar = integrantes.some((usuarioId) => isPremiumHogar(planesIntegrantes[usuarioId]));
   const selectedGasto = gastosDelHogar.find((gasto) => String(gasto.id) === hogarCuentaId);
   const totalPagado = comprobantesDelHogar.reduce((total, comprobante) => total + Number(comprobante.montoPagado || 0), 0);
   const totalGastos = gastosDelHogar.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
@@ -335,6 +371,8 @@ export default function Comprobantes() {
 
           {!isFocusedUploadMode && (
           <section className="household-summary">
+            {tienePremiumHogar ? (
+              <>
             <article className="household-stat">
               <span>Gastos con respaldo</span>
               <strong>{new Set(comprobantesDelHogar.map((comprobante) => comprobante.hogarCuentaId)).size}</strong>
@@ -351,6 +389,27 @@ export default function Comprobantes() {
               <span>Faltante por respaldar</span>
               <strong>{formatCurrency(totalFaltante)}</strong>
             </article>
+              </>
+            ) : (
+              <>
+                <article className="household-stat">
+                  <span>Comprobantes</span>
+                  <strong>{comprobantesDelHogar.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Gastos del hogar</span>
+                  <strong>{gastosDelHogar.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Integrantes</span>
+                  <strong>{integrantes.length}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Gastos con respaldo</span>
+                  <strong>{new Set(comprobantesDelHogar.map((comprobante) => comprobante.hogarCuentaId)).size}</strong>
+                </article>
+              </>
+            )}
           </section>
           )}
 

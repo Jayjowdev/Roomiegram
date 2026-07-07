@@ -40,6 +40,23 @@ export interface Suscripcion {
   renovacionAutomatica: boolean
 }
 
+export interface BeneficiosPlan {
+  usuarioId: number
+  plan: PlanId
+  busquedaBasica: boolean
+  compatibilidadBasica: boolean
+  resenasBasicas: boolean
+  crudBasico: boolean
+  compatibilidadDetallada: boolean
+  perfilDestacado: boolean
+  publicacionesDestacadas: boolean
+  resenasDestacadas: boolean
+  mejoresMatches: boolean
+  reportesHogarAvanzados: boolean
+  actividadHogarAvanzada: boolean
+  recomendacionesConvivencia: boolean
+}
+
 export const PLAN_LABELS: Record<PlanId, string> = {
   GRATIS: "Gratis",
   PREMIUM_INDIVIDUAL: "Premium Individual",
@@ -68,8 +85,34 @@ export function isPremiumPlan(plan?: PlanId | null) {
   return plan === "PREMIUM_INDIVIDUAL" || plan === "PREMIUM_HOGAR"
 }
 
+export function isPremiumIndividual(plan?: PlanId | null) {
+  return plan === "PREMIUM_INDIVIDUAL"
+}
+
 export function isPremiumHogar(plan?: PlanId | null) {
   return plan === "PREMIUM_HOGAR"
+}
+
+export function beneficiosFallback(usuarioId: number, plan: PlanId = "GRATIS"): BeneficiosPlan {
+  const premiumIndividual = plan === "PREMIUM_INDIVIDUAL"
+  const premiumHogar = plan === "PREMIUM_HOGAR"
+
+  return {
+    usuarioId,
+    plan,
+    busquedaBasica: true,
+    compatibilidadBasica: true,
+    resenasBasicas: true,
+    crudBasico: true,
+    compatibilidadDetallada: premiumIndividual,
+    perfilDestacado: premiumIndividual,
+    publicacionesDestacadas: premiumIndividual,
+    resenasDestacadas: premiumIndividual,
+    mejoresMatches: premiumIndividual,
+    reportesHogarAvanzados: premiumHogar,
+    actividadHogarAvanzada: premiumHogar,
+    recomendacionesConvivencia: premiumHogar,
+  }
 }
 
 const FALLBACK_PLANS: PlanInfo[] = [
@@ -85,7 +128,7 @@ const FALLBACK_PLANS: PlanInfo[] = [
     nombre: "Premium Individual",
     precio: 4990,
     descripcion: "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
-    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Reputación y reseñas visibles", "Gestión de solicitudes e invitaciones"],
+    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Reputacion y resenas mas visibles", "Mayor visibilidad en busqueda y resultados"],
   },
   {
     id: "PREMIUM_HOGAR",
@@ -109,6 +152,15 @@ export const membresiaService = {
   async obtenerActiva(usuarioId: number): Promise<Suscripcion> {
     try {
       const { data } = await usuarioApi.get<Suscripcion>(`/auth/membresias/usuario/${usuarioId}`)
+      return data
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error))
+    }
+  },
+
+  async obtenerBeneficios(usuarioId: number): Promise<BeneficiosPlan> {
+    try {
+      const { data } = await usuarioApi.get<BeneficiosPlan>(`/auth/membresias/usuario/${usuarioId}/beneficios`)
       return data
     } catch (error) {
       throw new Error(getApiErrorMessage(error))

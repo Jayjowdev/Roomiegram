@@ -6,6 +6,7 @@ import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 import { hogarService } from "../services/hogarService";
+import { isPremiumHogar, membresiaService, type PlanId } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { tareaService } from "../services/tareaService";
 import { usuarioService } from "../services/usuarioService";
@@ -97,6 +98,7 @@ export default function Tareas() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
 
   useEffect(() => {
     Promise.allSettled([hogarService.listar(), tareaService.listar(), usuarioService.listar()])
@@ -118,8 +120,36 @@ export default function Tareas() {
 
   const integrantes = useMemo(() => {
     if (!hogarActual) return [];
-    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])];
+    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])].filter(
+      (id): id is number => typeof id === "number" && id > 0
+    );
   }, [hogarActual]);
+
+  useEffect(() => {
+    if (!integrantes.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(integrantes.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = integrantes[index];
+          if (typeof usuarioId === "number" && result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setPlanesIntegrantes(planes);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes]);
 
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
@@ -137,6 +167,7 @@ export default function Tareas() {
 
   const canManage = isHogarAdmin(hogarActual, user?.id);
   const isEditing = editingTaskId !== null;
+  const tienePremiumHogar = integrantes.some((usuarioId) => typeof usuarioId === "number" && isPremiumHogar(planesIntegrantes[usuarioId]));
 
   const validateForm = () => {
     if (!hogarActual) return "Debes pertenecer a un hogar para crear tareas.";
@@ -414,6 +445,27 @@ export default function Tareas() {
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
       ) : (
+        <>
+        {tienePremiumHogar && (
+          <section className="household-summary">
+            <article className="household-stat">
+              <span>Tareas activas</span>
+              <strong>{tareasActivas.length}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Tareas completadas</span>
+              <strong>{tareasCompletadas.length}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Integrantes</span>
+              <strong>{integrantes.length}</strong>
+            </article>
+            <article className="household-stat">
+              <span>Avance del hogar</span>
+              <strong>{tareasDelHogar.length ? Math.round((tareasCompletadas.length / tareasDelHogar.length) * 100) : 0}%</strong>
+            </article>
+          </section>
+        )}
         <section className="module-layout">
           {canManage ? (
           <form className="module-form" onSubmit={handleSubmit}>
@@ -474,6 +526,7 @@ export default function Tareas() {
             )}
           </div>
         </section>
+        </>
       )}
     </div>
   );

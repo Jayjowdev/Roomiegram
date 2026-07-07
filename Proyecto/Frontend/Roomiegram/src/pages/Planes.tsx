@@ -34,13 +34,13 @@ const MATRIZ_PLANES_REALES = [
     PREMIUM_HOGAR: "Basico",
   },
   {
-    beneficio: "Tareas, gastos y comprobantes",
-    GRATIS: "CRUD basico",
-    PREMIUM_INDIVIDUAL: "CRUD basico",
-    PREMIUM_HOGAR: "CRUD basico + analisis avanzado",
+    beneficio: "Tareas, gastos y comprobantes del hogar",
+    GRATIS: "No incluido",
+    PREMIUM_INDIVIDUAL: "No incluido",
+    PREMIUM_HOGAR: "Incluido para integrantes actuales",
   },
   {
-    beneficio: "Reportes y recomendaciones de convivencia",
+    beneficio: "Actividad y acciones de convivencia",
     GRATIS: "No incluido",
     PREMIUM_INDIVIDUAL: "No incluido",
     PREMIUM_HOGAR: "Incluido para integrantes actuales",
@@ -211,7 +211,7 @@ export default function Planes() {
       <section className="planes-hero">
         <span className="planes-kicker">Planes Roomiegram</span>
         <h1>Elige el plan ideal para ti</h1>
-        <p>Gratis te ayuda a empezar, Premium Individual mejora tu búsqueda y Premium Hogar ordena la convivencia real con gastos, comprobantes y reportes.</p>
+        <p>Gratis te ayuda a empezar, Premium Individual mejora tu busqueda y Premium Hogar desbloquea la gestion operativa del hogar.</p>
 
         {suscripcionActiva && (
           <div className={`plan-activo-badge plan-activo-${suscripcionActiva.plan.toLowerCase()}`}>
@@ -300,10 +300,10 @@ export default function Planes() {
                 {planDetalle === plan.id && (
                   <p className="form-helper">
                     {plan.id === "GRATIS"
-                      ? "Ideal para explorar Roomiegram, crear publicaciones y organizar lo básico del hogar."
+                      ? "Ideal para explorar Roomiegram, crear publicaciones, buscar roomies y ver datos basicos del hogar."
                       : plan.id === "PREMIUM_INDIVIDUAL"
                         ? "Pensado para destacar tu perfil, mostrar reputacion y usar compatibilidad con mas claridad. Es un beneficio personal, no se comparte con el hogar."
-                        : "Pensado para hogares que quieren reportes, gastos, comprobantes y actividad ordenada. El titular habilita el beneficio al grupo mientras siga dentro del hogar."}
+                        : "Pensado para hogares que quieren tareas, gastos, comprobantes y actividad operativa. El titular habilita el beneficio al grupo mientras siga dentro del hogar."}
                   </p>
                 )}
               </article>

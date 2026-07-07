@@ -464,7 +464,9 @@ export default function Gastos() {
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
           <button className="btn btn-outline-success" onClick={() => navigate("/hogares")}>Mis hogares</button>
-          <button className="btn btn-outline-success" onClick={() => navigate("/comprobantes")}>Comprobantes</button>
+          {tienePremiumHogar && (
+            <button className="btn btn-outline-success" onClick={() => navigate("/comprobantes")}>Comprobantes</button>
+          )}
           <NotificationBell />
           <LogoutButton />
         </div>
@@ -485,6 +487,13 @@ export default function Gastos() {
           <p>Únete o crea un grupo roomie para organizar gastos compartidos.</p>
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
+      ) : !tienePremiumHogar ? (
+        <section className="empty-household">
+          <h2>Gestion del hogar disponible con Premium Hogar</h2>
+          <p>Tareas, gastos compartidos, comprobantes y actividad del hogar requieren que un integrante actual tenga Premium Hogar activo.</p>
+          <button className="btn btn-success" onClick={() => navigate("/planes")}>Ver Premium Hogar</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Volver a convivencia</button>
+        </section>
       ) : (
         <>
           <section className="household-summary">

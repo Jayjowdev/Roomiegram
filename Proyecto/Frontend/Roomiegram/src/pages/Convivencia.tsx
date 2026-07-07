@@ -436,7 +436,7 @@ export default function Convivencia() {
         <p>
           {hogarActual
             ? hogarActual.descripcion || "Resumen operativo del hogar compartido."
-            : "Cuando te unas a un hogar, aquí verás integrantes, tareas, gastos, comprobantes y avisos del grupo."}
+            : "Cuando te unas a un hogar, aqui veras sus datos basicos. La gestion de tareas, gastos, comprobantes y actividad requiere Premium Hogar."}
         </p>
       </section>
 
@@ -464,10 +464,12 @@ export default function Convivencia() {
               <span>Integrantes</span>
               <strong>{integrantes.length}</strong>
             </article>
+            {tienePremiumHogar && (
             <article className="household-stat">
               <span>Tareas activas</span>
               <strong>{tareasActivas}</strong>
             </article>
+            )}
             {tienePremiumHogar ? (
               <>
             <article className="household-stat">
@@ -494,16 +496,16 @@ export default function Convivencia() {
             ) : (
               <>
                 <article className="household-stat">
-                  <span>Gastos registrados</span>
-                  <strong>{gastosDelHogar.length}</strong>
-                </article>
-                <article className="household-stat">
-                  <span>Comprobantes</span>
-                  <strong>{comprobantesRegistrados}</strong>
-                </article>
-                <article className="household-stat">
                   <span>Solicitudes</span>
                   <strong>{hogarActual.solicitudesPendientesIds?.length || 0}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Publicaciones</span>
+                  <strong>{hogarActual.publicacionIds?.length || 0}</strong>
+                </article>
+                <article className="household-stat">
+                  <span>Estado del hogar</span>
+                  <strong>{hogarActual.activo ? "Activo" : "Inactivo"}</strong>
                 </article>
               </>
             )}
@@ -550,10 +552,10 @@ export default function Convivencia() {
                 </>
               ) : (
                 <div className="sin-resultados">
-                  <h4>Reportes avanzados bloqueados</h4>
+                  <h4>Gestion del hogar disponible con Premium Hogar</h4>
                   <p>
-                    Los reportes del hogar son un beneficio de Premium Hogar. Puedes seguir usando integrantes,
-                    tareas, gastos y comprobantes basicos con normalidad. La actividad avanzada queda reservada para Premium Hogar.
+                    Tareas, gastos compartidos, comprobantes y actividad del hogar requieren Premium Hogar grupal activo.
+                    La informacion basica del hogar sigue visible para sus integrantes.
                   </p>
                   <button className="btn btn-success" onClick={() => navigate("/planes")}>
                     Mejorar a Premium Hogar
@@ -565,16 +567,19 @@ export default function Convivencia() {
             <div className="dashboard-profile">
               <h4>{tienePremiumHogar ? "Indicadores incluidos" : "Indicadores basicos"}</h4>
               <p><strong>Integrantes:</strong> {integrantes.length}</p>
-              <p><strong>Tareas activas:</strong> {tareasActivas}</p>
-              <p><strong>Comprobantes:</strong> {comprobantesRegistrados}</p>
               {tienePremiumHogar ? (
                 <>
+                  <p><strong>Tareas activas:</strong> {tareasActivas}</p>
+                  <p><strong>Comprobantes:</strong> {comprobantesRegistrados}</p>
                   <p><strong>Respaldo registrado:</strong> {formatCurrency(totalRespaldado)}</p>
                   <p><strong>Gastos pendientes:</strong> {gastosPendientes.length}</p>
                   <p><strong>Actividad reciente:</strong> {actividadHogar.length}</p>
                 </>
               ) : (
-                <p><strong>Premium Hogar:</strong> reportes, recomendaciones y actividad avanzada no incluidos.</p>
+                <>
+                  <p><strong>Publicaciones:</strong> {hogarActual.publicacionIds?.length || 0}</p>
+                  <p><strong>Premium Hogar:</strong> gestion operativa no incluida.</p>
+                </>
               )}
             </div>
           </section>
@@ -626,10 +631,12 @@ export default function Convivencia() {
                 <strong>Solicitudes pendientes</strong>
                 <span>{hogarActual.solicitudesPendientesIds?.length || 0} usuario(s) esperando respuesta.</span>
               </article>
-              <article className="demo-widget">
-                <strong>Comprobantes asociados</strong>
-                <span>{hogarActual.comprobanteIds?.length || 0} comprobante(s) registrados en el hogar.</span>
-              </article>
+              {tienePremiumHogar && (
+                <article className="demo-widget">
+                  <strong>Comprobantes asociados</strong>
+                  <span>{hogarActual.comprobanteIds?.length || 0} comprobante(s) registrados en el hogar.</span>
+                </article>
+              )}
               <article className="demo-widget">
                 <strong>Publicaciones asociadas</strong>
                 <span>{hogarActual.publicacionIds?.length || 0} publicación(es) vinculada(s).</span>
@@ -637,6 +644,7 @@ export default function Convivencia() {
             </aside>
           </section>
 
+          {tienePremiumHogar ? (
           <section className="household-panels">
             <article className="household-panel">
               <div className="section-heading-row">
@@ -716,8 +724,16 @@ export default function Convivencia() {
               )}
             </article>
           </section>
+          ) : (
+            <section className="empty-household">
+              <h2>Gestion del hogar disponible con Premium Hogar</h2>
+              <p>Tareas, gastos compartidos, comprobantes y actividad avanzada requieren que un integrante actual tenga Premium Hogar activo.</p>
+              <button className="btn btn-success" onClick={() => navigate("/planes")}>Ver Premium Hogar</button>
+            </section>
+          )}
 
           <section className="dashboard-content">
+            {tienePremiumHogar && (
             <div className="dashboard-activity">
               <h4>Acciones para organizar la convivencia</h4>
               <div className="module-grid">
@@ -727,6 +743,7 @@ export default function Convivencia() {
                 <button className="module-link" onClick={() => navigate("/notificaciones")}><strong>Revisar actividad</strong><span>Ver solicitudes, tareas y comprobantes.</span></button>
               </div>
             </div>
+            )}
 
             <div className="dashboard-profile">
               <h4>Estado del grupo</h4>

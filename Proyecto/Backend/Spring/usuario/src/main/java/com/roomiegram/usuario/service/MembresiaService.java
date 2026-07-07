@@ -79,9 +79,9 @@ public class MembresiaService {
                         "descripcion", "Para empezar a encontrar tu roomie ideal",
                         "beneficios", List.of(
                                 "Crear publicaciones y perfiles roomie",
-                                "Búsqueda por tipo y ubicación",
+                                "Busqueda por tipo y ubicacion",
                                 "Unirse o crear un hogar compartido",
-                                "Gestión básica de tareas, gastos y comprobantes",
+                                "Ver datos basicos del hogar",
                                 "Notificaciones internas y por correo disponibles")),
                 Map.of(
                         "id", "PREMIUM_INDIVIDUAL",
@@ -98,13 +98,13 @@ public class MembresiaService {
                         "id", "PREMIUM_HOGAR",
                         "nombre", "Premium Hogar",
                         "precio", 8990,
-                        "descripcion", "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
+                        "descripcion", "Para hogares que necesitan gestion operativa completa",
                         "beneficios", List.of(
                                 "Beneficio grupal para integrantes actuales",
-                                "Reportes avanzados del hogar",
-                                "Resumen de tareas, gastos y deuda",
-                                "Seguimiento de comprobantes y actividad del hogar",
-                                "Recomendaciones de convivencia")));
+                                "Tareas del hogar",
+                                "Gastos compartidos",
+                                "Subir y ver comprobantes",
+                                "Actividad y acciones de convivencia")));
     }
 
     public Map<String, Object> obtenerBeneficios(Long usuarioId) {
@@ -125,6 +125,10 @@ public class MembresiaService {
                 Map.entry("publicacionesDestacadas", premiumIndividual),
                 Map.entry("resenasDestacadas", premiumIndividual),
                 Map.entry("mejoresMatches", premiumIndividual),
+                Map.entry("gestionHogarOperativa", premiumHogar),
+                Map.entry("tareasHogar", premiumHogar),
+                Map.entry("gastosHogar", premiumHogar),
+                Map.entry("comprobantesHogar", premiumHogar),
                 Map.entry("reportesHogarAvanzados", premiumHogar),
                 Map.entry("actividadHogarAvanzada", premiumHogar),
                 Map.entry("recomendacionesConvivencia", premiumHogar));

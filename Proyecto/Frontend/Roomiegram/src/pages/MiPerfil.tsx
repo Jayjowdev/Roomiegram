@@ -271,7 +271,7 @@ export default function MiPerfil() {
             {premiumHogarPorGrupo
               ? `Beneficio compartido: ${titularPremiumHogarNombre} es titular de Premium Hogar. Tu cuenta no aparece como pagadora, solo recibe los reportes del grupo.`
               : planEfectivo === "GRATIS"
-              ? "Tu cuenta gratis mantiene búsqueda, publicaciones y convivencia básica. Mejora de plan cuando quieras destacar tu perfil o activar reportes del hogar."
+              ? "Tu cuenta gratis mantiene busqueda, publicaciones y datos basicos del hogar. Tareas, gastos, comprobantes y actividad requieren Premium Hogar."
               : isPremiumIndividual(planActual)
                 ? "Tu perfil está destacado: aprovecha compatibilidad, reputación y reseñas para coordinar mejores matches."
                 : "Tu hogar tiene reportes completos: revisa gastos, comprobantes, actividad reciente y recomendaciones de convivencia."}

@@ -341,7 +341,9 @@ export default function Comprobantes() {
         <img src={logo} alt="RoomieGram" className="dashboard-logo" onClick={() => navigate("/home")} />
         <div className="dashboard-actions">
           <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Panel convivencia</button>
-          <button className="btn btn-outline-success" onClick={() => navigate("/gastos")}>Gastos</button>
+          {tienePremiumHogar && (
+            <button className="btn btn-outline-success" onClick={() => navigate("/gastos")}>Gastos</button>
+          )}
           <LogoutButton />
         </div>
       </header>
@@ -365,6 +367,13 @@ export default function Comprobantes() {
           <p>Únete o crea un grupo roomie para registrar comprobantes de gastos compartidos.</p>
           <button className="btn btn-success" onClick={() => navigate("/hogares")}>Ir a mis hogares</button>
         </div>
+      ) : !tienePremiumHogar ? (
+        <section className="empty-household">
+          <h2>Gestion del hogar disponible con Premium Hogar</h2>
+          <p>Subir, ver y revisar comprobantes del hogar requiere que un integrante actual tenga Premium Hogar activo.</p>
+          <button className="btn btn-success" onClick={() => navigate("/planes")}>Ver Premium Hogar</button>
+          <button className="btn btn-outline-success" onClick={() => navigate("/convivencia")}>Volver a convivencia</button>
+        </section>
       ) : (
         <>
           {showCreatedMessage && <p className="api-message">Comprobante registrado correctamente. Ya aparece en el historial del hogar.</p>}

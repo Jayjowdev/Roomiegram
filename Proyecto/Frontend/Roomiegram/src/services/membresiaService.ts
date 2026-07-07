@@ -52,6 +52,10 @@ export interface BeneficiosPlan {
   publicacionesDestacadas: boolean
   resenasDestacadas: boolean
   mejoresMatches: boolean
+  gestionHogarOperativa: boolean
+  tareasHogar: boolean
+  gastosHogar: boolean
+  comprobantesHogar: boolean
   reportesHogarAvanzados: boolean
   actividadHogarAvanzada: boolean
   recomendacionesConvivencia: boolean
@@ -76,9 +80,9 @@ export const PLAN_STATUS_TEXT: Record<PlanId, string> = {
 }
 
 export const PLAN_ACTIVE_BENEFIT: Record<PlanId, string> = {
-  GRATIS: "Puedes buscar roomies, crear publicaciones y usar convivencia básica; los reportes y beneficios destacados quedan reservados para Premium.",
+  GRATIS: "Puedes buscar roomies, crear publicaciones y ver datos basicos del hogar; tareas, gastos, comprobantes y actividad requieren Premium Hogar.",
   PREMIUM_INDIVIDUAL: "Beneficio personal activo: tu perfil, compatibilidad y reputacion se destacan solo en tu cuenta.",
-  PREMIUM_HOGAR: "Beneficio de hogar activo: el titular habilita reportes, gastos, comprobantes y actividad para su grupo actual.",
+  PREMIUM_HOGAR: "Beneficio de hogar activo: el titular habilita tareas, gastos, comprobantes y actividad para su grupo actual.",
 }
 
 export function isPremiumPlan(plan?: PlanId | null) {
@@ -109,6 +113,10 @@ export function beneficiosFallback(usuarioId: number, plan: PlanId = "GRATIS"): 
     publicacionesDestacadas: premiumIndividual,
     resenasDestacadas: premiumIndividual,
     mejoresMatches: premiumIndividual,
+    gestionHogarOperativa: premiumHogar,
+    tareasHogar: premiumHogar,
+    gastosHogar: premiumHogar,
+    comprobantesHogar: premiumHogar,
     reportesHogarAvanzados: premiumHogar,
     actividadHogarAvanzada: premiumHogar,
     recomendacionesConvivencia: premiumHogar,
@@ -121,7 +129,7 @@ const FALLBACK_PLANS: PlanInfo[] = [
     nombre: "Gratis",
     precio: 0,
     descripcion: "Para empezar a encontrar tu roomie ideal",
-    beneficios: ["Crear publicaciones y perfiles roomie", "Búsqueda por tipo y ubicación", "Unirse o crear un hogar", "Gestión básica de tareas, gastos y comprobantes"],
+    beneficios: ["Crear publicaciones y perfiles roomie", "Busqueda por tipo y ubicacion", "Unirse o crear un hogar", "Ver datos basicos del hogar"],
   },
   {
     id: "PREMIUM_INDIVIDUAL",
@@ -134,8 +142,8 @@ const FALLBACK_PLANS: PlanInfo[] = [
     id: "PREMIUM_HOGAR",
     nombre: "Premium Hogar",
     precio: 8990,
-    descripcion: "Para hogares que necesitan reportes, gastos y comprobantes mejor organizados",
-    beneficios: ["Reportes avanzados del hogar", "Resumen de tareas, gastos y deuda", "Seguimiento de comprobantes y actividad", "Recomendaciones de convivencia"],
+    descripcion: "Para hogares que necesitan gestion operativa completa",
+    beneficios: ["Tareas del hogar", "Gastos compartidos", "Subir y ver comprobantes", "Actividad y acciones de convivencia"],
   },
 ]
 

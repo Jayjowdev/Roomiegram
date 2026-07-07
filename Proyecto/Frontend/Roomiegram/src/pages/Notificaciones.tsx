@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
+import { isPremiumHogar, membresiaService, type PlanId } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
@@ -59,6 +60,11 @@ function getReadHistoryKey(userId?: number) {
   return userId ? `roomiegram:notificaciones-leidas:${userId}` : "";
 }
 
+function userBelongsToHogar(hogar: Hogar, userId?: number) {
+  if (!userId) return false;
+  return hogar.integrantesIds?.includes(userId) || hogar.usuarioAdministradorId === userId || hogar.usuarioCreadorId === userId;
+}
+
 export default function Notificaciones() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -74,6 +80,7 @@ export default function Notificaciones() {
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [readHistory, setReadHistory] = useState<Notificacion[]>([]);
   const [alternativeForms, setAlternativeForms] = useState<Record<number, { fecha: string; hora: string; mensaje: string }>>({});
+  const [planesIntegrantes, setPlanesIntegrantes] = useState<Record<number, PlanId>>({});
 
   useEffect(() => {
     Promise.allSettled([
@@ -145,6 +152,45 @@ export default function Notificaciones() {
       ...readHistory.filter((notificacion) => !notificacion.id || !idsActivos.has(notificacion.id)),
     ];
   }, [notificaciones, readHistory]);
+
+  const hogarActual = useMemo(() => {
+    return hogares.find((hogar) => userBelongsToHogar(hogar, user?.id));
+  }, [hogares, user?.id]);
+
+  const integrantes = useMemo(() => {
+    if (!hogarActual) return [];
+    return [...new Set([hogarActual.usuarioAdministradorId, hogarActual.usuarioCreadorId, ...(hogarActual.integrantesIds || [])])].filter(
+      (id): id is number => typeof id === "number" && id > 0
+    );
+  }, [hogarActual]);
+
+  useEffect(() => {
+    if (!integrantes.length) {
+      setPlanesIntegrantes({});
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled(integrantes.map((usuarioId) => membresiaService.obtenerActiva(usuarioId)))
+      .then((results) => {
+        if (!isMounted) return;
+
+        const planes = results.reduce<Record<number, PlanId>>((acc, result, index) => {
+          const usuarioId = integrantes[index];
+          if (result.status === "fulfilled") acc[usuarioId] = result.value.plan;
+          return acc;
+        }, {});
+
+        setPlanesIntegrantes(planes);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [integrantes]);
+
+  const tienePremiumHogar = integrantes.some((usuarioId) => isPremiumHogar(planesIntegrantes[usuarioId]));
 
   const misNotificaciones = useMemo(() => {
     if (!user?.id) return [];
@@ -702,7 +748,11 @@ export default function Notificaciones() {
 
       <section className="module-list mb-4">
         <h3>Tareas y avisos pendientes</h3>
-        {tareasPendientes.length === 0 ? (
+        {!tienePremiumHogar ? (
+          <div className="sin-resultados">
+            <p>Las tareas del hogar requieren Premium Hogar grupal activo.</p>
+          </div>
+        ) : tareasPendientes.length === 0 ? (
           <div className="sin-resultados"><p>No tienes tareas asignadas pendientes.</p></div>
         ) : (
           tareasPendientes.map((notificacion) => (
@@ -729,7 +779,11 @@ export default function Notificaciones() {
 
       <section className="module-list mb-4">
         <h3>Comprobantes y cuentas del hogar</h3>
-        {cuentasPendientes.length === 0 ? (
+        {!tienePremiumHogar ? (
+          <div className="sin-resultados">
+            <p>Los comprobantes y cuentas del hogar requieren Premium Hogar grupal activo.</p>
+          </div>
+        ) : cuentasPendientes.length === 0 ? (
           <div className="sin-resultados"><p>No tienes comprobantes nuevos por revisar.</p></div>
         ) : (
           cuentasPendientes.map((notificacion) => {

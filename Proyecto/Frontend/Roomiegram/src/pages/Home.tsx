@@ -130,8 +130,8 @@ const beneficiosHome = [
     descripcion: "Ofrece una habitación o publica que estás buscando roomie.",
   },
   {
-    titulo: "Tareas y gastos",
-    descripcion: "Ordena responsabilidades y acuerdos del hogar compartido.",
+    titulo: "Premium Hogar",
+    descripcion: "Desbloquea tareas, gastos, comprobantes y actividad del hogar compartido.",
   },
   {
     titulo: "Gestión de perfil",

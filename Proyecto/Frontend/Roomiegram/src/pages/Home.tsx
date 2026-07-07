@@ -7,6 +7,7 @@ import home3 from "../assets/home3.svg";
 import { LogoutButton } from "../components/LogoutButton";
 import { NotificationBell } from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
+import { useBeneficiosUsuarios } from "../hooks/useBeneficiosUsuarios";
 import { publicacionService, type Historia } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
 import type { Publicacion } from "../types/Publicacion";
@@ -262,7 +263,7 @@ export default function Home() {
     }
   };
 
-  const publicacionesFiltradas = useMemo(() => {
+  const publicacionesFiltradasBase = useMemo(() => {
     const ubicacionNormalizada = normalizarTexto(ubicacionFiltro);
 
     return publicaciones.filter((pub) => {
@@ -271,6 +272,17 @@ export default function Home() {
       return coincideTipo && coincideUbicacion;
     });
   }, [filtro, publicaciones, ubicacionFiltro]);
+
+  const beneficiosPublicadores = useBeneficiosUsuarios(publicacionesFiltradasBase.map((pub) => pub.usuarioId));
+
+  const publicacionesFiltradas = useMemo(() => {
+    return [...publicacionesFiltradasBase].sort((a, b) => {
+      const aDestacada = typeof a.usuarioId === "number" && beneficiosPublicadores[a.usuarioId]?.publicacionesDestacadas;
+      const bDestacada = typeof b.usuarioId === "number" && beneficiosPublicadores[b.usuarioId]?.publicacionesDestacadas;
+
+      return Number(bDestacada) - Number(aDestacada);
+    });
+  }, [beneficiosPublicadores, publicacionesFiltradasBase]);
 
   const tieneFiltrosActivos = filtro !== "todos" || ubicacionFiltro.trim().length > 0;
   const historiasVisibles = historias.length > 0 ? historias.slice(0, 6) : historiasFallback;
@@ -374,13 +386,17 @@ export default function Home() {
         ) : publicacionesFiltradas.length === 0 ? (
           <div className="sin-resultados"><p>{tieneFiltrosActivos ? "No hay publicaciones para esos filtros." : "No hay publicaciones disponibles"}</p></div>
         ) : (
-          publicacionesFiltradas.map((pub) => (
-            <article className="home-card" key={`${pub.origen || "publicacion"}-${pub.tipo || "publicacion"}-${pub.id}`}>
+          publicacionesFiltradas.map((pub) => {
+            const publicacionPremium = typeof pub.usuarioId === "number" && beneficiosPublicadores[pub.usuarioId]?.publicacionesDestacadas;
+
+            return (
+            <article className={`home-card ${publicacionPremium ? "home-card-premium" : ""}`} key={`${pub.origen || "publicacion"}-${pub.tipo || "publicacion"}-${pub.id}`}>
               {pub.tipo === "busco_roomie" ? (
                 <>
                   {pub.imagen && <img src={pub.imagen} alt={pub.nombre} className="home-card-img" />}
                   <div className="home-card-body">
                     <div className="home-card-top">
+                      {publicacionPremium && <span className="plan-badge plan-badge-premium">Premium Individual</span>}
                       <h3>{getRoomieTitle(pub)}</h3>
                       <p className="home-desc-oferta"><strong>Publicado por:</strong> {pub.nombre}{pub.edad ? ` (${pub.edad} años)` : ""}</p>
                       <p className="home-ubicacion">Ubicación: {getLocation(pub)}</p>
@@ -402,6 +418,7 @@ export default function Home() {
                   {pub.imagen && <img src={pub.imagen} alt={pub.titulo || pub.ubicacion} className="home-card-img" />}
                   <div className="home-card-body">
                     <div className="home-card-top">
+                      {publicacionPremium && <span className="plan-badge plan-badge-premium">Perfil destacado</span>}
                       <h3>{pub.titulo}</h3>
                       <p className="home-ubicacion">Ubicación: {pub.ubicacion}</p>
                       <p className="home-precio">${pub.precioMensual?.toLocaleString("es-CL")} / mes</p>
@@ -416,7 +433,8 @@ export default function Home() {
                 </>
               )}
             </article>
-          ))
+            );
+          })
         )}
       </section>
 

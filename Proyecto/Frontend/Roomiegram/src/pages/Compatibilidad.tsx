@@ -4,8 +4,9 @@ import logo from "../assets/Logo-removebg-preview.png";
 import avatar4 from "../assets/avatar4.svg";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { useBeneficiosUsuarios } from "../hooks/useBeneficiosUsuarios";
 import { hogarService } from "../services/hogarService";
-import { beneficiosFallback, membresiaService, PLAN_BADGE_CLASS, type BeneficiosPlan } from "../services/membresiaService";
+import { beneficiosFallback, PLAN_BADGE_CLASS, type BeneficiosPlan } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { usuarioService } from "../services/usuarioService";
@@ -124,6 +125,52 @@ function getEstadoCandidato(candidato: MatchCandidate) {
   return "Perfil compatible";
 }
 
+function getRecomendacionMatch(score: number) {
+  if (score >= 80) return "Muy compatible";
+  if (score >= 55) return "Compatible";
+  return "Requiere conversar";
+}
+
+function formatBudget(value?: string) {
+  const numberValue = Number(value || 0);
+  return numberValue > 0 ? `$${numberValue.toLocaleString("es-CL")}` : "Sin presupuesto";
+}
+
+function getDesgloseCompatibilidad(preferencias: PreferenciasCompatibilidad, candidato: PreferenciasCompatibilidad) {
+  const campos: Array<{ key: keyof Omit<PreferenciasCompatibilidad, "presupuesto">; label: string }> = [
+    { key: "limpieza", label: "Limpieza" },
+    { key: "horario", label: "Horario" },
+    { key: "ambiente", label: "Fiestas/ambiente" },
+    { key: "mascotas", label: "Mascotas" },
+    { key: "fumar", label: "Fumar" },
+  ];
+
+  const items = campos.map(({ key, label }) => {
+    const valorUsuario = preferencias[key] || "";
+    const valorCandidato = candidato[key] || "";
+    const coincide = valorUsuario === valorCandidato || valorUsuario.startsWith("indiferente") || valorCandidato.startsWith("indiferente");
+
+    return {
+      label,
+      coincide,
+      detalle: `${labelPreferencia(key, valorUsuario)} / ${labelPreferencia(key, valorCandidato)}`,
+    };
+  });
+
+  const presupuestoUsuario = Number(preferencias.presupuesto || 0);
+  const presupuestoCandidato = Number(candidato.presupuesto || 0);
+  const presupuestoOk = !presupuestoUsuario || !presupuestoCandidato || Math.abs(presupuestoUsuario - presupuestoCandidato) <= 100000;
+
+  return [
+    ...items,
+    {
+      label: "Presupuesto",
+      coincide: presupuestoOk,
+      detalle: `${formatBudget(preferencias.presupuesto)} / ${formatBudget(candidato.presupuesto)}`,
+    },
+  ];
+}
+
 export default function Compatibilidad() {
   const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
@@ -135,7 +182,7 @@ export default function Compatibilidad() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [beneficiosUsuarios, setBeneficiosUsuarios] = useState<Record<number, BeneficiosPlan>>({});
+  const beneficiosUsuarios = useBeneficiosUsuarios([user?.id, ...usuarios.map((usuario) => usuario.id)]);
 
   useEffect(() => {
     Promise.allSettled([usuarioService.listar(), publicacionService.listar(), hogarService.listar()])
@@ -159,35 +206,6 @@ export default function Compatibilidad() {
       setSelectedHogarId(String(hogaresAdministrables[0].id));
     }
   }, [hogaresAdministrables, selectedHogarId]);
-
-  useEffect(() => {
-    const ids = [...new Set([user?.id, ...usuarios.map((usuario) => usuario.id)].filter((id): id is number => !!id))];
-    if (!ids.length) {
-      setBeneficiosUsuarios({});
-      return;
-    }
-
-    let isMounted = true;
-
-    Promise.allSettled(ids.map((usuarioId) => membresiaService.obtenerBeneficios(usuarioId)))
-      .then((results) => {
-        if (!isMounted) return;
-
-        const beneficios = results.reduce<Record<number, BeneficiosPlan>>((acc, result, index) => {
-          const usuarioId = ids[index];
-          acc[usuarioId] = result.status === "fulfilled"
-            ? result.value
-            : beneficiosFallback(usuarioId);
-          return acc;
-        }, {});
-
-        setBeneficiosUsuarios(beneficios);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id, usuarios]);
 
   const candidatos = useMemo<MatchCandidate[]>(() => {
     return usuarios
@@ -314,6 +332,7 @@ export default function Compatibilidad() {
   const compatibilidadDetallada = beneficiosUsuarioActual.compatibilidadDetallada;
   const limiteCoincidencias = compatibilidadDetallada ? 6 : 4;
   const limiteDiferencias = compatibilidadDetallada ? 4 : 2;
+  const candidatosVisibles = compatibilidadDetallada ? candidatos : candidatos.slice(0, 5);
 
   return (
     <div className="module-page">
@@ -334,9 +353,9 @@ export default function Compatibilidad() {
 
       <section className="compatibility-panel compatibility-panel-upgraded">
         <div className="compatibility-form">
-          <span className="compatibility-kicker">{compatibilidadDetallada ? "Match Premium Individual" : "Match basico"}</span>
+          <span className="compatibility-kicker">{compatibilidadDetallada ? "Compatibilidad avanzada" : "Match basico"}</span>
           <h3>Tus preferencias</h3>
-          <p>Ajusta tus hábitos para buscar usuarios compatibles. Gratis mantiene la vista basica; Premium Individual muestra mas detalle.</p>
+          <p>Ajusta tus hábitos para buscar usuarios compatibles. Gratis ve 5 matches; Premium Individual muestra todos y agrega analisis avanzado.</p>
           <div className="compatibility-grid">
             <select className="form-control" value={compatibilidad.limpieza} onChange={(e) => setCompatibilidad({ ...compatibilidad, limpieza: e.target.value })}>
               <option value="ordenado">Muy ordenado</option>
@@ -386,15 +405,20 @@ export default function Compatibilidad() {
         <div className="compatibility-results">
           <div className="compatibility-results-title">
             <span>Personas compatibles</span>
-            <strong>{candidatos.length} resultado(s)</strong>
+            <strong>{candidatosVisibles.length} de {candidatos.length} resultado(s)</strong>
           </div>
+          {!compatibilidadDetallada && candidatos.length > 5 && (
+            <p className="api-message">
+              Activa Premium Individual para ver compatibilidad avanzada y todos los matches.
+            </p>
+          )}
           {candidatos.length === 0 ? (
             <div className="sin-resultados">
               <p>Aún no hay personas compatibles disponibles.</p>
               <p>Cuando otros usuarios completen sus preferencias de convivencia, aparecerán aquí.</p>
             </div>
           ) : (
-            candidatos.map((candidato) => {
+            candidatosVisibles.map((candidato) => {
               const puedeSolicitarIngreso = !!candidato.hogarDisponible && !candidato.hogarDisponible.solicitudesPendientesIds?.includes(user?.id || 0);
               const puedeInvitar = !!candidato.publicacionBuscaRoomie && hogaresAdministrables.length > 0;
               const estado = getEstadoCandidato(candidato);
@@ -441,9 +465,19 @@ export default function Compatibilidad() {
                       )}
                     </div>
                     {compatibilidadDetallada && (
-                      <p className="form-helper">
-                        Lectura Premium: este match se prioriza por coincidencias, diferencias e intereses visibles para comparar antes de invitar o solicitar ingreso.
-                      </p>
+                      <>
+                        <p className="form-helper">
+                          Lectura Premium: {candidato.nombre} encaja por {candidato.coincidencias.length} coincidencia(s), {candidato.diferencias.length} diferencia(s) y afinidad de presupuesto.
+                        </p>
+                        <div className="notification-context-grid mt-2">
+                          <span><strong>Recomendacion final:</strong> {getRecomendacionMatch(candidato.score)}</span>
+                          {getDesgloseCompatibilidad(compatibilidad, candidato.preferencias).map((item) => (
+                            <span key={`${candidato.id}-${item.label}`}>
+                              <strong>{item.label}:</strong> {item.detalle} - {item.coincide ? "coincide" : "conversar"}
+                            </span>
+                          ))}
+                        </div>
+                      </>
                     )}
 
                     <div className="match-actions">

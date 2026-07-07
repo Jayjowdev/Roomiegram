@@ -4,7 +4,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { useBeneficiosUsuarios } from "../hooks/useBeneficiosUsuarios";
 import { hogarService } from "../services/hogarService";
+import { PLAN_BADGE_CLASS } from "../services/membresiaService";
 import { notificacionService } from "../services/notificacionService";
 import { publicacionService } from "../services/publicacionService";
 import { resenaService } from "../services/resenaService";
@@ -222,6 +224,8 @@ export default function Perfil() {
   }, [perfilBackend, perfilLocal, usuarioPerfil]);
 
   const perfilUsuarioId = perfil?.usuarioId || usuarioPerfil?.id;
+  const beneficiosPerfil = useBeneficiosUsuarios([perfilUsuarioId]);
+  const perfilPremiumIndividual = !!perfilUsuarioId && beneficiosPerfil[perfilUsuarioId]?.perfilDestacado;
   const usuariosById = useMemo(() => {
     return new Map(usuarios.map((usuario) => [usuario.id, usuario]));
   }, [usuarios]);
@@ -526,10 +530,14 @@ export default function Perfil() {
             <div className="perfil-publication-summary">
               <span className="demo-kicker">Perfil publico</span>
               <h1>{getPerfilTitle(perfil, usuarioPerfil)}</h1>
+              {perfilPremiumIndividual && (
+                <span className={`plan-badge ${PLAN_BADGE_CLASS.PREMIUM_INDIVIDUAL}`}>Premium Individual</span>
+              )}
               <p className="perfil-ubicacion">Ubicación: {getPerfilLocation(perfil)}</p>
               <p className="perfil-bio">{perfil.descripcion}</p>
               <div className="profile-status-row">
                 <span className="status-pill success">{estadoPerfil}</span>
+                {perfilPremiumIndividual && <span className="status-pill success">Perfil destacado</span>}
                 {compatibilidadScore !== null && <span className="status-pill">{compatibilidadScore}% compatible contigo</span>}
                 <span className="status-pill">{resenas.length ? `${promedioResenas.toFixed(1)} / 5 · ${resenas.length} reseña(s)` : "Sin reseñas todavía"}</span>
               </div>

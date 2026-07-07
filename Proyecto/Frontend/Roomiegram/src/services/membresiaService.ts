@@ -81,7 +81,7 @@ export const PLAN_STATUS_TEXT: Record<PlanId, string> = {
 
 export const PLAN_ACTIVE_BENEFIT: Record<PlanId, string> = {
   GRATIS: "Puedes buscar roomies, crear publicaciones y ver datos basicos del hogar; tareas, gastos, comprobantes y actividad requieren Premium Hogar.",
-  PREMIUM_INDIVIDUAL: "Beneficio personal activo: tu perfil, compatibilidad y reputacion se destacan solo en tu cuenta.",
+  PREMIUM_INDIVIDUAL: "Beneficio personal activo: tu perfil se destaca, tus publicaciones ganan visibilidad y ves compatibilidad avanzada con todos los matches.",
   PREMIUM_HOGAR: "Beneficio de hogar activo: el titular habilita tareas, gastos, comprobantes y actividad para su grupo actual.",
 }
 
@@ -136,7 +136,7 @@ const FALLBACK_PLANS: PlanInfo[] = [
     nombre: "Premium Individual",
     precio: 4990,
     descripcion: "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
-    beneficios: ["Perfil y publicaciones con estado Premium", "Compatibilidad y preferencias destacadas", "Reputacion y resenas mas visibles", "Mayor visibilidad en busqueda y resultados"],
+    beneficios: ["Perfil y publicaciones destacadas", "Compatibilidad avanzada", "Todos los matches visibles", "Mayor visibilidad en busqueda y resultados"],
   },
   {
     id: "PREMIUM_HOGAR",

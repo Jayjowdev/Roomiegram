@@ -277,6 +277,28 @@ export default function MiPerfil() {
                 : "Tu hogar tiene reportes completos: revisa gastos, comprobantes, actividad reciente y recomendaciones de convivencia."}
           </p>
           {isPremiumIndividual(planActual) && (
+            <div className="module-grid mt-2">
+              <article className="module-link">
+                <strong>Perfil destacado activo</strong>
+                <span>Tu perfil se marca como Premium Individual para otros roomies.</span>
+              </article>
+              <article className="module-link">
+                <strong>Compatibilidad avanzada activa</strong>
+                <span>Ves todos los matches, desglose y recomendaciones.</span>
+              </article>
+              <article className="module-link">
+                <strong>Mayor visibilidad activa</strong>
+                <span>Tus publicaciones aparecen destacadas cuando tienen usuario asociado.</span>
+              </article>
+            </div>
+          )}
+          {planActual === "GRATIS" && !premiumHogarPorGrupo && (
+            <article className="module-link mt-2">
+              <strong>Activa Premium Individual</strong>
+              <span>Destaca tu perfil y accede a compatibilidad avanzada.</span>
+            </article>
+          )}
+          {isPremiumIndividual(planActual) && (
             <button className="btn btn-outline-success w-100 mt-2" onClick={() => navigate("/compatibilidad")}>
               Revisar compatibilidad y reputación
             </button>

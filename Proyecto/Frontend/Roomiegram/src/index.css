@@ -1751,6 +1751,11 @@ p {
   animation: cardRise 0.5s ease both;
 }
 
+.home-card-premium {
+  border: 2px solid rgba(29, 127, 91, 0.45);
+  box-shadow: 0 16px 38px rgba(22, 80, 58, 0.2);
+}
+
 .home-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.09);

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/Logo-removebg-preview.png";
 import { LogoutButton } from "../components/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { useBeneficiosUsuarios } from "../hooks/useBeneficiosUsuarios";
 import { comprobanteService } from "../services/comprobanteService";
 import { gastoService } from "../services/gastoService";
 import { hogarService } from "../services/hogarService";
@@ -196,6 +197,7 @@ export default function Notificaciones() {
     if (!user?.id) return [];
     return notificacionesVisibles.filter((notificacion) => notificacion.usuarioReceptorId === user.id);
   }, [notificacionesVisibles, user?.id]);
+  const beneficiosEmisores = useBeneficiosUsuarios(misNotificaciones.map((notificacion) => notificacion.usuarioEmisorId));
 
   const invitacionesPendientes = useMemo(() => {
     return misNotificaciones.filter((notificacion) =>
@@ -642,10 +644,12 @@ export default function Notificaciones() {
     const publicacionVisita = getPublicacionVisita(visita);
     const soyAnfitrionVisita = !!user?.id && visita?.anfitrionId === user.id;
     const soyInteresadoVisita = !!user?.id && visita?.interesadoId === user.id;
+    const emisorPremium = beneficiosEmisores[notificacion.usuarioEmisorId]?.perfilDestacado;
 
     return (
       <article className="module-item" key={notificacion.id || `${notificacion.titulo}-${notificacion.fechaCreacion}`}>
         <h4>{notificacion.titulo}</h4>
+        {emisorPremium && <span className="plan-badge plan-badge-premium">Usuario Premium</span>}
         <p>{notificacion.mensaje}</p>
         {esInteres && (
           <div className="notification-context-grid mt-2">
@@ -832,6 +836,7 @@ export default function Notificaciones() {
             const esAlternativa = visita?.estado === "PROPUESTA_ALTERNATIVA";
             const interesadoNombre = getNombreUsuario(visita?.interesadoId);
             const anfitrionNombre = getNombreUsuario(visita?.anfitrionId);
+            const emisorPremium = beneficiosEmisores[notificacion.usuarioEmisorId]?.perfilDestacado;
 
             return (
               <article className="module-item notification-context-card" key={notificacion.id || notificacion.titulo}>
@@ -840,6 +845,7 @@ export default function Notificaciones() {
                   <div>
                     <span className="eyebrow">Visita hogar</span>
                     <h4>{notificacion.titulo}</h4>
+                    {emisorPremium && <span className="plan-badge plan-badge-premium">Usuario Premium</span>}
                     <p>{notificacion.mensaje}</p>
                   </div>
                 </div>
@@ -986,6 +992,7 @@ export default function Notificaciones() {
         ) : (
           invitacionesPendientes.map((notificacion) => {
             const { esSolicitud, hogar, emisor, publicacion, nombreEmisor } = getNotificationContext(notificacion);
+            const emisorPremium = beneficiosEmisores[notificacion.usuarioEmisorId]?.perfilDestacado;
 
             return (
               <article className="module-item notification-context-card" key={notificacion.id || notificacion.titulo}>
@@ -996,6 +1003,7 @@ export default function Notificaciones() {
                   <div>
                     <span className="eyebrow">{esSolicitud ? "Solicitud de ingreso" : "Invitación recibida"}</span>
                     <h4>{esSolicitud ? `${nombreEmisor} quiere unirse` : `${nombreEmisor} te invitó a un hogar`}</h4>
+                    {emisorPremium && <span className="plan-badge plan-badge-premium">Usuario Premium</span>}
                     <p>{notificacion.mensaje}</p>
                   </div>
                 </div>
@@ -1052,6 +1060,7 @@ export default function Notificaciones() {
           {interesesPendientes.map((notificacion) => {
             const emisor = getUsuario(notificacion.usuarioEmisorId);
             const nombreEmisor = emisor?.nombre || emisor?.usuario || `Usuario #${notificacion.usuarioEmisorId}`;
+            const emisorPremium = beneficiosEmisores[notificacion.usuarioEmisorId]?.perfilDestacado;
 
             return (
               <article className="module-item notification-interest-card" key={notificacion.id || notificacion.titulo}>
@@ -1062,6 +1071,7 @@ export default function Notificaciones() {
                   <div>
                     <span className="eyebrow">Interés recibido</span>
                     <h4>Esta notificación pertenece a una función que ya no está activa.</h4>
+                    {emisorPremium && <span className="plan-badge plan-badge-premium">Usuario Premium</span>}
                     <p>{nombreEmisor} mostró interés en conectar contigo. Puedes revisar su perfil o descartar este aviso.</p>
                   </div>
                 </div>

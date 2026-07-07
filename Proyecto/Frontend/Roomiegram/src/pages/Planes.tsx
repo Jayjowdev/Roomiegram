@@ -24,13 +24,13 @@ const MATRIZ_PLANES_REALES = [
   {
     beneficio: "Busqueda y publicaciones basicas",
     GRATIS: "Incluido",
-    PREMIUM_INDIVIDUAL: "Incluido + visibilidad destacada",
+    PREMIUM_INDIVIDUAL: "Incluido + publicaciones destacadas",
     PREMIUM_HOGAR: "Incluido",
   },
   {
-    beneficio: "Compatibilidad, reputacion y resenas",
-    GRATIS: "Basico",
-    PREMIUM_INDIVIDUAL: "Detallado y destacado",
+    beneficio: "Compatibilidad y matches",
+    GRATIS: "Basico, maximo 5 matches",
+    PREMIUM_INDIVIDUAL: "Avanzado, todos los matches",
     PREMIUM_HOGAR: "Basico",
   },
   {
@@ -302,7 +302,7 @@ export default function Planes() {
                     {plan.id === "GRATIS"
                       ? "Ideal para explorar Roomiegram, crear publicaciones, buscar roomies y ver datos basicos del hogar."
                       : plan.id === "PREMIUM_INDIVIDUAL"
-                        ? "Pensado para destacar tu perfil, mostrar reputacion y usar compatibilidad con mas claridad. Es un beneficio personal, no se comparte con el hogar."
+                        ? "Pensado para destacar tu perfil, subir tus publicaciones en resultados y ver compatibilidad avanzada con todos los matches. Es un beneficio personal, no se comparte con el hogar."
                         : "Pensado para hogares que quieren tareas, gastos, comprobantes y actividad operativa. El titular habilita el beneficio al grupo mientras siga dentro del hogar."}
                   </p>
                 )}

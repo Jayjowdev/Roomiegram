@@ -89,11 +89,11 @@ public class MembresiaService {
                         "precio", 4990,
                         "descripcion", "Para destacar tu perfil, publicaciones y compatibilidad al buscar roomie",
                         "beneficios", List.of(
-                                "Perfil y publicaciones con estado Premium",
-                                "Compatibilidad y preferencias destacadas",
-                                "Reputación y reseñas visibles",
+                                "Perfil y publicaciones destacadas",
+                                "Compatibilidad avanzada",
+                                "Todos los matches visibles",
                                 "Mayor visibilidad en busqueda y resultados",
-                                "Beneficios destacados para encontrar mejores matches")),
+                                "Recomendacion final por match")),
                 Map.of(
                         "id", "PREMIUM_HOGAR",
                         "nombre", "Premium Hogar",

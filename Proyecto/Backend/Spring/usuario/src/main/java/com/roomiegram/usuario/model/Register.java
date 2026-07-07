@@ -56,6 +56,9 @@ public class Register {
 
     private boolean estaEnCasa = false;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean cuentaSuspendida = false;
+
     @Column(length = 150)
     private String hogarActual;
 

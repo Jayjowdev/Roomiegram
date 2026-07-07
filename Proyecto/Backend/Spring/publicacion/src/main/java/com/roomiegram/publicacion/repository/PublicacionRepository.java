@@ -6,4 +6,6 @@ import com.roomiegram.publicacion.model.Publicacion;
 
 public interface PublicacionRepository extends JpaRepository<Publicacion, Long> {
 
+    long countByUsuarioCreador(String usuarioCreador);
+
 }

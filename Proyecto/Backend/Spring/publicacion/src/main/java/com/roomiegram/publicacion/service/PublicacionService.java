@@ -72,6 +72,10 @@ public class PublicacionService {
             publicacion.setNumeroBanos(0);
         }
 
+        if (publicacion.getUsuarioId() != null) {
+            validarLimitePublicaciones(publicacion.getUsuarioId(), publicacion.getUsuarioCreador());
+        }
+
         return publicacionRepository.save(publicacion);
     }
 
@@ -116,7 +120,7 @@ public class PublicacionService {
         if (req.getUsuarioId() == null || req.getUsuarioId() <= 0) {
             throw new IllegalArgumentException("El usuario creador es obligatorio");
         }
-        validarSuscripcionParaCrearHogar(req.getUsuarioId());
+        validarLimitePublicaciones(req.getUsuarioId(), req.getUsuarioCreador());
 
         // 1. Create and persist the publication
         Publicacion pub = new Publicacion();
@@ -166,7 +170,7 @@ public class PublicacionService {
     }
 
     @SuppressWarnings("unchecked")
-    private void validarSuscripcionParaCrearHogar(Long usuarioId) {
+    private void validarLimitePublicaciones(Long usuarioId, String usuarioCreador) {
         String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -174,10 +178,21 @@ public class PublicacionService {
                 throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
             }
 
-            Object plan = response.getBody().get("plan");
-            if (plan == null || "GRATIS".equalsIgnoreCase(plan.toString())) {
+            String plan = response.getBody().get("plan") != null
+                    ? response.getBody().get("plan").toString()
+                    : "GRATIS";
+
+            int limite = switch (plan) {
+                case "PREMIUM_HOGAR" -> 5;
+                case "PREMIUM_INDIVIDUAL" -> 3;
+                default -> 1;
+            };
+
+            long activas = publicacionRepository.countByUsuarioCreador(usuarioCreador);
+            if (activas >= limite) {
                 throw new IllegalArgumentException(
-                        "Los usuarios con plan gratuito no pueden crear grupos de hogar. Actualiza tu suscripcion.");
+                        "Has alcanzado el limite de " + limite + " publicacion(es) para tu plan " + plan +
+                        ". Actualiza tu suscripcion para publicar mas.");
             }
         } catch (RestClientException e) {
             throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario: " + e.getMessage());

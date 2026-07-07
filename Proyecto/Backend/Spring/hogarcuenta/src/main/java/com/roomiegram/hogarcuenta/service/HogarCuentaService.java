@@ -1,10 +1,15 @@
 package com.roomiegram.hogarcuenta.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.roomiegram.hogarcuenta.model.CuentaDeudor;
 import com.roomiegram.hogarcuenta.model.HogarCuenta;
@@ -15,8 +20,17 @@ public class HogarCuentaService {
     @Autowired
     private HogarCuentaRepository hogarCuentaRepository;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${usuario.service.url}")
+    private String usuarioServiceUrl;
+
     public HogarCuenta guardarHogarCuenta(HogarCuenta hogarCuenta) {
         validarHogarCuenta(hogarCuenta);
+        if (hogarCuenta.getCreadoPorId() != null) {
+            validarPlanPremium(hogarCuenta.getCreadoPorId());
+        }
         prepararRelacionDeudores(hogarCuenta);
         hogarCuenta.recalcularMontosDeudores();
 
@@ -56,6 +70,24 @@ public class HogarCuentaService {
 
         for (CuentaDeudor deudor : hogarCuenta.getDeudores()) {
             deudor.setHogarCuenta(hogarCuenta);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarPlanPremium(Long usuarioId) {
+        String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
+            }
+            Object plan = response.getBody().get("plan");
+            if (plan == null || "GRATIS".equalsIgnoreCase(plan.toString())) {
+                throw new IllegalArgumentException(
+                        "Los usuarios con plan gratuito no pueden registrar gastos del hogar. Actualiza tu suscripcion.");
+            }
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("No se pudo verificar la suscripcion: " + e.getMessage());
         }
     }
 }

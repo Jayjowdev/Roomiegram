@@ -54,6 +54,9 @@ public class Publicacion {
     @Column(nullable = false)
     private int numeroBanos;
 
+    @Column(nullable = true)
+    private Long usuarioId;
+
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String imagen;

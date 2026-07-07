@@ -96,6 +96,7 @@ public class HogarService {
 
     public Hogar aprobarSolicitud(Long hogarId, Long usuarioId, AdminActionRequest request) {
         validarAdministrador(request);
+        validarPlanAdminHogar(request.administradorId());
 
         Hogar hogar = buscarHogar(hogarId);
         validarAdministradorDelHogar(hogar, request.administradorId());
@@ -109,6 +110,7 @@ public class HogarService {
 
     public Hogar rechazarSolicitud(Long hogarId, Long usuarioId, AdminActionRequest request) {
         validarAdministrador(request);
+        validarPlanAdminHogar(request.administradorId());
 
         Hogar hogar = buscarHogar(hogarId);
         validarAdministradorDelHogar(hogar, request.administradorId());
@@ -122,6 +124,7 @@ public class HogarService {
 
     public Hogar removerIntegrante(Long hogarId, Long usuarioId, Long administradorId) {
         validarId(administradorId, "El administrador es obligatorio");
+        validarPlanAdminHogar(administradorId);
 
         Hogar hogar = buscarHogar(hogarId);
         validarAdministradorDelHogar(hogar, administradorId);
@@ -305,6 +308,24 @@ public class HogarService {
             return EstadoVisita.valueOf(estado.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Estado de visita invalido. Valores permitidos: PENDIENTE, REALIZADA, CANCELADA");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarPlanAdminHogar(Long usuarioId) {
+        String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
+            }
+            Object plan = response.getBody().get("plan");
+            if (plan == null || !"PREMIUM_HOGAR".equalsIgnoreCase(plan.toString())) {
+                throw new IllegalArgumentException(
+                        "Solo los usuarios con plan Premium Hogar pueden gestionar integrantes. Actualiza tu suscripcion.");
+            }
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("No se pudo verificar la suscripcion: " + e.getMessage());
         }
     }
 

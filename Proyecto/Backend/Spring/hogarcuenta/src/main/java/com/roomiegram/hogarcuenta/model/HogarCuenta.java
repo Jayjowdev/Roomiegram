@@ -37,6 +37,9 @@ public class HogarCuenta {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal monto;
 
+    @Column(name = "creado_por_id", nullable = true)
+    private Long creadoPorId;
+
     @JsonManagedReference
     @OneToMany(mappedBy = "hogarCuenta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CuentaDeudor> deudores = new ArrayList<>();

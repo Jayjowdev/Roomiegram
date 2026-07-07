@@ -1,9 +1,15 @@
 package com.roomiegram.tarea.service;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.roomiegram.tarea.model.Tarea;
 import com.roomiegram.tarea.repository.TareaRepository;
@@ -14,9 +20,26 @@ public class TareaService {
     @Autowired
     private TareaRepository tareaRepository;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${usuario.service.url}")
+    private String usuarioServiceUrl;
+
+    private static final int LIMITE_GRATIS_MES = 5;
+
     public Tarea guardarTarea(Tarea tarea) {
         validarTarea(tarea);
         normalizarEstado(tarea);
+
+        if (tarea.getFechaCreacion() == null) {
+            tarea.setFechaCreacion(LocalDate.now());
+        }
+
+        if (tarea.getCreadoPorId() != null) {
+            validarLimiteTareas(tarea.getCreadoPorId());
+        }
+
         return tareaRepository.save(tarea);
     }
 
@@ -77,6 +100,34 @@ public class TareaService {
     private void normalizarEstado(Tarea tarea) {
         if (tarea.getCompletada() == null) {
             tarea.setCompletada(false);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validarLimiteTareas(Long usuarioId) {
+        String url = usuarioServiceUrl + "/auth/membresias/usuario/" + usuarioId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("No se pudo verificar la suscripcion del usuario");
+            }
+
+            String plan = response.getBody().get("plan") != null
+                    ? response.getBody().get("plan").toString()
+                    : "GRATIS";
+
+            if ("GRATIS".equalsIgnoreCase(plan)) {
+                LocalDate inicioMes = LocalDate.now().withDayOfMonth(1);
+                long tareasEsteMes = tareaRepository.countByCreadoPorIdAndFechaCreacionGreaterThanEqual(
+                        usuarioId, inicioMes);
+                if (tareasEsteMes >= LIMITE_GRATIS_MES) {
+                    throw new IllegalArgumentException(
+                            "Has alcanzado el limite de " + LIMITE_GRATIS_MES + " tareas por mes para el plan gratuito. " +
+                            "Actualiza tu suscripcion para crear tareas ilimitadas.");
+                }
+            }
+        } catch (RestClientException e) {
+            throw new IllegalArgumentException("No se pudo verificar la suscripcion: " + e.getMessage());
         }
     }
 }

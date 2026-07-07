@@ -38,4 +38,10 @@ public class Tarea {
     @Column
     private Boolean completada = false;
 
+    @Column(name = "creado_por_id", nullable = true)
+    private Long creadoPorId;
+
+    @Column(name = "fecha_creacion", nullable = true)
+    private LocalDate fechaCreacion;
+
 }
